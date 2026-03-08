@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 220 33% 99%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --primary: 222 89% 54%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 214 32% 95%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 215 28% 95%;
+  --muted-foreground: 215 16% 47%;
+  --accent: 196 85% 94%;
+  --accent-foreground: 222 47% 11%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 222 89% 54%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 210 40% 98%;
+}
+.dark {
+  --background: 224 30% 8%;
+  --foreground: 210 40% 98%;
+  --card: 223 28% 12%;
+  --card-foreground: 210 40% 98%;
+  --primary: 213 94% 68%;
+  --primary-foreground: 222 47% 11%;
+  --secondary: 223 19% 18%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 223 19% 18%;
+  --muted-foreground: 215 20% 70%;
+  --accent: 199 89% 18%;
+  --accent-foreground: 210 40% 98%;
+  --border: 223 19% 18%;
+  --input: 223 19% 18%;
+  --ring: 213 94% 68%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 210 40% 98%;
+}
+html, body, :root { height: 100%; }
+body {
+  @apply bg-background text-foreground antialiased;
+  background-image: radial-gradient(circle at top left, rgba(59,130,246,0.08), transparent 25%), radial-gradient(circle at bottom right, rgba(14,165,233,0.08), transparent 20%);
+}
+* { @apply border-border; }

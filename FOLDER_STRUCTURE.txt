@@ -1,0 +1,48 @@
+personal-health-record-companion/
+├─ app/
+│  ├─ api/auth/[...nextauth]/route.ts
+│  ├─ exports/[type]/route.ts
+│  ├─ actions.ts
+│  ├─ appointments/page.tsx
+│  ├─ dashboard/page.tsx
+│  ├─ doctors/page.tsx
+│  ├─ documents/page.tsx
+│  ├─ exports/page.tsx
+│  ├─ globals.css
+│  ├─ health-profile/page.tsx
+│  ├─ labs/page.tsx
+│  ├─ layout.tsx
+│  ├─ login/page.tsx
+│  ├─ medications/page.tsx
+│  ├─ page.tsx
+│  ├─ signup/page.tsx
+│  ├─ summary/page.tsx
+│  ├─ symptoms/page.tsx
+│  ├─ vaccinations/page.tsx
+│  └─ vitals/page.tsx
+├─ components/
+│  ├─ app-shell.tsx
+│  ├─ auth-form.tsx
+│  ├─ charts.tsx
+│  ├─ common.tsx
+│  ├─ providers.tsx
+│  └─ ui.tsx
+├─ lib/
+│  ├─ auth.ts
+│  ├─ dashboard-data.ts
+│  ├─ db.ts
+│  ├─ export.ts
+│  ├─ session.ts
+│  ├─ upload.ts
+│  ├─ utils.ts
+│  └─ validations.ts
+├─ prisma/
+│  ├─ schema.prisma
+│  └─ seed.ts
+├─ .env.example
+├─ middleware.ts
+├─ next.config.ts
+├─ package.json
+├─ postcss.config.mjs
+├─ tailwind.config.ts
+└─ tsconfig.json

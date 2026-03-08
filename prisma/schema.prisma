@@ -1,0 +1,251 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Sex { MALE FEMALE OTHER PREFER_NOT_TO_SAY }
+enum MedicationStatus { ACTIVE INACTIVE COMPLETED }
+enum MedicationLogStatus { TAKEN MISSED SKIPPED }
+enum AppointmentStatus { UPCOMING COMPLETED CANCELLED }
+enum LabFlag { NORMAL BORDERLINE HIGH LOW }
+enum SymptomSeverity { MILD MODERATE SEVERE }
+enum ReminderType { MEDICATION APPOINTMENT VACCINATION LAB_FOLLOW_UP GENERAL }
+enum DocumentType { PRESCRIPTION LAB_RESULT DISCHARGE_SUMMARY CERTIFICATE SCAN OTHER }
+
+model User {
+  id             String   @id @default(cuid())
+  name           String?
+  email          String   @unique
+  emailVerified  DateTime?
+  image          String?
+  passwordHash   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  accounts       Account[]
+  sessions       Session[]
+  healthProfile  HealthProfile?
+  doctors        Doctor[]
+  medications    Medication[]
+  medicationLogs MedicationLog[]
+  appointments   Appointment[]
+  labResults     LabResult[]
+  vitalRecords   VitalRecord[]
+  symptomEntries SymptomEntry[]
+  vaccinations   VaccinationRecord[]
+  documents      MedicalDocument[]
+  reminders      Reminder[]
+}
+
+model HealthProfile {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  fullName              String
+  dateOfBirth           DateTime?
+  sex                   Sex?
+  bloodType             String?
+  heightCm              Float?
+  weightKg              Float?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  chronicConditions     String?
+  allergiesSummary      String?
+  notes                 String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Doctor {
+  id          String        @id @default(cuid())
+  userId      String
+  name        String
+  specialty   String?
+  clinic      String?
+  phone       String?
+  email       String?
+  address     String?
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medications Medication[]
+  appointments Appointment[]
+}
+
+model Medication {
+  id           String           @id @default(cuid())
+  userId       String
+  doctorId     String?
+  name         String
+  dosage       String
+  frequency    String
+  instructions String?
+  startDate    DateTime
+  endDate      DateTime?
+  status       MedicationStatus @default(ACTIVE)
+  active       Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  doctor       Doctor?          @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+  schedules    MedicationSchedule[]
+  logs         MedicationLog[]
+}
+
+model MedicationSchedule {
+  id           String     @id @default(cuid())
+  medicationId String
+  timeOfDay    String
+  createdAt    DateTime   @default(now())
+  medication   Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+}
+
+model MedicationLog {
+  id           String              @id @default(cuid())
+  userId       String
+  medicationId String
+  scheduleTime String?
+  loggedAt     DateTime            @default(now())
+  status       MedicationLogStatus
+  notes        String?
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medication   Medication          @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+}
+
+model Appointment {
+  id            String            @id @default(cuid())
+  userId        String
+  doctorId      String?
+  clinic        String
+  specialty     String?
+  doctorName    String
+  scheduledAt   DateTime
+  purpose       String
+  notes         String?
+  followUpNotes String?
+  status        AppointmentStatus @default(UPCOMING)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  doctor        Doctor?           @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+}
+
+model LabResult {
+  id             String   @id @default(cuid())
+  userId         String
+  testName       String
+  dateTaken      DateTime
+  resultSummary  String
+  referenceRange String?
+  flag           LabFlag  @default(NORMAL)
+  filePath       String?
+  fileName       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VitalRecord {
+  id               String   @id @default(cuid())
+  userId           String
+  recordedAt       DateTime @default(now())
+  systolic         Int?
+  diastolic        Int?
+  heartRate        Int?
+  bloodSugar       Float?
+  oxygenSaturation Int?
+  temperatureC     Float?
+  weightKg         Float?
+  notes            String?
+  createdAt        DateTime @default(now())
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SymptomEntry {
+  id        String          @id @default(cuid())
+  userId    String
+  title     String
+  severity  SymptomSeverity
+  bodyArea  String?
+  startedAt DateTime
+  duration  String?
+  trigger   String?
+  notes     String?
+  resolved  Boolean         @default(false)
+  createdAt DateTime        @default(now())
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VaccinationRecord {
+  id          String   @id @default(cuid())
+  userId      String
+  vaccineName String
+  doseNumber  Int
+  dateTaken   DateTime
+  location    String?
+  nextDueDate DateTime?
+  notes       String?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MedicalDocument {
+  id        String       @id @default(cuid())
+  userId    String
+  title     String
+  type      DocumentType
+  filePath  String
+  fileName  String
+  mimeType  String
+  sizeBytes Int
+  notes     String?
+  createdAt DateTime     @default(now())
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Reminder {
+  id          String       @id @default(cuid())
+  userId      String
+  type        ReminderType
+  title       String
+  description String?
+  dueAt       DateTime
+  completed   Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@id([sessionToken])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  @@id([identifier, token])
+}
