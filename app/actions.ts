@@ -24,19 +24,65 @@ export async function signupAction(_: unknown, formData: FormData) {
 
 export async function saveHealthProfile(formData: FormData) {
   const user = await requireUser();
+  const userId = user.id;
+
+  if (!userId) {
+    throw new Error("Unauthorized");
+  }
+
   const parsed = healthProfileSchema.safeParse({
-    fullName: formData.get("fullName"), dateOfBirth: formData.get("dateOfBirth"), sex: formData.get("sex") || undefined,
-    bloodType: formData.get("bloodType"), heightCm: formData.get("heightCm") || undefined, weightKg: formData.get("weightKg") || undefined,
-    emergencyContactName: formData.get("emergencyContactName"), emergencyContactPhone: formData.get("emergencyContactPhone"),
-    chronicConditions: formData.get("chronicConditions"), allergiesSummary: formData.get("allergiesSummary"), notes: formData.get("notes")
+    fullName: formData.get("fullName"),
+    dateOfBirth: formData.get("dateOfBirth"),
+    sex: formData.get("sex") || undefined,
+    bloodType: formData.get("bloodType"),
+    heightCm: formData.get("heightCm") || undefined,
+    weightKg: formData.get("weightKg") || undefined,
+    emergencyContactName: formData.get("emergencyContactName"),
+    emergencyContactPhone: formData.get("emergencyContactPhone"),
+    chronicConditions: formData.get("chronicConditions"),
+    allergiesSummary: formData.get("allergiesSummary"),
+    notes: formData.get("notes"),
   });
-  if (!parsed.success) throw new Error(parsed.error.issues[0]?.message);
+
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? "Invalid input.");
+  }
+
+  const profileData = {
+    fullName: parsed.data.fullName,
+    dateOfBirth: parsed.data.dateOfBirth
+      ? new Date(parsed.data.dateOfBirth)
+      : null,
+    sex: parsed.data.sex,
+    bloodType: parsed.data.bloodType || null,
+    heightCm:
+      parsed.data.heightCm !== undefined && parsed.data.heightCm !== null
+        ? Number(parsed.data.heightCm)
+        : null,
+    weightKg:
+      parsed.data.weightKg !== undefined && parsed.data.weightKg !== null
+        ? Number(parsed.data.weightKg)
+        : null,
+    emergencyContactName: parsed.data.emergencyContactName || null,
+    emergencyContactPhone: parsed.data.emergencyContactPhone || null,
+    chronicConditions: parsed.data.chronicConditions || null,
+    allergiesSummary: parsed.data.allergiesSummary || null,
+    notes: parsed.data.notes || null,
+  };
+
   await db.healthProfile.upsert({
-    where: { userId: user.id },
-    update: { ...parsed.data, dateOfBirth: parsed.data.dateOfBirth ? new Date(parsed.data.dateOfBirth) : null },
-    create: { userId: user.id, ...parsed.data, dateOfBirth: parsed.data.dateOfBirth ? new Date(parsed.data.dateOfBirth) : null }
+    where: { userId },
+    update: profileData,
+    create: {
+      ...profileData,
+      user: {
+        connect: { id: userId },
+      },
+    },
   });
-  revalidatePath("/health-profile"); revalidatePath("/dashboard");
+
+  revalidatePath("/health-profile");
+  revalidatePath("/dashboard");
 }
 
 export async function addDoctor(formData: FormData) {
