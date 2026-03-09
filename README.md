@@ -242,33 +242,6 @@ The project includes the following main Prisma models:
 
 ---
 
-## GitHub Topics
-
-```text
-nextjs
-typescript
-prisma
-postgresql
-authjs
-tailwindcss
-shadcn-ui
-health-app
-personal-health-record
-dashboard
-full-stack
-portfolio-project
-```
-
----
-
-## Suggested Repository Description
-
-```text
-A flagship personal health record companion for tracking medications, appointments, lab results, vitals, symptoms, documents, and health insights in one secure dashboard.
-```
-
----
-
 ## Future Improvements
 
 - Edit and delete flows across all entities
