@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { Activity, CalendarClock, ClipboardList, FileBarChart, FileHeart, HeartHandshake, HeartPulse, LayoutDashboard, MoonStar, Pill, ShieldPlus, Stethoscope, SunMedium, Syringe, UserRound, Bell } from "lucide-react";
-import { Avatar, Button, cn } from "@/lib/utils";
+import { Avatar, Button, Card } from "@/components/ui";
+import { cn } from "@/lib/utils";
 
 const items = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
