@@ -7,14 +7,60 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Sex { MALE FEMALE OTHER PREFER_NOT_TO_SAY }
-enum MedicationStatus { ACTIVE INACTIVE COMPLETED }
-enum MedicationLogStatus { TAKEN MISSED SKIPPED }
-enum AppointmentStatus { UPCOMING COMPLETED CANCELLED }
-enum LabFlag { NORMAL BORDERLINE HIGH LOW }
-enum SymptomSeverity { MILD MODERATE SEVERE }
-enum ReminderType { MEDICATION APPOINTMENT VACCINATION LAB_FOLLOW_UP GENERAL }
-enum DocumentType { PRESCRIPTION LAB_RESULT DISCHARGE_SUMMARY CERTIFICATE SCAN OTHER }
+enum Sex {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum MedicationStatus {
+  ACTIVE
+  INACTIVE
+  COMPLETED
+}
+
+enum MedicationLogStatus {
+  TAKEN
+  MISSED
+  SKIPPED
+}
+
+enum AppointmentStatus {
+  UPCOMING
+  COMPLETED
+  CANCELLED
+}
+
+enum LabFlag {
+  NORMAL
+  BORDERLINE
+  HIGH
+  LOW
+}
+
+enum SymptomSeverity {
+  MILD
+  MODERATE
+  SEVERE
+}
+
+enum ReminderType {
+  MEDICATION
+  APPOINTMENT
+  VACCINATION
+  LAB_FOLLOW_UP
+  GENERAL
+}
+
+enum DocumentType {
+  PRESCRIPTION
+  LAB_RESULT
+  DISCHARGE_SUMMARY
+  CERTIFICATE
+  SCAN
+  OTHER
+}
 
 model User {
   id             String   @id @default(cuid())
