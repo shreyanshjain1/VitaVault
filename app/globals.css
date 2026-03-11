@@ -21,6 +21,7 @@
   --destructive: 0 84% 60%;
   --destructive-foreground: 210 40% 98%;
 }
+
 .dark {
   --background: 224 30% 8%;
   --foreground: 210 40% 98%;
@@ -40,9 +41,25 @@
   --destructive: 0 72% 51%;
   --destructive-foreground: 210 40% 98%;
 }
-html, body, :root { height: 100%; }
+
+html,
+body,
+:root {
+  height: 100%;
+}
+
+html,
+body {
+  overflow-x: hidden;
+}
+
 body {
   @apply bg-background text-foreground antialiased;
-  background-image: radial-gradient(circle at top left, rgba(59,130,246,0.08), transparent 25%), radial-gradient(circle at bottom right, rgba(14,165,233,0.08), transparent 20%);
+  background-image:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 25%),
+    radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.08), transparent 20%);
 }
-* { @apply border-border; }
+
+* {
+  @apply border-border;
+}
