@@ -37,6 +37,48 @@ Users can securely manage:
 
 ---
 
+## What's New
+
+- Prevents duplicate same-day medication logs for the same medication schedule
+- Adds a **Skipped** medication action alongside **Taken** and **Missed**
+- Adds medication adherence summary cards on the Medications page
+- Adds GitHub workflow polish with CI typecheck support and contribution templates
+- Keeps the app startup-style, premium, and portfolio-ready while improving real product behavior
+
+---
+
+## Screenshots
+
+> Place these images inside your repo folder exactly as shown below so GitHub can render them.
+> 
+> Example folder path in repo: `.mkdir/`
+
+### Landing Page
+![Landing Page](.mkdir/Landing-Page.jpg)
+
+### Login Page
+![Login Page](.mkdir/Login-Page.jpg)
+
+### Dashboard
+![Dashboard](.mkdir/Dashboard.jpg)
+
+### Health Profile
+![Health Profile](.mkdir/Health-Profile.jpg)
+
+### Medications
+![Medications](.mkdir/Medications.jpg)
+
+### Appointments
+![Appointments](.mkdir/Appointments.jpg)
+
+### Lab Results
+![Lab Results](.mkdir/Lab-Results.jpg)
+
+### Exports Page
+_Exports page screenshot placeholder added — current image file appears incomplete, so replace `.mkdir/Exports-Page.jpg` with a valid screenshot when ready._
+
+---
+
 ## Features
 
 ### Authentication
@@ -61,6 +103,9 @@ Users can securely manage:
 ### Health Records
 - Health profile management
 - Medication management with schedules and adherence tracking
+- Same-day medication logging protection to avoid duplicate dose entries
+- Taken, Missed, and Skipped adherence actions
+- Medication adherence summary cards
 - Appointment tracking with follow-up notes
 - Lab result logging with result flags
 - Vital signs tracker with charts and history
@@ -85,6 +130,13 @@ Users can securely manage:
 - File upload validation
 - Cross-user access prevention on data routes and exports
 
+### Developer Experience
+- TypeScript typecheck script
+- CI workflow for automated type checking
+- GitHub issue templates
+- GitHub pull request template
+- Prisma-powered data modeling
+
 ---
 
 ## Tech Stack
@@ -106,6 +158,10 @@ Users can securely manage:
 
 ```text
 personal-health-record-companion/
+├── .github/
+│   ├── ISSUE_TEMPLATE/
+│   ├── workflows/
+│   └── pull_request_template.md
 ├── app/
 │   ├── (auth)/
 │   ├── appointments/
@@ -121,6 +177,7 @@ personal-health-record-companion/
 │   ├── symptoms/
 │   ├── vaccinations/
 │   ├── vitals/
+│   ├── actions.ts
 │   ├── globals.css
 │   ├── layout.tsx
 │   └── page.tsx
@@ -130,6 +187,8 @@ personal-health-record-companion/
 │   ├── schema.prisma
 │   └── seed.ts
 ├── public/uploads/
+├── types/
+├── .env.example
 ├── middleware.ts
 ├── package.json
 ├── tailwind.config.ts
@@ -205,7 +264,13 @@ npm run seed
 npm run dev
 ```
 
-### 6. Open the app
+### 6. Optional: run typecheck
+
+```bash
+npm run typecheck
+```
+
+### 7. Open the app
 
 ```text
 http://localhost:3000
@@ -239,6 +304,16 @@ The project includes the following main Prisma models:
 - VaccinationRecord
 - MedicalDocument
 - Reminder
+
+---
+
+## Why This Project Stands Out
+
+- Built like a startup MVP, not just a CRUD school project
+- Covers multiple real healthcare record workflows in one product
+- Blends premium UI with practical data handling
+- Includes analytics, adherence tracking, export flows, and printable summary support
+- Strong candidate for a pinned GitHub project and portfolio centerpiece
 
 ---
 
