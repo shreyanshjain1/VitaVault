@@ -1,14 +1,13 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-
 export function PrintSummaryButton() {
   return (
-    <Button
+    <button
       type="button"
       onClick={() => window.print()}
+      className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
     >
       Print / Save PDF
-    </Button>
+    </button>
   );
 }
