@@ -71,7 +71,7 @@ Users can securely manage:
 ![Lab Results](.mkdir/Lab-Results.jpg)
 
 ### Exports Page
-_Exports page screenshot placeholder added — current image file appears incomplete, so replace `.mkdir/Exports-Page.jpg` with a valid screenshot when ready._
+![Exports Page](.mkdir/Exports-Page.jpg)
 
 ---
 
