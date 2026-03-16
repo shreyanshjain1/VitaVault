@@ -49,29 +49,12 @@ Users can securely manage:
 
 ## Screenshots
 
-### Landing Page
-![Landing Page](.mkdir/Landing-Page.jpg)
-
-### Login Page
-![Login Page](.mkdir/Login-Page.jpg)
-
-### Dashboard
-![Dashboard](.mkdir/Dashboard.jpg)
-
-### Health Profile
-![Health Profile](.mkdir/Health-Profile.jpg)
-
-### Medications
-![Medications](.mkdir/Medications.jpg)
-
-### Appointments
-![Appointments](.mkdir/Appointments.jpg)
-
-### Lab Results
-![Lab Results](.mkdir/Lab-Results.jpg)
-
-### Exports Page
-![Exports Page](.mkdir/Exports-Page.jpg)
+| Preview 1 | Preview 2 |
+|---|---|
+| **Landing Page**<br><img src=".mkdir/Landing-Page.jpg" alt="Landing Page" width="100%"> | **Login Page**<br><img src=".mkdir/Login-Page.jpg" alt="Login Page" width="100%"> |
+| **Dashboard**<br><img src=".mkdir/Dashboard.jpg" alt="Dashboard" width="100%"> | **Health Profile**<br><img src=".mkdir/Health-Profile.jpg" alt="Health Profile" width="100%"> |
+| **Medications**<br><img src=".mkdir/Medications.jpg" alt="Medications" width="100%"> | **Appointments**<br><img src=".mkdir/Appointments.jpg" alt="Appointments" width="100%"> |
+| **Lab Results**<br><img src=".mkdir/Lab-Results.jpg" alt="Lab Results" width="100%"> | **Exports Page**<br><img src=".mkdir/Exports-Page.jpg" alt="Exports Page" width="100%"> |
 
 ---
 
