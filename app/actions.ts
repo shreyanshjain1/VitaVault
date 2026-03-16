@@ -1,7 +1,15 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import { MedicationLogStatus, type AppointmentStatus, type DocumentType, type LabFlag, type MedicationStatus, type SymptomSeverity } from "@prisma/client";
+import {
+  MedicationLogStatus,
+  type AppointmentStatus,
+  type DocumentType,
+  type LabFlag,
+  type MedicationStatus,
+  type SymptomSeverity,
+} from "@prisma/client";
+import { endOfDay, startOfDay } from "date-fns";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { signIn } from "@/lib/auth";
@@ -216,25 +224,66 @@ export async function saveMedication(formData: FormData) {
 
 export async function logMedicationStatus(formData: FormData) {
   const user = await requireUser();
-  const medicationId = String(formData.get("medicationId") || "");
+  const medicationId = String(formData.get("medicationId") || "").trim();
+  const scheduleTime = String(formData.get("scheduleTime") || "").trim() || null;
+  const status = String(formData.get("status") || "TAKEN") as MedicationLogStatus;
+  const notes = String(formData.get("notes") || "").trim() || null;
 
   const medication = await db.medication.findFirst({
     where: { id: medicationId, userId: user.id },
+    include: { schedules: true },
   });
 
   if (!medication) {
     throw new Error("Medication not found.");
   }
 
-  await db.medicationLog.create({
-    data: {
+  if (
+    scheduleTime &&
+    !medication.schedules.some((schedule) => schedule.timeOfDay === scheduleTime)
+  ) {
+    throw new Error("Invalid schedule time for this medication.");
+  }
+
+  const now = new Date();
+  const dayStart = startOfDay(now);
+  const dayEnd = endOfDay(now);
+
+  const existingLog = await db.medicationLog.findFirst({
+    where: {
       userId: user.id,
       medicationId,
-      scheduleTime: String(formData.get("scheduleTime") || "").trim() || null,
-      status: String(formData.get("status") || "TAKEN") as MedicationLogStatus,
-      notes: String(formData.get("notes") || "").trim() || null,
+      scheduleTime,
+      loggedAt: {
+        gte: dayStart,
+        lte: dayEnd,
+      },
+    },
+    orderBy: {
+      loggedAt: "desc",
     },
   });
+
+  if (existingLog) {
+    await db.medicationLog.update({
+      where: { id: existingLog.id },
+      data: {
+        status,
+        notes,
+        loggedAt: now,
+      },
+    });
+  } else {
+    await db.medicationLog.create({
+      data: {
+        userId: user.id,
+        medicationId,
+        scheduleTime,
+        status,
+        notes,
+      },
+    });
+  }
 
   revalidatePath("/medications");
   revalidatePath("/dashboard");
@@ -265,6 +314,7 @@ export async function saveAppointment(formData: FormData) {
 export async function saveLabResult(formData: FormData) {
   const user = await requireUser();
   const file = formData.get("file");
+
   let uploadData: {
     fileName?: string;
     filePath?: string;

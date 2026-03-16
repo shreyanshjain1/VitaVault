@@ -77,7 +77,7 @@ export default function HomePage() {
 
         <section className="grid gap-10 py-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:py-16">
           <div className="space-y-8">
-            <Badge className="rounded-full px-4 py-2 text-sm" variant="secondary">
+            <Badge className="rounded-full px-4 py-2 text-sm">
               <ShieldCheck className="mr-2 h-4 w-4" />
               Secure, private, and startup-grade UX
             </Badge>
