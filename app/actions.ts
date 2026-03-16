@@ -40,8 +40,11 @@ export async function signupAction(
     };
   }
 
-  const email = parsed.data.email.toLowerCase();
-  const exists = await db.user.findUnique({ where: { email } });
+  const email = parsed.data.email.toLowerCase().trim();
+
+  const exists = await db.user.findUnique({
+    where: { email },
+  });
 
   if (exists) {
     return {
@@ -65,11 +68,19 @@ export async function signupAction(
     },
   });
 
-  await signIn("credentials", {
-    email,
-    password: parsed.data.password,
-    redirect: false,
-  });
+  try {
+    await signIn("credentials", {
+      email,
+      password: parsed.data.password,
+      redirect: false,
+    });
+  } catch {
+    return {
+      error:
+        "Account created, but automatic sign-in failed. Please sign in manually.",
+      success: null,
+    };
+  }
 
   redirect("/dashboard");
 }
@@ -94,14 +105,14 @@ export async function loginAction(
       password,
       redirect: false,
     });
-
-    redirect("/dashboard");
   } catch {
     return {
       error: "Invalid email or password.",
       success: null,
     };
   }
+
+  redirect("/dashboard");
 }
 
 export async function saveHealthProfile(formData: FormData) {
@@ -190,6 +201,7 @@ export async function addDoctor(formData: FormData) {
 
 export async function saveMedication(formData: FormData) {
   const user = await requireUser();
+
   const scheduleTimes = formData
     .getAll("scheduleTimes")
     .map(String)
@@ -224,14 +236,20 @@ export async function saveMedication(formData: FormData) {
 
 export async function logMedicationStatus(formData: FormData) {
   const user = await requireUser();
+
   const medicationId = String(formData.get("medicationId") || "").trim();
   const scheduleTime = String(formData.get("scheduleTime") || "").trim() || null;
   const status = String(formData.get("status") || "TAKEN") as MedicationLogStatus;
   const notes = String(formData.get("notes") || "").trim() || null;
 
   const medication = await db.medication.findFirst({
-    where: { id: medicationId, userId: user.id },
-    include: { schedules: true },
+    where: {
+      id: medicationId,
+      userId: user.id,
+    },
+    include: {
+      schedules: true,
+    },
   });
 
   if (!medication) {
@@ -313,6 +331,7 @@ export async function saveAppointment(formData: FormData) {
 
 export async function saveLabResult(formData: FormData) {
   const user = await requireUser();
+
   const file = formData.get("file");
 
   let uploadData: {
@@ -413,6 +432,7 @@ export async function saveVaccination(formData: FormData) {
 
 export async function uploadDocument(formData: FormData) {
   const user = await requireUser();
+
   const file = formData.get("file");
 
   if (!(file instanceof File) || file.size === 0) {
