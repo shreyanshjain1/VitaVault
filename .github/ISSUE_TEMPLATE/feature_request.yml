@@ -1,0 +1,28 @@
+name: Feature request
+description: Suggest an improvement for VitaVault
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      placeholder: Users need a better medication adherence overview.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      placeholder: Add adherence summary cards and clearer daily dose actions.
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Why this matters
+      placeholder: This makes the app more useful and more portfolio-worthy.
+    validations:
+      required: true

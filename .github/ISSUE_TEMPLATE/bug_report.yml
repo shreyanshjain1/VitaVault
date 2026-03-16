@@ -1,0 +1,41 @@
+name: Bug report
+description: Report a bug in VitaVault
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is broken?
+      placeholder: Medication logging creates duplicate entries for the same dose on the same day.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Login
+        2. Open Medications
+        3. Click Taken twice for the same schedule
+        4. Check adherence log
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: The same day entry should be updated instead of duplicated.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      placeholder: Multiple duplicate logs are created.
+    validations:
+      required: true
