@@ -49,10 +49,6 @@ Users can securely manage:
 
 ## Screenshots
 
-> Place these images inside your repo folder exactly as shown below so GitHub can render them.
-> 
-> Example folder path in repo: `.mkdir/`
-
 ### Landing Page
 ![Landing Page](.mkdir/Landing-Page.jpg)
 
