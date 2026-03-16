@@ -2,16 +2,29 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
+import { z } from "zod";
+
 import { db } from "@/lib/db";
+
+const credentialsSchema = z.object({
+  email: z.string().trim().email(),
+  password: z.string().min(1),
+});
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
+
+  // IMPORTANT:
+  // Credentials auth must use JWT sessions, not database sessions.
   session: {
     strategy: "jwt",
+    maxAge: 60 * 60 * 24 * 30,
   },
+
   pages: {
     signIn: "/login",
   },
+
   providers: [
     Credentials({
       name: "Credentials",
@@ -26,14 +39,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         },
       },
       async authorize(credentials) {
-        const email = String(credentials?.email || "")
-          .trim()
-          .toLowerCase();
-        const password = String(credentials?.password || "");
+        const parsed = credentialsSchema.safeParse(credentials);
 
-        if (!email || !password) {
+        if (!parsed.success) {
           return null;
         }
+
+        const email = parsed.data.email.toLowerCase().trim();
+        const password = parsed.data.password;
 
         const user = await db.user.findUnique({
           where: { email },
@@ -43,9 +56,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
-        const isValid = await bcrypt.compare(password, user.passwordHash);
+        const passwordMatches = await bcrypt.compare(
+          password,
+          user.passwordHash
+        );
 
-        if (!isValid) {
+        if (!passwordMatches) {
           return null;
         }
 
@@ -58,31 +74,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
+
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        token.sub = user.id;
         token.id = user.id;
-      }
-
-      if (!token.id && token.email) {
-        const dbUser = await db.user.findUnique({
-          where: { email: token.email },
-        });
-
-        if (dbUser) {
-          token.id = dbUser.id;
-        }
+        token.name = user.name;
+        token.email = user.email;
+        token.picture = user.image;
       }
 
       return token;
     },
+
     async session({ session, token }) {
-      if (session.user && token.id) {
-        session.user.id = String(token.id);
+      if (session.user && token.sub) {
+        session.user.id = token.sub;
       }
 
       return session;
     },
   },
-  secret: process.env.AUTH_SECRET,
 });
