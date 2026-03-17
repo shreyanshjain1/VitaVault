@@ -1,117 +1,168 @@
-import Link from "next/link";
+import { FileText, UploadCloud } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { EmptyState, PageHeader } from "@/components/common";
+import { PageHeader, EmptyState } from "@/components/common";
 import { uploadDocument } from "@/app/actions";
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
 import {
+  Badge,
   Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
   Input,
   Label,
   Select,
   Textarea,
 } from "@/components/ui";
-import { formatDate } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
+import { ModuleFormCard, ModuleHero, ModuleListCard, DataCard } from "@/components/module-sections";
+import { PageTransition, StaggerGroup, StaggerItem } from "@/components/page-transition";
 
 export default async function DocumentsPage() {
   const user = await requireUser();
 
-  const docs = await db.medicalDocument.findMany({
+  const documents = await db.medicalDocument.findMany({
     where: { userId: user.id },
     orderBy: { createdAt: "desc" },
   });
 
+  const latest = documents[0] ?? null;
+
   return (
     <AppShell>
-      <PageHeader
-        title="Medical Documents"
-        description="Upload prescriptions, result PDFs, certificates, and scans with validated file handling."
-      />
-
-      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Upload document</CardTitle>
-          </CardHeader>
-
-          <CardContent>
-            <form action={uploadDocument} className="grid gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
-                <Input id="title" name="title" required />
+      <div className="mx-auto max-w-7xl space-y-6 p-6">
+        <PageTransition>
+          <PageHeader
+            title="Documents"
+            description="Upload reports, scans, and supporting clinical files so your workspace remains complete."
+            action={
+              <div className="flex flex-wrap gap-2">
+                <Badge className="bg-background/70">{documents.length} files</Badge>
+                <Badge className="bg-background/70">
+                  {latest ? `Latest: ${formatDateTime(latest.createdAt)}` : "No uploads yet"}
+                </Badge>
               </div>
+            }
+          />
+        </PageTransition>
 
-              <div className="space-y-2">
-                <Label htmlFor="type">Type</Label>
-                <Select id="type" name="type" defaultValue="OTHER">
-                  <option value="PRESCRIPTION">Prescription</option>
-                  <option value="LAB_RESULT">Lab result</option>
-                  <option value="DISCHARGE_SUMMARY">Discharge summary</option>
-                  <option value="CERTIFICATE">Certificate</option>
-                  <option value="SCAN">Scan / image</option>
-                  <option value="OTHER">Other</option>
-                </Select>
-              </div>
+        <PageTransition delay={0.04}>
+          <ModuleHero
+            eyebrow="Medical files"
+            title="Structured clinical document storage"
+            description="Keep source files organized so appointments, labs, and care-team review become easier."
+            stats={[
+              { label: "Stored files", value: documents.length },
+              { label: "Latest upload", value: latest ? latest.title : "—" },
+              { label: "Latest type", value: latest ? latest.type : "—" },
+              { label: "File-linked record", value: latest?.fileName ?? "—" },
+            ]}
+          />
+        </PageTransition>
 
-              <div className="space-y-2">
-                <Label htmlFor="file">File</Label>
-                <Input
-                  id="file"
-                  type="file"
-                  name="file"
-                  accept=".pdf,image/png,image/jpeg,image/webp"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea id="notes" name="notes" />
-              </div>
-
-              <Button type="submit">Upload document</Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-4">
-          {docs.length ? (
-            docs.map((doc) => (
-              <Card key={doc.id}>
-                <CardContent className="pt-6">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-lg font-semibold">{doc.title}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {doc.type.replaceAll("_", " ")}
-                      </p>
-                    </div>
-
-                    <Link href={doc.filePath} className="text-sm text-primary">
-                      Open
-                    </Link>
+        <StaggerGroup delay={0.08}>
+          <div className="grid gap-6 xl:grid-cols-[1.02fr_1.48fr]">
+            <StaggerItem>
+              <ModuleFormCard
+                title="Upload document"
+                description="Store a structured title, type, notes, and the source file."
+              >
+                <form action={uploadDocument} className="grid gap-4">
+                  <div className="space-y-2">
+                    <Label>Title</Label>
+                    <Input name="title" required placeholder="Chest X-Ray Report" />
                   </div>
 
-                  <div className="mt-3 grid gap-2 text-sm">
-                    <p>File name: {doc.fileName}</p>
-                    <p>Uploaded: {formatDate(doc.createdAt)}</p>
-                    <p>Size: {(doc.sizeBytes / 1024).toFixed(1)} KB</p>
-                    <p>Notes: {doc.notes ?? "—"}</p>
+                  <div className="space-y-2">
+                    <Label>Type</Label>
+                    <Select name="type" defaultValue="OTHER">
+                      <option value="LAB_RESULT">Lab Result</option>
+                      <option value="PRESCRIPTION">Prescription</option>
+                      <option value="IMAGING">Imaging</option>
+                      <option value="DISCHARGE_SUMMARY">Discharge Summary</option>
+                      <option value="CONSULT_NOTE">Consult Note</option>
+                      <option value="OTHER">Other</option>
+                    </Select>
                   </div>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <EmptyState
-              title="No documents uploaded"
-              description="Upload prescriptions, lab PDFs, and scans to keep your records centralized."
-            />
-          )}
-        </div>
+
+                  <div className="space-y-2">
+                    <Label>Notes</Label>
+                    <Textarea
+                      name="notes"
+                      className="min-h-[120px]"
+                      placeholder="Add context for what this file contains and why it matters."
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>File</Label>
+                    <Input name="file" type="file" required />
+                  </div>
+
+                  <Button type="submit" size="lg">
+                    <UploadCloud className="mr-2 h-4 w-4" />
+                    Upload document
+                  </Button>
+                </form>
+              </ModuleFormCard>
+            </StaggerItem>
+
+            <StaggerItem>
+              <ModuleListCard
+                title="Document library"
+                description="Review uploaded files and open them when needed."
+              >
+                <div className="space-y-4">
+                  {documents.length ? (
+                    documents.map((document) => (
+                      <DataCard key={document.id}>
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <h3 className="text-lg font-semibold">{document.title}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Uploaded: {formatDateTime(document.createdAt)}
+                            </p>
+                          </div>
+                          <Badge className="bg-background/70">{document.type}</Badge>
+                        </div>
+
+                        <div className="mt-4 rounded-2xl border border-border/60 bg-background/40 p-4">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-primary" />
+                            <p className="text-sm font-medium">Notes</p>
+                          </div>
+                          <p className="mt-2 text-sm text-muted-foreground">
+                            {document.notes ?? "No notes added."}
+                          </p>
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap items-center gap-3">
+                          {document.fileName ? (
+                            <Badge className="bg-background/70">{document.fileName}</Badge>
+                          ) : null}
+
+                          {document.filePath ? (
+                            <a
+                              href={document.filePath}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-sm font-medium text-primary"
+                            >
+                              Open file
+                            </a>
+                          ) : null}
+                        </div>
+                      </DataCard>
+                    ))
+                  ) : (
+                    <EmptyState
+                      title="No documents yet"
+                      description="Upload a medical file to begin building your document library."
+                    />
+                  )}
+                </div>
+              </ModuleListCard>
+            </StaggerItem>
+          </div>
+        </StaggerGroup>
       </div>
     </AppShell>
   );

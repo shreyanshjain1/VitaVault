@@ -1,24 +1,185 @@
+import { ActivitySquare, AlertCircle } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader, EmptyState } from "@/components/common";
 import { saveSymptom } from "@/app/actions";
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Select, Textarea } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Input,
+  Label,
+  Select,
+  Textarea,
+} from "@/components/ui";
 import { formatDateTime } from "@/lib/utils";
+import { ModuleFormCard, ModuleHero, ModuleListCard, DataCard } from "@/components/module-sections";
+import { PageTransition, StaggerGroup, StaggerItem } from "@/components/page-transition";
 
-export default async function SymptomsPage({ searchParams }: { searchParams: Promise<{ q?: string; resolved?: string }> }) {
+export default async function SymptomsPage() {
   const user = await requireUser();
-  const params = await searchParams;
-  const q = params.q ?? "";
-  const resolved = params.resolved ?? "";
+
   const symptoms = await db.symptomEntry.findMany({
-    where: {
-      userId: user.id,
-      ...(q ? { OR: [{ title: { contains: q, mode: "insensitive" } }, { notes: { contains: q, mode: "insensitive" } }, { bodyArea: { contains: q, mode: "insensitive" } }] } : {}),
-      ...(resolved === "true" ? { resolved: true } : {}),
-      ...(resolved === "false" ? { resolved: false } : {})
-    },
-    orderBy: { startedAt: "desc" }
+    where: { userId: user.id },
+    orderBy: { startedAt: "desc" },
   });
-  return <AppShell><PageHeader title="Symptom Journal" description="Capture severity, body area, triggers, and resolution status with searchable history." /><div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]"><Card><CardHeader><CardTitle>Add symptom entry</CardTitle></CardHeader><CardContent><form action={saveSymptom} className="grid gap-4"><div className="space-y-2"><Label>Symptom title</Label><Input name="title" required /></div><div className="space-y-2"><Label>Severity</Label><Select name="severity" defaultValue="MILD"><option value="MILD">Mild</option><option value="MODERATE">Moderate</option><option value="SEVERE">Severe</option></Select></div><div className="space-y-2"><Label>Body area</Label><Input name="bodyArea" /></div><div className="space-y-2"><Label>Date & time</Label><Input type="datetime-local" name="startedAt" required /></div><div className="grid gap-4 md:grid-cols-2"><div className="space-y-2"><Label>Duration</Label><Input name="duration" /></div><div className="space-y-2"><Label>Trigger</Label><Input name="trigger" /></div></div><div className="space-y-2"><Label>Notes</Label><Textarea name="notes" /></div><label className="flex items-center gap-2 text-sm"><input type="checkbox" name="resolved" /> Mark as resolved</label><Button>Add symptom</Button></form></CardContent></Card><div className="space-y-4"><Card><CardContent className="pt-6"><form className="grid gap-3 md:grid-cols-[1fr_180px_auto]"><Input name="q" placeholder="Search symptoms" defaultValue={q} /><Select name="resolved" defaultValue={resolved}><option value="">All statuses</option><option value="false">Unresolved</option><option value="true">Resolved</option></Select><Button>Filter</Button></form></CardContent></Card>{symptoms.length ? symptoms.map(s => <Card key={s.id}><CardContent className="pt-6"><div className="flex items-start justify-between gap-3"><div><h3 className="text-lg font-semibold">{s.title}</h3><p className="text-sm text-muted-foreground">{s.bodyArea ?? "General"} • {s.duration ?? "No duration"}</p></div><Badge>{s.severity}</Badge></div><p className="mt-3 text-sm">Trigger: {s.trigger ?? "—"}</p><p className="text-sm text-muted-foreground">{s.notes ?? "No notes provided."}</p><p className="mt-2 text-xs text-muted-foreground">{formatDateTime(s.startedAt)} • {s.resolved ? "Resolved" : "Unresolved"}</p></CardContent></Card>) : <EmptyState title="No symptom entries" description="Log symptoms to spot patterns and bring better details to your doctor." />}</div></div></AppShell>;
+
+  const unresolved = symptoms.filter((s) => !s.resolved).length;
+  const resolved = symptoms.filter((s) => s.resolved).length;
+
+  return (
+    <AppShell>
+      <div className="mx-auto max-w-7xl space-y-6 p-6">
+        <PageTransition>
+          <PageHeader
+            title="Symptoms"
+            description="Keep a symptom timeline with severity, duration, triggers, and resolution status."
+            action={
+              <div className="flex flex-wrap gap-2">
+                <Badge className="bg-background/70">{symptoms.length} logged</Badge>
+                <Badge className="bg-background/70">{unresolved} unresolved</Badge>
+              </div>
+            }
+          />
+        </PageTransition>
+
+        <PageTransition delay={0.04}>
+          <ModuleHero
+            eyebrow="Symptom journal"
+            title="Track what changed and when"
+            description="This gives better visit prep, better patient summaries, and stronger future AI signal quality."
+            stats={[
+              { label: "Logged symptoms", value: symptoms.length },
+              { label: "Unresolved", value: unresolved },
+              { label: "Resolved", value: resolved },
+              { label: "Latest entry", value: symptoms[0] ? formatDateTime(symptoms[0].startedAt) : "—" },
+            ]}
+          />
+        </PageTransition>
+
+        <StaggerGroup delay={0.08}>
+          <div className="grid gap-6 xl:grid-cols-[1.05fr_1.45fr]">
+            <StaggerItem>
+              <ModuleFormCard
+                title="Log symptom"
+                description="Capture symptom context clearly so it is useful later during review."
+              >
+                <form action={saveSymptom} className="grid gap-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>Title</Label>
+                      <Input name="title" required placeholder="Chest discomfort" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Severity</Label>
+                      <Select name="severity" defaultValue="MILD">
+                        <option value="MILD">Mild</option>
+                        <option value="MODERATE">Moderate</option>
+                        <option value="SEVERE">Severe</option>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Body area</Label>
+                      <Input name="bodyArea" placeholder="Chest" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Started at</Label>
+                      <Input name="startedAt" type="datetime-local" required />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Duration</Label>
+                      <Input name="duration" placeholder="30 minutes" />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>Trigger</Label>
+                      <Input name="trigger" placeholder="After climbing stairs" />
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-border/60 bg-background/40 p-4">
+                    <label className="flex items-center gap-2 text-sm font-medium">
+                      <input type="checkbox" name="resolved" />
+                      Mark as resolved
+                    </label>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Resolution tracking helps timelines and future trend detection.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Notes</Label>
+                    <Textarea
+                      name="notes"
+                      className="min-h-[120px]"
+                      placeholder="Describe the symptom, what it felt like, and anything that helped."
+                    />
+                  </div>
+
+                  <Button type="submit" size="lg">
+                    Add symptom
+                  </Button>
+                </form>
+              </ModuleFormCard>
+            </StaggerItem>
+
+            <StaggerItem>
+              <ModuleListCard
+                title="Symptom timeline"
+                description="A cleaner symptom history with severity and context."
+              >
+                <div className="space-y-4">
+                  {symptoms.length ? (
+                    symptoms.map((symptom) => (
+                      <DataCard key={symptom.id}>
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <h3 className="text-lg font-semibold">{symptom.title}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Started: {formatDateTime(symptom.startedAt)}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge className="bg-background/70">{symptom.severity}</Badge>
+                            <Badge className="bg-background/70">
+                              {symptom.resolved ? "RESOLVED" : "ACTIVE"}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 grid gap-3 text-sm md:grid-cols-2">
+                          <p>Body area: {symptom.bodyArea ?? "—"}</p>
+                          <p>Duration: {symptom.duration ?? "—"}</p>
+                          <p className="md:col-span-2">Trigger: {symptom.trigger ?? "—"}</p>
+                        </div>
+
+                        <div className="mt-4 rounded-2xl border border-border/60 bg-background/40 p-4">
+                          <div className="flex items-center gap-2">
+                            <AlertCircle className="h-4 w-4 text-primary" />
+                            <p className="text-sm font-medium">Notes</p>
+                          </div>
+                          <p className="mt-2 text-sm text-muted-foreground">
+                            {symptom.notes ?? "No notes added."}
+                          </p>
+                        </div>
+                      </DataCard>
+                    ))
+                  ) : (
+                    <EmptyState
+                      title="No symptoms logged yet"
+                      description="Add a symptom entry to begin building your journal."
+                    />
+                  )}
+                </div>
+              </ModuleListCard>
+            </StaggerItem>
+          </div>
+        </StaggerGroup>
+      </div>
+    </AppShell>
+  );
 }

@@ -1,6 +1,7 @@
 import { endOfDay, startOfDay } from "date-fns";
+import { Pill, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { PageHeader, EmptyState } from "@/components/common";
+import { EmptyState, PageHeader } from "@/components/common";
 import { saveMedication, logMedicationStatus } from "@/app/actions";
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
@@ -9,16 +10,22 @@ import {
   Button,
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
   Input,
   Label,
   Select,
   Textarea,
 } from "@/components/ui";
 import { formatDate, formatDateTime } from "@/lib/utils";
+import { ModuleFormCard, ModuleHero, ModuleListCard, DataCard } from "@/components/module-sections";
+import { PageTransition, StaggerGroup, StaggerItem } from "@/components/page-transition";
 
-type DailyLogMap = Map<string, { status: string; loggedAt: Date }>;
+type DailyLogMap = Map<
+  string,
+  {
+    status: string;
+    loggedAt: Date;
+  }
+>;
 
 function makeLogKey(medicationId: string, scheduleTime: string | null) {
   return `${medicationId}__${scheduleTime ?? "unscheduled"}`;
@@ -44,7 +51,7 @@ export default async function MedicationsPage() {
       where: { userId: user.id },
       include: { medication: true },
       orderBy: { loggedAt: "desc" },
-      take: 10,
+      take: 12,
     }),
     db.medicationLog.findMany({
       where: {
@@ -87,314 +94,283 @@ export default async function MedicationsPage() {
   ).length;
 
   const adherencePercent =
-    scheduledDosesToday > 0
-      ? Math.round((takenToday / scheduledDosesToday) * 100)
-      : 0;
+    scheduledDosesToday > 0 ? Math.round((takenToday / scheduledDosesToday) * 100) : 0;
 
   return (
     <AppShell>
-      <PageHeader
-        title="Medication Management"
-        description="Track medications, schedules, status, instructions, and adherence."
-      />
-
-      <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Active medications</p>
-            <p className="mt-2 text-3xl font-semibold">
-              {activeMedications.length}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Scheduled doses today</p>
-            <p className="mt-2 text-3xl font-semibold">{scheduledDosesToday}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Taken today</p>
-            <p className="mt-2 text-3xl font-semibold">{takenToday}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Adherence today</p>
-            <p className="mt-2 text-3xl font-semibold">{adherencePercent}%</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {missedOrSkippedToday} missed or skipped
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Add medication</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form action={saveMedication} className="grid gap-4">
-              <div className="space-y-2">
-                <Label>Name</Label>
-                <Input name="name" required />
+      <div className="mx-auto max-w-7xl space-y-6 p-6">
+        <PageTransition>
+          <PageHeader
+            title="Medications"
+            description="Track active medications, scheduled doses, and daily adherence without losing clinical context."
+            action={
+              <div className="flex flex-wrap gap-2">
+                <Badge className="bg-background/70">{activeMedications.length} active</Badge>
+                <Badge className="bg-background/70">{adherencePercent}% today</Badge>
               </div>
+            }
+          />
+        </PageTransition>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Dosage</Label>
-                  <Input name="dosage" required />
-                </div>
-                <div className="space-y-2">
-                  <Label>Frequency</Label>
-                  <Input name="frequency" required />
-                </div>
-              </div>
+        <PageTransition delay={0.04}>
+          <ModuleHero
+            eyebrow="Medication management"
+            title="Daily adherence workspace"
+            description="This page should feel operational: what is active, what is due, what was missed, and what needs attention."
+            stats={[
+              { label: "Active medications", value: activeMedications.length },
+              { label: "Scheduled doses today", value: scheduledDosesToday },
+              { label: "Taken today", value: takenToday },
+              { label: "Missed / skipped", value: missedOrSkippedToday },
+            ]}
+          />
+        </PageTransition>
 
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label>Schedule time 1</Label>
-                  <Input type="time" name="scheduleTimes" required />
-                </div>
-                <div className="space-y-2">
-                  <Label>Schedule time 2</Label>
-                  <Input type="time" name="scheduleTimes" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Schedule time 3</Label>
-                  <Input type="time" name="scheduleTimes" />
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Start date</Label>
-                  <Input type="date" name="startDate" required />
-                </div>
-                <div className="space-y-2">
-                  <Label>End date</Label>
-                  <Input type="date" name="endDate" />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Prescribing doctor</Label>
-                <Select name="doctorId" defaultValue="">
-                  <option value="">Select doctor</option>
-                  {doctors.map((doctor) => (
-                    <option key={doctor.id} value={doctor.id}>
-                      {doctor.name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select name="status" defaultValue="ACTIVE">
-                  <option value="ACTIVE">Active</option>
-                  <option value="INACTIVE">Inactive</option>
-                  <option value="COMPLETED">Completed</option>
-                </Select>
-              </div>
-
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="active" defaultChecked />
-                Active
-              </label>
-
-              <div className="space-y-2">
-                <Label>Instructions</Label>
-                <Textarea name="instructions" />
-              </div>
-
-              <Button>Add medication</Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-6">
-          {medications.length ? (
-            medications.map((medication) => (
-              <Card key={medication.id}>
-                <CardContent className="pt-6">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-lg font-semibold">{medication.name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {medication.dosage} • {medication.frequency}
-                      </p>
+        <StaggerGroup delay={0.08}>
+          <div className="grid gap-6 xl:grid-cols-[1.05fr_1.45fr]">
+            <StaggerItem>
+              <ModuleFormCard
+                title="Add medication"
+                description="Create a medication plan with schedules, instructions, and doctor linkage."
+              >
+                <form action={saveMedication} className="grid gap-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>Name</Label>
+                      <Input name="name" placeholder="Metformin" required />
                     </div>
-                    <Badge>{medication.status}</Badge>
+
+                    <div className="space-y-2">
+                      <Label>Dosage</Label>
+                      <Input name="dosage" placeholder="500 mg" required />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Frequency</Label>
+                      <Input name="frequency" placeholder="Twice daily" required />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Schedule time 1</Label>
+                      <Input name="scheduleTimes" type="time" required />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Schedule time 2</Label>
+                      <Input name="scheduleTimes" type="time" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Schedule time 3</Label>
+                      <Input name="scheduleTimes" type="time" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Start date</Label>
+                      <Input name="startDate" type="date" required />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>End date</Label>
+                      <Input name="endDate" type="date" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Prescribing doctor</Label>
+                      <Select name="doctorId" defaultValue="">
+                        <option value="">Select doctor</option>
+                        {doctors.map((doctor) => (
+                          <option key={doctor.id} value={doctor.id}>
+                            {doctor.name}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Status</Label>
+                      <Select name="status" defaultValue="ACTIVE">
+                        <option value="ACTIVE">Active</option>
+                        <option value="INACTIVE">Inactive</option>
+                        <option value="COMPLETED">Completed</option>
+                      </Select>
+                    </div>
                   </div>
 
-                  <div className="mt-3 grid gap-2 text-sm md:grid-cols-2">
-                    <p>
-                      Schedule:{" "}
-                      {medication.schedules.map((schedule) => schedule.timeOfDay).join(", ") ||
-                        "—"}
+                  <div className="rounded-2xl border border-border/60 bg-background/40 p-4">
+                    <label className="flex items-center gap-2 text-sm font-medium">
+                      <input type="checkbox" name="active" defaultChecked />
+                      Mark as actively taken
+                    </label>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Active medications contribute to today’s adherence summary and upcoming schedule view.
                     </p>
-                    <p>Doctor: {medication.doctor?.name ?? "—"}</p>
-                    <p>Start: {formatDate(medication.startDate)}</p>
-                    <p>End: {formatDate(medication.endDate)}</p>
                   </div>
 
-                  <p className="mt-3 text-sm text-muted-foreground">
-                    {medication.instructions ?? "No instructions added."}
-                  </p>
+                  <div className="space-y-2">
+                    <Label>Instructions</Label>
+                    <Textarea
+                      name="instructions"
+                      className="min-h-[110px]"
+                      placeholder="Take after meals. Avoid missing evening dose."
+                    />
+                  </div>
 
-                  <div className="mt-4 space-y-3">
-                    {medication.schedules.length ? (
-                      medication.schedules.map((schedule) => {
-                        const todayLog =
-                          todayLogMap.get(
-                            makeLogKey(medication.id, schedule.timeOfDay)
-                          ) ?? null;
+                  <Button type="submit" size="lg">
+                    Add medication
+                  </Button>
+                </form>
+              </ModuleFormCard>
+            </StaggerItem>
 
-                        return (
-                          <div
-                            key={schedule.id}
-                            className="rounded-2xl border p-4"
-                          >
-                            <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                              <div>
-                                <p className="font-medium">
-                                  Dose at {schedule.timeOfDay}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {todayLog
-                                    ? `Latest update today: ${todayLog.status} • ${formatDateTime(
-                                        todayLog.loggedAt
-                                      )}`
-                                    : "No status logged for this dose today yet."}
-                                </p>
-                              </div>
-                              {todayLog ? <Badge>{todayLog.status}</Badge> : null}
+            <StaggerItem>
+              <div className="space-y-6">
+                <ModuleListCard
+                  title="Medication plans"
+                  description="View current plans, today’s dose status, and quick adherence actions."
+                >
+                  <div className="space-y-4">
+                    {medications.length ? (
+                      medications.map((medication) => (
+                        <DataCard key={medication.id}>
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <h3 className="text-lg font-semibold">{medication.name}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                {medication.dosage} • {medication.frequency}
+                              </p>
                             </div>
-
                             <div className="flex flex-wrap gap-2">
-                              <form
-                                action={logMedicationStatus}
-                                className="flex items-center gap-2"
-                              >
-                                <input
-                                  type="hidden"
-                                  name="medicationId"
-                                  value={medication.id}
-                                />
-                                <input
-                                  type="hidden"
-                                  name="scheduleTime"
-                                  value={schedule.timeOfDay}
-                                />
-                                <input
-                                  type="hidden"
-                                  name="status"
-                                  value="TAKEN"
-                                />
-                                <Button size="sm">Taken</Button>
-                              </form>
-
-                              <form
-                                action={logMedicationStatus}
-                                className="flex items-center gap-2"
-                              >
-                                <input
-                                  type="hidden"
-                                  name="medicationId"
-                                  value={medication.id}
-                                />
-                                <input
-                                  type="hidden"
-                                  name="scheduleTime"
-                                  value={schedule.timeOfDay}
-                                />
-                                <input
-                                  type="hidden"
-                                  name="status"
-                                  value="MISSED"
-                                />
-                                <Button size="sm" variant="outline">
-                                  Missed
-                                </Button>
-                              </form>
-
-                              <form
-                                action={logMedicationStatus}
-                                className="flex items-center gap-2"
-                              >
-                                <input
-                                  type="hidden"
-                                  name="medicationId"
-                                  value={medication.id}
-                                />
-                                <input
-                                  type="hidden"
-                                  name="scheduleTime"
-                                  value={schedule.timeOfDay}
-                                />
-                                <input
-                                  type="hidden"
-                                  name="status"
-                                  value="SKIPPED"
-                                />
-                                <Button size="sm" variant="secondary">
-                                  Skipped
-                                </Button>
-                              </form>
+                              <Badge className="bg-background/70">{medication.status}</Badge>
+                              {medication.active ? (
+                                <Badge className="bg-background/70">ACTIVE TRACKING</Badge>
+                              ) : null}
                             </div>
                           </div>
-                        );
-                      })
+
+                          <div className="mt-4 grid gap-3 text-sm md:grid-cols-2">
+                            <p>Schedule: {medication.schedules.map((s) => s.timeOfDay).join(", ") || "—"}</p>
+                            <p>Doctor: {medication.doctor?.name ?? "—"}</p>
+                            <p>Start: {formatDate(medication.startDate)}</p>
+                            <p>End: {formatDate(medication.endDate)}</p>
+                          </div>
+
+                          <p className="mt-4 text-sm text-muted-foreground">
+                            {medication.instructions ?? "No instructions added."}
+                          </p>
+
+                          <div className="mt-5 space-y-3">
+                            {medication.schedules.length ? (
+                              medication.schedules.map((schedule) => {
+                                const todayLog =
+                                  todayLogMap.get(makeLogKey(medication.id, schedule.timeOfDay)) ?? null;
+
+                                return (
+                                  <div
+                                    key={schedule.id}
+                                    className="rounded-2xl border border-border/60 bg-background/40 p-4"
+                                  >
+                                    <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                                      <div>
+                                        <p className="font-medium">Dose at {schedule.timeOfDay}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {todayLog
+                                            ? `Latest update today: ${todayLog.status} • ${formatDateTime(
+                                                todayLog.loggedAt
+                                              )}`
+                                            : "No status logged for this dose today yet."}
+                                        </p>
+                                      </div>
+
+                                      {todayLog ? (
+                                        <Badge className="bg-background/70">{todayLog.status}</Badge>
+                                      ) : null}
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-2">
+                                      <form action={logMedicationStatus}>
+                                        <input type="hidden" name="medicationId" value={medication.id} />
+                                        <input type="hidden" name="scheduleTime" value={schedule.timeOfDay} />
+                                        <input type="hidden" name="status" value="TAKEN" />
+                                        <Button size="sm">Taken</Button>
+                                      </form>
+
+                                      <form action={logMedicationStatus}>
+                                        <input type="hidden" name="medicationId" value={medication.id} />
+                                        <input type="hidden" name="scheduleTime" value={schedule.timeOfDay} />
+                                        <input type="hidden" name="status" value="MISSED" />
+                                        <Button size="sm" variant="outline">
+                                          Missed
+                                        </Button>
+                                      </form>
+
+                                      <form action={logMedicationStatus}>
+                                        <input type="hidden" name="medicationId" value={medication.id} />
+                                        <input type="hidden" name="scheduleTime" value={schedule.timeOfDay} />
+                                        <input type="hidden" name="status" value="SKIPPED" />
+                                        <Button size="sm" variant="secondary">
+                                          Skipped
+                                        </Button>
+                                      </form>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            ) : (
+                              <div className="rounded-2xl border border-dashed border-border/70 p-4 text-sm text-muted-foreground">
+                                No schedule times added for this medication.
+                              </div>
+                            )}
+                          </div>
+                        </DataCard>
+                      ))
                     ) : (
-                      <div className="rounded-2xl border border-dashed p-4 text-sm text-muted-foreground">
-                        No schedule times added for this medication.
-                      </div>
+                      <EmptyState
+                        title="No medications yet"
+                        description="Add your medication plan to begin adherence tracking."
+                      />
                     )}
                   </div>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <EmptyState
-              title="No medications yet"
-              description="Add your medication plan to begin adherence tracking."
-            />
-          )}
+                </ModuleListCard>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent adherence log</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {logs.length ? (
-                logs.map((log) => (
-                  <div key={log.id} className="rounded-2xl border p-4 text-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-medium">{log.medication.name}</p>
-                      <Badge>{log.status}</Badge>
-                    </div>
-                    <p className="text-muted-foreground">
-                      Schedule: {log.scheduleTime ?? "—"}
-                    </p>
-                    <p className="text-muted-foreground">
-                      {formatDateTime(log.loggedAt)}
-                    </p>
+                <ModuleListCard
+                  title="Recent adherence log"
+                  description="Latest medication status updates across your workspace."
+                >
+                  <div className="space-y-3">
+                    {logs.length ? (
+                      logs.map((log) => (
+                        <DataCard key={log.id}>
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="font-medium">{log.medication.name}</p>
+                            <Badge className="bg-background/70">{log.status}</Badge>
+                          </div>
+                          <p className="mt-2 text-sm text-muted-foreground">
+                            Schedule: {log.scheduleTime ?? "—"}
+                          </p>
+                          <p className="text-sm text-muted-foreground">{formatDateTime(log.loggedAt)}</p>
+                        </DataCard>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No adherence logs yet.</p>
+                    )}
                   </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No adherence logs yet.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                </ModuleListCard>
+
+                <Card className="bg-background/40">
+                  <CardContent className="p-5">
+                    <div className="flex items-start gap-3">
+                      <ShieldCheck className="mt-0.5 h-4 w-4 text-primary" />
+                      <p className="text-sm text-muted-foreground">
+                        This page is intentionally designed for future device-linked medication reminder workflows and caregiver visibility.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </StaggerItem>
+          </div>
+        </StaggerGroup>
       </div>
     </AppShell>
   );

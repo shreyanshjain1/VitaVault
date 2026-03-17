@@ -12,11 +12,26 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-  type TooltipProps,
 } from "recharts";
-import type { NameType, ValueType } from "recharts/types/component/DefaultTooltipContent";
+import type {
+  NameType,
+  ValueType,
+} from "recharts/types/component/DefaultTooltipContent";
 
 type GenericDatum = Record<string, string | number | null | undefined>;
+
+type PremiumTooltipPayloadItem = {
+  name?: NameType;
+  value?: ValueType;
+  color?: string;
+};
+
+type PremiumTooltipProps = {
+  active?: boolean;
+  payload?: PremiumTooltipPayloadItem[];
+  label?: string | number;
+  valueSuffix?: string;
+};
 
 const LINE_COLORS = [
   "#2563eb",
@@ -39,7 +54,7 @@ function formatAxisLabel(value: unknown) {
   return String(value ?? "");
 }
 
-function formatTooltipValue(value: ValueType) {
+function formatTooltipValue(value: ValueType | undefined) {
   if (typeof value === "number") {
     return Number.isInteger(value) ? value.toString() : value.toFixed(1);
   }
@@ -83,9 +98,7 @@ function PremiumTooltip({
   payload,
   label,
   valueSuffix,
-}: TooltipProps<ValueType, NameType> & {
-  valueSuffix?: string;
-}) {
+}: PremiumTooltipProps) {
   if (!active || !payload || payload.length === 0) {
     return null;
   }
@@ -97,12 +110,18 @@ function PremiumTooltip({
       </p>
 
       <div className="space-y-2">
-        {payload.map((entry, index) => (
-          <div key={`${entry.name}-${index}`} className="flex items-center justify-between gap-4">
+        {payload.map((entry: PremiumTooltipPayloadItem, index: number) => (
+          <div
+            key={`${String(entry.name ?? "Value")}-${index}`}
+            className="flex items-center justify-between gap-4"
+          >
             <div className="flex items-center gap-2">
               <span
                 className="h-2.5 w-2.5 rounded-full"
-                style={{ backgroundColor: entry.color ?? LINE_COLORS[index % LINE_COLORS.length] }}
+                style={{
+                  backgroundColor:
+                    entry.color ?? LINE_COLORS[index % LINE_COLORS.length],
+                }}
               />
               <span className="text-sm text-foreground/85">
                 {String(entry.name ?? "Value")}
@@ -138,7 +157,11 @@ export function TrendChart({
       {!isEmpty ? (
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={baseChartMargins()}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.16)" vertical={false} />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="rgba(148,163,184,0.16)"
+              vertical={false}
+            />
             <XAxis
               dataKey="label"
               tickLine={false}
@@ -157,7 +180,10 @@ export function TrendChart({
             />
             <Tooltip
               content={<PremiumTooltip />}
-              cursor={{ stroke: "rgba(148,163,184,0.3)", strokeDasharray: "4 4" }}
+              cursor={{
+                stroke: "rgba(148,163,184,0.3)",
+                strokeDasharray: "4 4",
+              }}
             />
 
             {lines.map((line, index) => (
@@ -202,7 +228,11 @@ export function AreaTrendChart({
               </linearGradient>
             </defs>
 
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.16)" vertical={false} />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="rgba(148,163,184,0.16)"
+              vertical={false}
+            />
             <XAxis
               dataKey="label"
               tickLine={false}
@@ -221,7 +251,10 @@ export function AreaTrendChart({
             />
             <Tooltip
               content={<PremiumTooltip />}
-              cursor={{ stroke: "rgba(148,163,184,0.3)", strokeDasharray: "4 4" }}
+              cursor={{
+                stroke: "rgba(148,163,184,0.3)",
+                strokeDasharray: "4 4",
+              }}
             />
 
             <Area
@@ -252,7 +285,11 @@ export function AdherenceChart({
       {!isEmpty ? (
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={baseChartMargins()} barGap={8}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.16)" vertical={false} />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="rgba(148,163,184,0.16)"
+              vertical={false}
+            />
             <XAxis
               dataKey="label"
               tickLine={false}

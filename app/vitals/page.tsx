@@ -1,16 +1,179 @@
+import { HeartPulse, Activity } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader, EmptyState } from "@/components/common";
 import { saveVital } from "@/app/actions";
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
-import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Table, TBody, TD, TH, THead, TR, Textarea } from "@/components/ui";
-import { bpLabel, formatDateTime } from "@/lib/utils";
+import {
+  Badge,
+  Button,
+  Input,
+  Label,
+  Textarea,
+} from "@/components/ui";
+import { formatDateTime } from "@/lib/utils";
+import { ModuleFormCard, ModuleHero, ModuleListCard, DataCard } from "@/components/module-sections";
+import { PageTransition, StaggerGroup, StaggerItem } from "@/components/page-transition";
 
-export default async function VitalsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+export default async function VitalsPage() {
   const user = await requireUser();
-  const params = await searchParams;
-  const q = params.q ?? "";
-  const vitals = await db.vitalRecord.findMany({ where: { userId: user.id }, orderBy: { recordedAt: "desc" } });
-  const filtered = vitals.filter(v => JSON.stringify(v).toLowerCase().includes(q.toLowerCase()));
-  return <AppShell><PageHeader title="Vital Signs Tracker" description="Record vitals, see history, and use charts from the dashboard for trends." /><div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]"><Card><CardHeader><CardTitle>Log vitals</CardTitle></CardHeader><CardContent><form action={saveVital} className="grid gap-4"><div className="space-y-2"><Label>Date & time</Label><Input type="datetime-local" name="recordedAt" required /></div><div className="grid gap-4 md:grid-cols-2"><div className="space-y-2"><Label>Systolic</Label><Input type="number" name="systolic" /></div><div className="space-y-2"><Label>Diastolic</Label><Input type="number" name="diastolic" /></div><div className="space-y-2"><Label>Heart rate</Label><Input type="number" name="heartRate" /></div><div className="space-y-2"><Label>Blood sugar</Label><Input type="number" step="0.1" name="bloodSugar" /></div><div className="space-y-2"><Label>Oxygen saturation</Label><Input type="number" name="oxygenSaturation" /></div><div className="space-y-2"><Label>Temperature (°C)</Label><Input type="number" step="0.1" name="temperatureC" /></div><div className="space-y-2"><Label>Weight (kg)</Label><Input type="number" step="0.1" name="weightKg" /></div></div><div className="space-y-2"><Label>Notes</Label><Textarea name="notes" /></div><Button>Add vital record</Button></form></CardContent></Card><div className="space-y-4"><Card><CardContent className="pt-6"><form className="grid gap-3 md:grid-cols-[1fr_auto]"><Input name="q" placeholder="Search vitals" defaultValue={q} /><Button>Search</Button></form></CardContent></Card>{filtered.length ? <Card><CardContent className="pt-6"><div className="overflow-x-auto"><Table><THead><TR><TH>Date</TH><TH>BP</TH><TH>HR</TH><TH>Sugar</TH><TH>O2</TH><TH>Temp</TH><TH>Weight</TH></TR></THead><TBody>{filtered.map(item => <TR key={item.id}><TD>{formatDateTime(item.recordedAt)}</TD><TD>{bpLabel(item.systolic, item.diastolic)}</TD><TD>{item.heartRate ?? "—"}</TD><TD>{item.bloodSugar ?? "—"}</TD><TD>{item.oxygenSaturation ?? "—"}</TD><TD>{item.temperatureC ?? "—"}</TD><TD>{item.weightKg ?? "—"}</TD></TR>)}</TBody></Table></div></CardContent></Card> : <EmptyState title="No vital records" description="Add your first blood pressure or weight entry to start building trends." />}</div></div></AppShell>;
+
+  const vitals = await db.vitalRecord.findMany({
+    where: { userId: user.id },
+    orderBy: { recordedAt: "desc" },
+  });
+
+  const latest = vitals[0] ?? null;
+
+  return (
+    <AppShell>
+      <div className="mx-auto max-w-7xl space-y-6 p-6">
+        <PageTransition>
+          <PageHeader
+            title="Vitals"
+            description="Capture blood pressure, heart rate, sugar, oxygen, temperature, and weight in one consistent record."
+            action={
+              <div className="flex flex-wrap gap-2">
+                <Badge className="bg-background/70">{vitals.length} entries</Badge>
+                <Badge className="bg-background/70">
+                  {latest ? `Latest: ${formatDateTime(latest.recordedAt)}` : "No entries yet"}
+                </Badge>
+              </div>
+            }
+          />
+        </PageTransition>
+
+        <PageTransition delay={0.04}>
+          <ModuleHero
+            eyebrow="Vital signs"
+            title="Structured vital sign tracking"
+            description="This page is intentionally ready for future Android Health Connect and device-fed readings later."
+            stats={[
+              { label: "Total entries", value: vitals.length },
+              { label: "Latest BP", value: latest?.systolic && latest?.diastolic ? `${latest.systolic}/${latest.diastolic}` : "—" },
+              { label: "Latest heart rate", value: latest?.heartRate ?? "—" },
+              { label: "Latest oxygen", value: latest?.oxygenSaturation ? `${latest.oxygenSaturation}%` : "—" },
+            ]}
+          />
+        </PageTransition>
+
+        <StaggerGroup delay={0.08}>
+          <div className="grid gap-6 xl:grid-cols-[1.05fr_1.45fr]">
+            <StaggerItem>
+              <ModuleFormCard
+                title="Add vital reading"
+                description="Log a manual vital entry now. These same fields can later accept mobile or device-linked readings."
+              >
+                <form action={saveVital} className="grid gap-4">
+                  <div className="space-y-2">
+                    <Label>Recorded at</Label>
+                    <Input name="recordedAt" type="datetime-local" required />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Systolic</Label>
+                      <Input name="systolic" type="number" placeholder="120" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Diastolic</Label>
+                      <Input name="diastolic" type="number" placeholder="80" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Heart rate</Label>
+                      <Input name="heartRate" type="number" placeholder="72" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Blood sugar</Label>
+                      <Input name="bloodSugar" type="number" step="0.01" placeholder="95" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Oxygen saturation</Label>
+                      <Input name="oxygenSaturation" type="number" step="0.01" placeholder="98" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Temperature (°C)</Label>
+                      <Input name="temperatureC" type="number" step="0.01" placeholder="36.8" />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>Weight (kg)</Label>
+                      <Input name="weightKg" type="number" step="0.01" placeholder="81" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Notes</Label>
+                    <Textarea
+                      name="notes"
+                      className="min-h-[110px]"
+                      placeholder="Context, symptoms, activity, or medication timing around this reading."
+                    />
+                  </div>
+
+                  <Button type="submit" size="lg">
+                    Add vital entry
+                  </Button>
+                </form>
+              </ModuleFormCard>
+            </StaggerItem>
+
+            <StaggerItem>
+              <ModuleListCard
+                title="Vital history"
+                description="A cleaner view of each reading so trends are easier to review later."
+              >
+                <div className="space-y-4">
+                  {vitals.length ? (
+                    vitals.map((vital) => (
+                      <DataCard key={vital.id}>
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <h3 className="text-lg font-semibold">{formatDateTime(vital.recordedAt)}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Manual vital record entry
+                            </p>
+                          </div>
+                          <Badge className="bg-background/70">Vital record</Badge>
+                        </div>
+
+                        <div className="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-3">
+                          <p>Blood pressure: {vital.systolic && vital.diastolic ? `${vital.systolic}/${vital.diastolic}` : "—"}</p>
+                          <p>Heart rate: {vital.heartRate ?? "—"}</p>
+                          <p>Blood sugar: {vital.bloodSugar ?? "—"}</p>
+                          <p>Oxygen saturation: {vital.oxygenSaturation ?? "—"}</p>
+                          <p>Temperature: {vital.temperatureC ?? "—"}</p>
+                          <p>Weight: {vital.weightKg ?? "—"}</p>
+                        </div>
+
+                        <div className="mt-4 rounded-2xl border border-border/60 bg-background/40 p-4">
+                          <div className="flex items-center gap-2">
+                            <Activity className="h-4 w-4 text-primary" />
+                            <p className="text-sm font-medium">Notes</p>
+                          </div>
+                          <p className="mt-2 text-sm text-muted-foreground">
+                            {vital.notes ?? "No notes added."}
+                          </p>
+                        </div>
+                      </DataCard>
+                    ))
+                  ) : (
+                    <EmptyState
+                      title="No vital records yet"
+                      description="Add manual readings to begin building your timeline."
+                    />
+                  )}
+                </div>
+              </ModuleListCard>
+            </StaggerItem>
+          </div>
+        </StaggerGroup>
+      </div>
+    </AppShell>
+  );
 }
