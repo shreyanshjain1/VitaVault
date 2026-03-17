@@ -23,6 +23,14 @@ export type AuthActionState = {
   success: string | null;
 };
 
+function safeCallbackUrl(raw: unknown) {
+  const value = typeof raw === "string" ? raw.trim() : "";
+  if (!value) return "/dashboard";
+  if (!value.startsWith("/")) return "/dashboard";
+  if (value.startsWith("//")) return "/dashboard";
+  return value;
+}
+
 export async function signupAction(
   _: AuthActionState,
   formData: FormData
@@ -40,17 +48,10 @@ export async function signupAction(
     };
   }
 
-  const email = parsed.data.email.toLowerCase().trim();
-
-  const exists = await db.user.findUnique({
-    where: { email },
-  });
-
+  const email = parsed.data.email.toLowerCase();
+  const exists = await db.user.findUnique({ where: { email } });
   if (exists) {
-    return {
-      error: "An account with that email already exists.",
-      success: null,
-    };
+    return { error: "An account with that email already exists.", success: null };
   }
 
   const passwordHash = await bcrypt.hash(parsed.data.password, 12);
@@ -60,29 +61,18 @@ export async function signupAction(
       name: parsed.data.name,
       email,
       passwordHash,
-      healthProfile: {
-        create: {
-          fullName: parsed.data.name,
-        },
-      },
+      healthProfile: { create: { fullName: parsed.data.name } },
     },
   });
 
-  try {
-    await signIn("credentials", {
-      email,
-      password: parsed.data.password,
-      redirect: false,
-    });
-  } catch {
-    return {
-      error:
-        "Account created, but automatic sign-in failed. Please sign in manually.",
-      success: null,
-    };
-  }
+  await signIn("credentials", {
+    email,
+    password: parsed.data.password,
+    redirect: false,
+  });
 
-  redirect("/dashboard");
+  const callbackUrl = safeCallbackUrl(formData.get("callbackUrl"));
+  redirect(callbackUrl);
 }
 
 export async function loginAction(
@@ -91,37 +81,24 @@ export async function loginAction(
 ): Promise<AuthActionState> {
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const password = String(formData.get("password") || "");
+  const callbackUrl = safeCallbackUrl(formData.get("callbackUrl"));
 
   if (!email || !password) {
-    return {
-      error: "Email and password are required.",
-      success: null,
-    };
+    return { error: "Email and password are required.", success: null };
   }
 
   try {
-    await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    await signIn("credentials", { email, password, redirect: false });
+    redirect(callbackUrl);
   } catch {
-    return {
-      error: "Invalid email or password.",
-      success: null,
-    };
+    return { error: "Invalid email or password.", success: null };
   }
-
-  redirect("/dashboard");
 }
 
 export async function saveHealthProfile(formData: FormData) {
   const user = await requireUser();
   const userId = user.id;
-
-  if (!userId) {
-    throw new Error("Unauthorized");
-  }
+  if (!userId) throw new Error("Unauthorized");
 
   const parsed = healthProfileSchema.safeParse({
     fullName: formData.get("fullName"),
@@ -143,9 +120,7 @@ export async function saveHealthProfile(formData: FormData) {
 
   const profileData = {
     fullName: parsed.data.fullName,
-    dateOfBirth: parsed.data.dateOfBirth
-      ? new Date(parsed.data.dateOfBirth)
-      : null,
+    dateOfBirth: parsed.data.dateOfBirth ? new Date(parsed.data.dateOfBirth) : null,
     sex: parsed.data.sex,
     bloodType: parsed.data.bloodType || null,
     heightCm:
@@ -168,9 +143,7 @@ export async function saveHealthProfile(formData: FormData) {
     update: profileData,
     create: {
       ...profileData,
-      user: {
-        connect: { id: userId },
-      },
+      user: { connect: { id: userId } },
     },
   });
 
@@ -223,9 +196,7 @@ export async function saveMedication(formData: FormData) {
       status: String(formData.get("status") || "ACTIVE") as MedicationStatus,
       active: formData.get("active") === "on",
       schedules: {
-        create: scheduleTimes.map((time) => ({
-          timeOfDay: time,
-        })),
+        create: scheduleTimes.map((time) => ({ timeOfDay: time })),
       },
     },
   });
@@ -243,18 +214,11 @@ export async function logMedicationStatus(formData: FormData) {
   const notes = String(formData.get("notes") || "").trim() || null;
 
   const medication = await db.medication.findFirst({
-    where: {
-      id: medicationId,
-      userId: user.id,
-    },
-    include: {
-      schedules: true,
-    },
+    where: { id: medicationId, userId: user.id },
+    include: { schedules: true },
   });
 
-  if (!medication) {
-    throw new Error("Medication not found.");
-  }
+  if (!medication) throw new Error("Medication not found.");
 
   if (
     scheduleTime &&
@@ -272,34 +236,19 @@ export async function logMedicationStatus(formData: FormData) {
       userId: user.id,
       medicationId,
       scheduleTime,
-      loggedAt: {
-        gte: dayStart,
-        lte: dayEnd,
-      },
+      loggedAt: { gte: dayStart, lte: dayEnd },
     },
-    orderBy: {
-      loggedAt: "desc",
-    },
+    orderBy: { loggedAt: "desc" },
   });
 
   if (existingLog) {
     await db.medicationLog.update({
       where: { id: existingLog.id },
-      data: {
-        status,
-        notes,
-        loggedAt: now,
-      },
+      data: { status, notes, loggedAt: now },
     });
   } else {
     await db.medicationLog.create({
-      data: {
-        userId: user.id,
-        medicationId,
-        scheduleTime,
-        status,
-        notes,
-      },
+      data: { userId: user.id, medicationId, scheduleTime, status, notes },
     });
   }
 
@@ -333,7 +282,6 @@ export async function saveLabResult(formData: FormData) {
   const user = await requireUser();
 
   const file = formData.get("file");
-
   let uploadData: {
     fileName?: string;
     filePath?: string;
@@ -434,7 +382,6 @@ export async function uploadDocument(formData: FormData) {
   const user = await requireUser();
 
   const file = formData.get("file");
-
   if (!(file instanceof File) || file.size === 0) {
     throw new Error("A file is required.");
   }

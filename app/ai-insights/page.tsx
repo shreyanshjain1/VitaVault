@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
-
 import { AppShell } from "@/components/app-shell";
+import { PageHeader, StatusPill } from "@/components/common";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
+import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
 import { generateOwnAiInsightAction } from "./actions";
 
 function parseJsonArray<T>(value: string | null): T[] {
@@ -24,6 +25,8 @@ export default async function AiInsightsPage({
   const user = await requireUser();
   const params = (await searchParams) ?? {};
 
+  const isAiConfigured = Boolean(process.env.OPENAI_API_KEY?.trim());
+
   const [insights, sharedPatients] = await Promise.all([
     db.aiInsight.findMany({
       where: { ownerUserId: user.id },
@@ -42,11 +45,7 @@ export default async function AiInsightsPage({
             id: true,
             name: true,
             email: true,
-            healthProfile: {
-              select: {
-                fullName: true,
-              },
-            },
+            healthProfile: { select: { fullName: true } },
           },
         },
       },
@@ -62,169 +61,196 @@ export default async function AiInsightsPage({
 
   return (
     <AppShell>
-      <div className="space-y-8">
-        <section className="rounded-[32px] border border-zinc-200/70 bg-white/90 p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
-          <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-500">
-                AI Insights
-              </p>
-              <h1 className="mt-3 text-3xl font-semibold">Health summary assistant</h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-400">
-                Generate patient-friendly summaries, trend flags, and follow-up talking points using the health records already stored in VitaVault.
-              </p>
-
-              <div className="mt-5 flex flex-wrap gap-3">
-                <form action={generateOwnAiInsightAction}>
-                  <button
-                    type="submit"
-                    className="rounded-2xl bg-zinc-950 px-4 py-2.5 text-sm font-medium text-white dark:bg-white dark:text-black"
-                  >
-                    Generate new insight
-                  </button>
-                </form>
-
-                <Link
-                  href="/care-team"
-                  className="rounded-2xl border px-4 py-2.5 text-sm font-medium"
+      <div className="mx-auto max-w-7xl space-y-6 p-6">
+        <PageHeader
+          title="AI Insights"
+          description="Generate patient-friendly summaries, trend flags, and follow-up talking points from the records already stored in VitaVault."
+          action={
+            <div className="flex flex-wrap gap-3">
+              <form action={generateOwnAiInsightAction}>
+                <button
+                  type="submit"
+                  disabled={!isAiConfigured}
+                  className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Open Care Team
-                </Link>
-              </div>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Generate new insight
+                </button>
+              </form>
+              <Link
+                href="/care-team"
+                className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"
+              >
+                Open Care Team
+              </Link>
             </div>
+          }
+        />
 
-            <div className="rounded-3xl border border-violet-200 bg-violet-50/80 p-5 dark:border-violet-900/50 dark:bg-violet-950/25">
-              <div className="flex items-start gap-3">
-                <div className="rounded-2xl bg-violet-600 p-2 text-white">
-                  <Sparkles className="h-4 w-4" />
-                </div>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="font-semibold">AI visibility fixed</p>
-                  <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                    This page is the main entry point for owner-generated AI insights.
-                  </p>
+                  <CardTitle>Latest insight</CardTitle>
+                  <CardDescription className="mt-1">
+                    A concise summary + trend flags built from your stored records.
+                  </CardDescription>
                 </div>
+                {isAiConfigured ? (
+                  <StatusPill tone="success">AI configured</StatusPill>
+                ) : (
+                  <StatusPill tone="warning">Not configured</StatusPill>
+                )}
               </div>
-            </div>
-          </div>
-        </section>
+            </CardHeader>
+            <CardContent>
+              {params.error === "quota" ? (
+                <div className="mb-4 rounded-3xl border border-amber-200/70 bg-amber-50/70 p-4 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
+                  OpenAI API quota/billing is not available for this project. Add billing/credits, then retry.
+                </div>
+              ) : null}
 
-        {params.error === "quota" ? (
-          <section className="rounded-3xl border border-amber-300 bg-amber-50 p-5 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
-            OpenAI API quota is exhausted or billing is not active for this API project. Add credits / payment method in your OpenAI API billing, then try again.
-          </section>
-        ) : null}
+              {params.error === "not_configured" ? (
+                <div className="mb-4 rounded-3xl border border-amber-200/70 bg-amber-50/70 p-4 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
+                  AI is not configured. Set <span className="font-mono">OPENAI_API_KEY</span> (and optional{" "}
+                  <span className="font-mono">OPENAI_MODEL</span>), then retry.
+                </div>
+              ) : null}
 
-        {params.error === "general" ? (
-          <section className="rounded-3xl border border-red-300 bg-red-50 p-5 text-sm text-red-900 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-100">
-            AI insight generation failed. Please try again.
-          </section>
-        ) : null}
+              {params.error === "general" ? (
+                <div className="mb-4 rounded-3xl border border-rose-200/70 bg-rose-50/70 p-4 text-sm text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200">
+                  AI insight generation failed. Please try again.
+                </div>
+              ) : null}
 
-        {params.success === "1" ? (
-          <section className="rounded-3xl border border-emerald-300 bg-emerald-50 p-5 text-sm text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100">
-            AI insight generated successfully.
-          </section>
-        ) : null}
+              {params.success === "1" ? (
+                <div className="mb-4 rounded-3xl border border-emerald-200/70 bg-emerald-50/70 p-4 text-sm text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-200">
+                  AI insight generated successfully.
+                </div>
+              ) : null}
 
-        <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-[28px] border border-zinc-200/70 bg-white/90 p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
-            <h2 className="text-xl font-semibold">Latest insight</h2>
+              {latest ? (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className="bg-background/70">{latest.adherenceRisk.toUpperCase()} risk</Badge>
+                    <Badge className="bg-background/70">
+                      Generated: {latest.createdAt.toLocaleString()}
+                    </Badge>
+                  </div>
 
-            {latest ? (
-              <div className="mt-5 space-y-4">
-                <div className="rounded-3xl border border-zinc-200/80 p-5 dark:border-zinc-800">
-                  <p className="font-semibold">{latest.title}</p>
-                  <p className="mt-2 text-sm leading-6">{latest.summary}</p>
-                  <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
-                    Adherence risk: {latest.adherenceRisk}
-                  </p>
-                  <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-500">
-                    Generated: {latest.createdAt.toLocaleString()}
+                  <div className="rounded-3xl border border-border/60 bg-background/40 p-5">
+                    <p className="text-base font-semibold">{latest.title}</p>
+                    <p className="mt-2 text-sm text-muted-foreground">{latest.summary}</p>
+                  </div>
+
+                  <div className="rounded-3xl border border-border/60 bg-background/40 p-5">
+                    <p className="text-sm font-medium">Trend flags</p>
+                    <ul className="mt-2 space-y-2 text-sm text-muted-foreground">
+                      {latestFlags.length ? (
+                        latestFlags.map((flag, idx) => (
+                          <li key={idx} className="flex gap-2">
+                            <span className="font-medium text-foreground/80">[{flag.severity}]</span>
+                            <span>{flag.message}</span>
+                          </li>
+                        ))
+                      ) : (
+                        <li>No trend flags found.</li>
+                      )}
+                    </ul>
+                  </div>
+
+                  <div className="rounded-3xl border border-border/60 bg-background/40 p-5">
+                    <p className="text-xs text-muted-foreground">{latest.disclaimer}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-3xl border border-border/60 bg-background/40 p-5">
+                  <p className="text-sm font-medium">No AI insight yet</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Generate your first insight to produce a patient-friendly summary from your stored data.
                   </p>
                 </div>
+              )}
+            </CardContent>
+          </Card>
 
-                <div className="rounded-3xl border border-zinc-200/80 p-5 dark:border-zinc-800">
-                  <p className="font-semibold">Trend flags</p>
-                  <ul className="mt-3 list-disc space-y-2 pl-5 text-sm">
-                    {latestFlags.length ? (
-                      latestFlags.map((flag, idx) => (
-                        <li key={`${flag.type}-${idx}`}>
-                          [{flag.severity}] {flag.message}
-                        </li>
-                      ))
-                    ) : (
-                      <li>No trend flags found.</li>
-                    )}
-                  </ul>
-                </div>
-
-                <p className="text-xs text-zinc-500 dark:text-zinc-500">
-                  {latest.disclaimer}
-                </p>
-              </div>
-            ) : (
-              <p className="mt-5 text-sm text-zinc-600 dark:text-zinc-400">
-                No AI insight generated yet. Use the button above to create your first one.
-              </p>
-            )}
-          </div>
-
-          <div className="rounded-[28px] border border-zinc-200/70 bg-white/90 p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
-            <h2 className="text-xl font-semibold">Shared patients with AI permission</h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              These are patient workspaces where your current shared-access permissions allow AI generation.
-            </p>
-
-            <div className="mt-5 space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Shared patients (AI allowed)</CardTitle>
+              <CardDescription className="mt-1">
+                Workspaces where your shared permissions allow AI generation.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
               {sharedPatients.length === 0 ? (
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                <div className="rounded-3xl border border-border/60 bg-background/40 p-4 text-sm text-muted-foreground">
                   No shared patients currently allow AI generation.
-                </p>
+                </div>
               ) : (
                 sharedPatients.map((grant) => (
-                  <div key={grant.id} className="rounded-3xl border border-zinc-200/80 p-4 dark:border-zinc-800">
-                    <p className="font-medium">
+                  <div
+                    key={grant.id}
+                    className="rounded-3xl border border-border/60 bg-background/40 p-4"
+                  >
+                    <p className="text-sm font-medium">
                       {grant.owner.healthProfile?.fullName ?? grant.owner.name ?? "Patient"}
                     </p>
-                    <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                      {grant.owner.email}
-                    </p>
-                    <div className="mt-4">
-                      <Link
-                        href={`/patient/${grant.owner.id}`}
-                        className="inline-flex rounded-2xl bg-zinc-950 px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-black"
-                      >
-                        Open shared patient workspace
-                      </Link>
-                    </div>
+                    <p className="text-sm text-muted-foreground">{grant.owner.email}</p>
+                    <Link
+                      href={`/patient/${grant.owner.id}`}
+                      className="mt-3 inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-3 py-2 text-sm font-medium hover:bg-muted/50"
+                    >
+                      Open workspace
+                    </Link>
                   </div>
                 ))
               )}
-            </div>
-          </div>
-        </section>
 
-        <section className="rounded-[28px] border border-zinc-200/70 bg-white/90 p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
-          <h2 className="text-xl font-semibold">Insight history</h2>
-          <div className="mt-5 space-y-4">
+              <div className="rounded-3xl border border-border/60 bg-background/40 p-4 text-xs text-muted-foreground">
+                AI insights are informational and non-diagnostic. Use them to prepare better questions for clinicians.
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Insight history</CardTitle>
+            <CardDescription className="mt-1">
+              Your last 12 generated insights.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             {insights.length === 0 ? (
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">No AI insight history yet.</p>
+              <div className="rounded-3xl border border-border/60 bg-background/40 p-5 text-sm text-muted-foreground">
+                No AI insight history yet.
+              </div>
             ) : (
-              insights.map((item) => (
-                <div key={item.id} className="rounded-3xl border border-zinc-200/80 p-4 dark:border-zinc-800">
-                  <p className="font-medium">{item.title}</p>
-                  <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-                    {item.summary}
-                  </p>
-                  <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-500">
-                    {item.createdAt.toLocaleString()}
-                  </p>
-                </div>
-              ))
+              <div className="grid gap-4 md:grid-cols-2">
+                {insights.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-3xl border border-border/60 bg-background/40 p-5"
+                  >
+                    <p className="text-sm font-semibold">{item.title}</p>
+                    <p className="mt-2 line-clamp-4 text-sm text-muted-foreground">
+                      {item.summary}
+                    </p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <Badge className="bg-background/70">
+                        {item.createdAt.toLocaleString()}
+                      </Badge>
+                      <Badge className="bg-background/70">
+                        {String(item.adherenceRisk).toUpperCase()} risk
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
-          </div>
-        </section>
+          </CardContent>
+        </Card>
       </div>
     </AppShell>
   );

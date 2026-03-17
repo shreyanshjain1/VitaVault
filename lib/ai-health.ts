@@ -180,12 +180,8 @@ const insightSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
-    title: {
-      type: "string",
-    },
-    summary: {
-      type: "string",
-    },
+    title: { type: "string" },
+    summary: { type: "string" },
     adherenceRisk: {
       type: "string",
       enum: ["low", "medium", "high"],
@@ -204,28 +200,20 @@ const insightSchema = {
             type: "string",
             enum: ["info", "warning", "urgent"],
           },
-          message: {
-            type: "string",
-          },
+          message: { type: "string" },
         },
         required: ["type", "severity", "message"],
       },
     },
     suggestedQuestions: {
       type: "array",
-      items: {
-        type: "string",
-      },
+      items: { type: "string" },
     },
     recommendedFollowUp: {
       type: "array",
-      items: {
-        type: "string",
-      },
+      items: { type: "string" },
     },
-    disclaimer: {
-      type: "string",
-    },
+    disclaimer: { type: "string" },
   },
   required: [
     "title",
@@ -238,58 +226,113 @@ const insightSchema = {
   ],
 };
 
-export async function generatePatientHealthInsight(args: {
+function buildFallbackInsight(context: Awaited<ReturnType<typeof buildPatientInsightContext>>): PatientInsightResult {
+  const highOrLowLabs = context.labs.filter((item) => item.flag !== "NORMAL");
+  const unresolvedSymptoms = context.symptoms.filter((item) => !item.resolved);
+  const recentVitals = context.vitals.slice(0, 5);
+  const missedMedicationLogs = context.medications.flatMap((m) => m.logs).filter((log) => log.status === "MISSED");
+
+  const trendFlags: PatientInsightResult["trendFlags"] = [];
+
+  if (highOrLowLabs.length > 0) {
+    trendFlags.push({
+      type: "labs",
+      severity: highOrLowLabs.length >= 2 ? "warning" : "info",
+      message: `${highOrLowLabs.length} recent lab result(s) were marked outside normal range.`,
+    });
+  }
+
+  const highBpCount = recentVitals.filter(
+    (item) => (item.systolic ?? 0) >= 140 || (item.diastolic ?? 0) >= 90
+  ).length;
+
+  if (highBpCount > 0) {
+    trendFlags.push({
+      type: "vitals",
+      severity: highBpCount >= 2 ? "warning" : "info",
+      message: `${highBpCount} recent blood pressure reading(s) appear elevated.`,
+    });
+  }
+
+  const highSugarCount = recentVitals.filter((item) => (item.bloodSugar ?? 0) >= 180).length;
+
+  if (highSugarCount > 0) {
+    trendFlags.push({
+      type: "vitals",
+      severity: highSugarCount >= 2 ? "warning" : "info",
+      message: `${highSugarCount} recent blood sugar reading(s) appear higher than expected.`,
+    });
+  }
+
+  if (missedMedicationLogs.length > 0) {
+    trendFlags.push({
+      type: "medications",
+      severity: missedMedicationLogs.length >= 3 ? "warning" : "info",
+      message: `${missedMedicationLogs.length} missed medication log(s) were recorded recently.`,
+    });
+  }
+
+  if (unresolvedSymptoms.length > 0) {
+    trendFlags.push({
+      type: "symptoms",
+      severity: unresolvedSymptoms.some((s) => s.severity === "SEVERE") ? "warning" : "info",
+      message: `${unresolvedSymptoms.length} symptom entry/entries remain unresolved.`,
+    });
+  }
+
+  if (trendFlags.length === 0) {
+    trendFlags.push({
+      type: "general",
+      severity: "info",
+      message: "No major warning patterns were detected in the currently saved records.",
+    });
+  }
+
+  const adherenceRisk: "low" | "medium" | "high" =
+    missedMedicationLogs.length >= 4 ? "high" : missedMedicationLogs.length >= 1 ? "medium" : "low";
+
+  const patientName = context.patient.name || "the patient";
+
+  return {
+    title: "Demo health insight",
+    summary:
+      `This is a locally generated fallback summary for ${patientName}. ` +
+      `VitaVault reviewed medications, appointments, labs, vitals, and symptoms already stored in the database. ` +
+      `The current focus should be medication consistency, reviewing any abnormal lab or vital trends, and preparing follow-up questions for the next consultation.`,
+    adherenceRisk,
+    trendFlags,
+    suggestedQuestions: [
+      "Are any of the abnormal or borderline results already being monitored by a clinician?",
+      "Have there been any recent missed doses, side effects, or schedule changes?",
+      "Which symptoms are improving, and which ones are still ongoing?",
+    ],
+    recommendedFollowUp: [
+      "Review recent abnormal labs and elevated vitals with a healthcare professional.",
+      "Confirm the medication routine and reinforce logging consistency.",
+      "Track repeat readings to see whether current patterns are isolated or persistent.",
+    ],
+    disclaimer:
+      "Demo mode: this fallback insight was generated locally because live AI was unavailable. It is informational only and not a diagnosis.",
+  };
+}
+
+async function saveInsight(args: {
   ownerUserId: string;
   actorUserId: string;
+  result: PatientInsightResult;
+  metadata?: Record<string, unknown>;
 }) {
-  if (!openai) {
-    throw new Error("OPENAI_API_KEY is missing.");
-  }
-
-  const context = await buildPatientInsightContext(args.ownerUserId);
-
-  const response = await openai.responses.create({
-    model: OPENAI_MODEL,
-    instructions:
-      [
-        "You are VitaVault Care Insight, an informational healthcare assistant.",
-        "You are NOT diagnosing, prescribing, replacing a doctor, or issuing emergency triage decisions.",
-        "Use only the structured patient data provided.",
-        "Give concise, practical, non-diagnostic observations.",
-        "Flag patterns worth discussing with a clinician.",
-        "Always include a disclaimer that the output is informational and not a diagnosis.",
-        "Return only valid JSON matching the schema.",
-      ].join(" "),
-    input: JSON.stringify(context),
-    text: {
-      format: {
-        type: "json_schema",
-        name: "vitavault_patient_insight",
-        strict: true,
-        schema: insightSchema,
-      },
-    },
-  });
-
-  const raw = response.output_text?.trim();
-
-  if (!raw) {
-    throw new Error("AI did not return structured output.");
-  }
-
-  const parsed = JSON.parse(raw) as PatientInsightResult;
-
   const saved = await db.aiInsight.create({
     data: {
       ownerUserId: args.ownerUserId,
       generatedByUserId: args.actorUserId,
-      title: parsed.title,
-      summary: parsed.summary,
-      adherenceRisk: parsed.adherenceRisk,
-      trendFlagsJson: JSON.stringify(parsed.trendFlags),
-      suggestedQuestionsJson: JSON.stringify(parsed.suggestedQuestions),
-      recommendedFollowUpJson: JSON.stringify(parsed.recommendedFollowUp),
-      disclaimer: parsed.disclaimer,
+      title: args.result.title,
+      summary: args.result.summary,
+      adherenceRisk: args.result.adherenceRisk,
+      trendFlagsJson: JSON.stringify(args.result.trendFlags),
+      suggestedQuestionsJson: JSON.stringify(args.result.suggestedQuestions),
+      recommendedFollowUpJson: JSON.stringify(args.result.recommendedFollowUp),
+      disclaimer: args.result.disclaimer,
     },
   });
 
@@ -299,11 +342,88 @@ export async function generatePatientHealthInsight(args: {
     action: "AI_INSIGHT_GENERATED",
     targetType: "AiInsight",
     targetId: saved.id,
-    metadata: {
-      model: OPENAI_MODEL,
-      adherenceRisk: parsed.adherenceRisk,
-    },
+    metadata: args.metadata ?? null,
   });
 
   return saved;
+}
+
+export async function generatePatientHealthInsight(args: {
+  ownerUserId: string;
+  actorUserId: string;
+}) {
+  const context = await buildPatientInsightContext(args.ownerUserId);
+
+  if (!openai) {
+    const fallback = buildFallbackInsight(context);
+    return saveInsight({
+      ownerUserId: args.ownerUserId,
+      actorUserId: args.actorUserId,
+      result: fallback,
+      metadata: {
+        mode: "fallback",
+        reason: "OPENAI_API_KEY missing",
+      },
+    });
+  }
+
+  try {
+    const response = await openai.responses.create({
+      model: OPENAI_MODEL,
+      instructions: [
+        "You are VitaVault Care Insight, an informational healthcare assistant.",
+        "You are NOT diagnosing, prescribing, replacing a doctor, or issuing emergency triage decisions.",
+        "Use only the structured patient data provided.",
+        "Give concise, practical, non-diagnostic observations.",
+        "Flag patterns worth discussing with a clinician.",
+        "Always include a disclaimer that the output is informational and not a diagnosis.",
+        "Return only valid JSON matching the schema.",
+      ].join(" "),
+      input: JSON.stringify(context),
+      text: {
+        format: {
+          type: "json_schema",
+          name: "vitavault_patient_insight",
+          strict: true,
+          schema: insightSchema,
+        },
+      },
+    });
+
+    const raw = response.output_text?.trim();
+
+    if (!raw) {
+      throw new Error("AI did not return structured output.");
+    }
+
+    const parsed = JSON.parse(raw) as PatientInsightResult;
+
+    return saveInsight({
+      ownerUserId: args.ownerUserId,
+      actorUserId: args.actorUserId,
+      result: parsed,
+      metadata: {
+        mode: "live",
+        model: OPENAI_MODEL,
+        adherenceRisk: parsed.adherenceRisk,
+      },
+    });
+  } catch (error) {
+    const fallback = buildFallbackInsight(context);
+    const message = error instanceof Error ? error.message : "Unknown AI error";
+
+    return saveInsight({
+      ownerUserId: args.ownerUserId,
+      actorUserId: args.actorUserId,
+      result: {
+        ...fallback,
+        disclaimer:
+          "Demo mode: live AI could not be reached or billing/quota is unavailable. This fallback summary is informational only and not a diagnosis.",
+      },
+      metadata: {
+        mode: "fallback",
+        reason: message,
+      },
+    });
+  }
 }

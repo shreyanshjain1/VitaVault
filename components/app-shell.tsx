@@ -1,177 +1,274 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
-import { MoonStar, Sparkles, SunMedium } from "lucide-react";
+import {
+  LogOut,
+  Menu,
+  MoonStar,
+  Sparkles,
+  SunMedium,
+  X,
+} from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
-
-import { primaryRoutes, utilityRoutes } from "@/lib/app-routes";
+import { cn } from "@/lib/utils";
+import { primaryRoutes, utilityRoutes, type AppRouteItem } from "@/lib/app-routes";
 
 type AppShellProps = {
   children: React.ReactNode;
 };
 
-function navLinkClasses(active: boolean) {
-  return [
-    "group flex items-start gap-3 rounded-2xl border px-3 py-3 transition-all duration-200",
-    active
-      ? "border-zinc-950 bg-zinc-950 text-white shadow-sm dark:border-white dark:bg-white dark:text-black"
-      : "border-zinc-200/80 bg-white/80 text-zinc-900 hover:-translate-y-0.5 hover:border-zinc-300 hover:bg-white hover:shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-100 dark:hover:border-zinc-700 dark:hover:bg-zinc-900",
-  ].join(" ");
+function navItemClasses(active: boolean) {
+  return cn(
+    "group flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-all",
+    "border border-transparent hover:border-border/60 hover:bg-muted/40",
+    active &&
+      "border-border/70 bg-muted/60 shadow-sm dark:bg-muted/30"
+  );
+}
+
+function NavItem({ item, active, onNavigate }: { item: AppRouteItem; active: boolean; onNavigate?: () => void }) {
+  const Icon = item.icon;
+  return (
+    <Link href={item.href} className={navItemClasses(active)} onClick={onNavigate}>
+      <span
+        className={cn(
+          "flex h-9 w-9 items-center justify-center rounded-2xl border",
+          active
+            ? "border-border/70 bg-background/70"
+            : "border-border/50 bg-background/40 group-hover:bg-background/70"
+        )}
+      >
+        <Icon className={cn("h-4 w-4", active ? "text-foreground" : "text-muted-foreground")} />
+      </span>
+      <div className="min-w-0">
+        <p className={cn("truncate text-sm font-medium", active ? "text-foreground" : "text-foreground/90")}>
+          {item.title}
+        </p>
+        <p className="truncate text-xs text-muted-foreground">
+          {item.description}
+        </p>
+      </div>
+    </Link>
+  );
 }
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const activeTitle = useMemo(() => {
     const all = [...primaryRoutes, ...utilityRoutes];
-    return all.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))?.title ?? "VitaVault";
+    return (
+      all.find(
+        (item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
+      )?.title ?? "VitaVault"
+    );
   }, [pathname]);
 
-  return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(120,119,198,0.10),_transparent_32%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.08),_transparent_28%),linear-gradient(to_bottom,_#f8fafc,_#f4f4f5)] text-zinc-950 dark:bg-[radial-gradient(circle_at_top_left,_rgba(120,119,198,0.18),_transparent_32%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.12),_transparent_28%),linear-gradient(to_bottom,_#09090b,_#111827)] dark:text-zinc-50">
-      <div className="mx-auto grid min-h-screen max-w-[1680px] grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)]">
-        <aside className="border-b border-zinc-200/70 bg-white/80 p-5 backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/70 lg:border-b-0 lg:border-r">
-          <div className="rounded-3xl border border-zinc-200/70 bg-white/90 p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-zinc-500">
+  const routeMap = useMemo(() => {
+    const all = [...primaryRoutes, ...utilityRoutes];
+    return new Map(all.map((r) => [r.href, r]));
+  }, []);
+
+  const groups = useMemo(() => {
+    const pick = (hrefs: string[]) =>
+      hrefs.map((h) => routeMap.get(h)).filter(Boolean) as AppRouteItem[];
+
+    const overview = pick(["/dashboard"]);
+    const collaboration = pick(["/ai-insights", "/care-team", "/alerts"]);
+    const records = (primaryRoutes.filter(
+      (r) =>
+        !["/dashboard", "/ai-insights", "/care-team", "/alerts", "/summary"].includes(r.href)
+    ) ?? []) as AppRouteItem[];
+    const utilities = pick(["/summary", ...utilityRoutes.map((r) => r.href)]);
+
+    return [
+      { label: "Overview", items: overview },
+      { label: "Flagship", items: collaboration },
+      { label: "Records", items: records },
+      { label: "Utilities", items: utilities },
+    ];
+  }, [routeMap]);
+
+  const Sidebar = ({ onNavigate }: { onNavigate?: () => void }) => (
+    <aside className="flex h-full w-full flex-col">
+      <div className="px-4 pt-5">
+        <Link href="/dashboard" className="group block" onClick={onNavigate}>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-base font-semibold tracking-tight">
                   VitaVault
                 </p>
-                <h1 className="mt-2 text-2xl font-semibold">Patient Workspace</h1>
-                <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-                  Secure records, care-team collaboration, and AI-backed health summaries.
+                <p className="truncate text-xs text-muted-foreground">
+                  Patient workspace
                 </p>
               </div>
-
-              <button
-                type="button"
-                className="rounded-2xl border border-zinc-200 bg-white p-2.5 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                aria-label="Toggle theme"
-              >
-                {theme === "dark" ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
-              </button>
             </div>
+          </div>
+          <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+            Secure records, care-team collaboration, and AI-backed summaries.
+          </p>
+        </Link>
+      </div>
 
-            <div className="mt-5 rounded-2xl border border-violet-200 bg-violet-50/80 p-4 dark:border-violet-900/60 dark:bg-violet-950/30">
-              <div className="flex items-start gap-3">
-                <div className="rounded-2xl bg-violet-600 p-2 text-white dark:bg-violet-500">
-                  <Sparkles className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">AI Insights ready</p>
-                  <p className="mt-1 text-xs leading-5 text-zinc-600 dark:text-zinc-400">
-                    Generate concise, patient-friendly summaries and follow-up talking points from existing records.
-                  </p>
-                </div>
+      <div className="mt-6 flex-1 overflow-y-auto px-3 pb-6">
+        {groups.map((group) => (
+          <div key={group.label} className="mb-5">
+            <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              {group.label}
+            </p>
+            <div className="space-y-1">
+              {group.items.map((item) => {
+                const active =
+                  pathname === item.href || pathname.startsWith(`${item.href}/`);
+                return (
+                  <NavItem
+                    key={item.href}
+                    item={item}
+                    active={active}
+                    onNavigate={onNavigate}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="border-t border-border/60 px-4 py-4">
+        <div className="flex items-center justify-between gap-3">
+          <button
+            type="button"
+            className={cn(
+              "inline-flex h-10 w-10 items-center justify-center rounded-2xl",
+              "border border-border/60 bg-background/60 hover:bg-muted/50"
+            )}
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            aria-label="Toggle theme"
+          >
+            {theme === "dark" ? (
+              <SunMedium className="h-4 w-4" />
+            ) : (
+              <MoonStar className="h-4 w-4" />
+            )}
+          </button>
+
+          <button
+            type="button"
+            className={cn(
+              "inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-medium",
+              "border border-border/60 bg-background/60 hover:bg-muted/50"
+            )}
+            onClick={() => signOut({ callbackUrl: "/login" })}
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </button>
+        </div>
+
+        <p className="mt-3 text-xs text-muted-foreground">
+          Your workspace is authenticated and protected by server-side checks.
+        </p>
+      </div>
+    </aside>
+  );
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Desktop layout */}
+      <div className="hidden min-h-screen lg:flex">
+        <div className="w-[340px] border-r border-border/60 bg-background/70">
+          <div className="sticky top-0 h-screen">
+            <Sidebar />
+          </div>
+        </div>
+
+        <div className="flex min-h-screen flex-1 flex-col">
+          <div className="sticky top-0 z-20 border-b border-border/60 bg-background/70 backdrop-blur">
+            <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">
+                  Current section
+                </p>
+                <p className="text-sm font-semibold">{activeTitle}</p>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Premium healthcare SaaS shell • Dark mode supported
               </div>
             </div>
           </div>
 
-          <div className="mt-6 space-y-6">
-            <div>
-              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-                Main
-              </p>
-              <nav className="space-y-2">
-                {primaryRoutes.map((item) => {
-                  const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                  const Icon = item.icon;
+          {children}
+        </div>
+      </div>
 
-                  return (
-                    <Link key={item.href} href={item.href} className={navLinkClasses(active)}>
-                      <div
-                        className={
-                          active
-                            ? "rounded-2xl bg-white/10 p-2 dark:bg-black/10"
-                            : "rounded-2xl border border-zinc-200/80 bg-zinc-50 p-2 dark:border-zinc-800 dark:bg-zinc-950"
-                        }
-                      >
-                        <Icon className="h-4 w-4 shrink-0" />
-                      </div>
+      {/* Mobile layout */}
+      <div className="lg:hidden">
+        <div className="sticky top-0 z-30 border-b border-border/60 bg-background/70 backdrop-blur">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
+            <button
+              type="button"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-border/60 bg-background/60"
+              onClick={() => setMobileOpen(true)}
+              aria-label="Open navigation"
+            >
+              <Menu className="h-4 w-4" />
+            </button>
 
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold">{item.title}</p>
-                        <p
-                          className={
-                            active
-                              ? "mt-1 text-xs text-white/80 dark:text-black/70"
-                              : "mt-1 text-xs text-zinc-500 dark:text-zinc-400"
-                          }
-                        >
-                          {item.description}
-                        </p>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </nav>
+            <div className="min-w-0 text-center">
+              <p className="truncate text-sm font-semibold">{activeTitle}</p>
+              <p className="truncate text-xs text-muted-foreground">VitaVault</p>
             </div>
 
-            <div>
-              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-                Utility
-              </p>
-              <nav className="space-y-2">
-                {utilityRoutes.map((item) => {
-                  const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                  const Icon = item.icon;
+            <button
+              type="button"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-border/60 bg-background/60"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              aria-label="Toggle theme"
+            >
+              {theme === "dark" ? (
+                <SunMedium className="h-4 w-4" />
+              ) : (
+                <MoonStar className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+        </div>
 
-                  return (
-                    <Link key={item.href} href={item.href} className={navLinkClasses(active)}>
-                      <div
-                        className={
-                          active
-                            ? "rounded-2xl bg-white/10 p-2 dark:bg-black/10"
-                            : "rounded-2xl border border-zinc-200/80 bg-zinc-50 p-2 dark:border-zinc-800 dark:bg-zinc-950"
-                        }
-                      >
-                        <Icon className="h-4 w-4 shrink-0" />
-                      </div>
+        {children}
 
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold">{item.title}</p>
-                        <p
-                          className={
-                            active
-                              ? "mt-1 text-xs text-white/80 dark:text-black/70"
-                              : "mt-1 text-xs text-zinc-500 dark:text-zinc-400"
-                          }
-                        >
-                          {item.description}
-                        </p>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </nav>
-            </div>
-
-            <div className="rounded-3xl border border-zinc-200/70 bg-white/90 p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-                Current section
-              </p>
-              <p className="mt-2 text-sm font-semibold">{activeTitle}</p>
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                Your workspace is authenticated and protected by server-side session checks.
-              </p>
-
-              <button
-                type="button"
-                className="mt-4 inline-flex w-full items-center justify-center rounded-2xl border border-zinc-300 px-4 py-2.5 text-sm font-medium transition hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
-                onClick={() => signOut({ callbackUrl: "/login" })}
-              >
-                Logout
-              </button>
+        {mobileOpen ? (
+          <div className="fixed inset-0 z-50">
+            <div
+              className="absolute inset-0 bg-black/40"
+              onClick={() => setMobileOpen(false)}
+            />
+            <div className="absolute left-0 top-0 h-full w-[88%] max-w-[360px] border-r border-border/60 bg-background">
+              <div className="flex items-center justify-between px-4 py-4">
+                <p className="text-sm font-semibold">Navigation</p>
+                <button
+                  type="button"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-border/60 bg-background/60"
+                  onClick={() => setMobileOpen(false)}
+                  aria-label="Close navigation"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="h-[calc(100%-64px)]">
+                <Sidebar onNavigate={() => setMobileOpen(false)} />
+              </div>
             </div>
           </div>
-        </aside>
-
-        <main className="min-w-0 p-4 sm:p-6 lg:p-8">{children}</main>
+        ) : null}
       </div>
     </div>
   );

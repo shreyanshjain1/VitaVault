@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Check, Copy } from "lucide-react";
+import { Button, Input } from "@/components/ui";
 
 type CopyInviteFieldProps = {
   value: string;
@@ -9,11 +11,13 @@ type CopyInviteFieldProps = {
 export function CopyInviteField({ value }: CopyInviteFieldProps) {
   const [copied, setCopied] = useState(false);
 
+  const displayValue = useMemo(() => value.trim(), [value]);
+
   async function handleCopy() {
     try {
-      await navigator.clipboard.writeText(value);
+      await navigator.clipboard.writeText(displayValue);
       setCopied(true);
-      window.setTimeout(() => setCopied(false), 1800);
+      window.setTimeout(() => setCopied(false), 1600);
     } catch {
       setCopied(false);
     }
@@ -21,23 +25,29 @@ export function CopyInviteField({ value }: CopyInviteFieldProps) {
 
   return (
     <div className="space-y-2">
-      <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
-        Invite link
-      </label>
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <input
-          readOnly
-          value={value}
-          className="min-w-0 flex-1 rounded-2xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-        />
-        <button
+      <p className="text-sm font-medium text-foreground/90">Invite link</p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <Input readOnly value={displayValue} className="font-mono text-xs" />
+        <Button
           type="button"
+          variant={copied ? "secondary" : "outline"}
           onClick={handleCopy}
-          className="rounded-2xl border border-zinc-300 px-4 py-2 text-sm font-medium transition hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          className="shrink-0"
         >
-          {copied ? "Copied" : "Copy link"}
-        </button>
+          {copied ? (
+            <>
+              <Check className="h-4 w-4" /> Copied
+            </>
+          ) : (
+            <>
+              <Copy className="h-4 w-4" /> Copy link
+            </>
+          )}
+        </Button>
       </div>
+      <p className="text-xs text-muted-foreground">
+        Share this link with the exact email recipient. They must sign in using the same email to accept.
+      </p>
     </div>
   );
 }
