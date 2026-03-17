@@ -1,12 +1,199 @@
+import { Building2, Stethoscope } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader, EmptyState } from "@/components/common";
 import { addDoctor } from "@/app/actions";
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
-import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Textarea } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Input,
+  Label,
+  Textarea,
+} from "@/components/ui";
+import {
+  ModuleFormCard,
+  ModuleHero,
+  ModuleListCard,
+  DataCard,
+} from "@/components/module-sections";
+import {
+  PageTransition,
+  StaggerGroup,
+  StaggerItem,
+} from "@/components/page-transition";
 
 export default async function DoctorsPage() {
   const user = await requireUser();
-  const doctors = await db.doctor.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" } });
-  return <AppShell><PageHeader title="Doctors & Clinics" description="Manage doctors, specialties, clinic details, and notes." /><div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]"><Card><CardHeader><CardTitle>Add doctor</CardTitle></CardHeader><CardContent><form action={addDoctor} className="grid gap-4"><div className="space-y-2"><Label>Name</Label><Input name="name" required /></div><div className="space-y-2"><Label>Specialty</Label><Input name="specialty" /></div><div className="space-y-2"><Label>Clinic</Label><Input name="clinic" /></div><div className="space-y-2"><Label>Phone</Label><Input name="phone" /></div><div className="space-y-2"><Label>Email</Label><Input type="email" name="email" /></div><div className="space-y-2"><Label>Address</Label><Input name="address" /></div><div className="space-y-2"><Label>Notes</Label><Textarea name="notes" /></div><Button>Add doctor</Button></form></CardContent></Card><div className="space-y-4">{doctors.length ? doctors.map(doctor => <Card key={doctor.id}><CardContent className="pt-6"><h3 className="text-lg font-semibold">{doctor.name}</h3><p className="text-sm text-muted-foreground">{doctor.specialty ?? "General"} • {doctor.clinic ?? "No clinic set"}</p><div className="mt-3 grid gap-2 text-sm"><p>Phone: {doctor.phone ?? "—"}</p><p>Email: {doctor.email ?? "—"}</p><p>Address: {doctor.address ?? "—"}</p><p>Notes: {doctor.notes ?? "—"}</p></div></CardContent></Card>) : <EmptyState title="No doctors yet" description="Add your doctors and clinics so appointments and medications can reference them." />}</div></div></AppShell>;
+
+  const doctors = await db.doctor.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const specialtyCount = new Set(
+    doctors.map((doctor) => doctor.specialty).filter(Boolean)
+  ).size;
+
+  const clinicCount = new Set(
+    doctors.map((doctor) => doctor.clinic).filter(Boolean)
+  ).size;
+
+  return (
+    <AppShell>
+      <div className="mx-auto max-w-7xl space-y-6 p-6">
+        <PageTransition>
+          <PageHeader
+            title="Doctors"
+            description="Maintain your doctor and clinic directory so medications, appointments, and summaries stay connected."
+            action={
+              <div className="flex flex-wrap gap-2">
+                <Badge className="bg-background/70">{doctors.length} doctors</Badge>
+                <Badge className="bg-background/70">{clinicCount} clinics</Badge>
+              </div>
+            }
+          />
+        </PageTransition>
+
+        <PageTransition delay={0.04}>
+          <ModuleHero
+            eyebrow="Care directory"
+            title="Doctors and clinics"
+            description="This is your reusable reference layer for appointment planning, prescriptions, and care-team context."
+            stats={[
+              { label: "Doctors", value: doctors.length },
+              { label: "Specialties", value: specialtyCount },
+              { label: "Clinics", value: clinicCount },
+              {
+                label: "Latest doctor",
+                value: doctors[0]?.name ?? "—",
+                hint: doctors[0]?.specialty ?? "No doctor yet",
+              },
+            ]}
+          />
+        </PageTransition>
+
+        <StaggerGroup delay={0.08}>
+          <div className="grid gap-6 xl:grid-cols-[1.02fr_1.48fr]">
+            <StaggerItem>
+              <ModuleFormCard
+                title="Add doctor"
+                description="Store a clinician, specialty, clinic, and contact details for future use."
+              >
+                <form action={addDoctor} className="grid gap-4">
+                  <div className="space-y-2">
+                    <Label>Name</Label>
+                    <Input name="name" required placeholder="Dr. Maria Santos" />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Specialty</Label>
+                      <Input name="specialty" placeholder="Cardiology" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Clinic</Label>
+                      <Input name="clinic" placeholder="HeartCare Clinic" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Phone</Label>
+                      <Input name="phone" placeholder="+63..." />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Email</Label>
+                      <Input name="email" type="email" placeholder="doctor@clinic.com" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Address</Label>
+                    <Input name="address" placeholder="Clinic address" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Notes</Label>
+                    <Textarea
+                      name="notes"
+                      className="min-h-[120px]"
+                      placeholder="Consultation habits, schedule notes, referral context, or clinic reminders."
+                    />
+                  </div>
+
+                  <Button type="submit" size="lg">
+                    Add doctor
+                  </Button>
+                </form>
+              </ModuleFormCard>
+            </StaggerItem>
+
+            <StaggerItem>
+              <ModuleListCard
+                title="Doctor directory"
+                description="A more polished directory for your clinicians and clinic contacts."
+              >
+                <div className="space-y-4">
+                  {doctors.length ? (
+                    doctors.map((doctor) => (
+                      <DataCard key={doctor.id}>
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <h3 className="text-lg font-semibold">{doctor.name}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {doctor.specialty ?? "General"} • {doctor.clinic ?? "No clinic set"}
+                            </p>
+                          </div>
+                          <Badge className="bg-background/70">
+                            {doctor.specialty ?? "General"}
+                          </Badge>
+                        </div>
+
+                        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                          <div className="rounded-2xl border border-border/60 bg-background/40 p-4">
+                            <div className="flex items-center gap-2">
+                              <Stethoscope className="h-4 w-4 text-primary" />
+                              <p className="text-sm font-medium">Contact</p>
+                            </div>
+                            <div className="mt-2 grid gap-2 text-sm text-muted-foreground">
+                              <p>Phone: {doctor.phone ?? "—"}</p>
+                              <p>Email: {doctor.email ?? "—"}</p>
+                            </div>
+                          </div>
+
+                          <div className="rounded-2xl border border-border/60 bg-background/40 p-4">
+                            <div className="flex items-center gap-2">
+                              <Building2 className="h-4 w-4 text-primary" />
+                              <p className="text-sm font-medium">Clinic</p>
+                            </div>
+                            <div className="mt-2 grid gap-2 text-sm text-muted-foreground">
+                              <p>{doctor.clinic ?? "No clinic set"}</p>
+                              <p>{doctor.address ?? "No address recorded"}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 rounded-2xl border border-border/60 bg-background/40 p-4">
+                          <p className="text-sm font-medium">Notes</p>
+                          <p className="mt-2 text-sm text-muted-foreground">
+                            {doctor.notes ?? "No notes added."}
+                          </p>
+                        </div>
+                      </DataCard>
+                    ))
+                  ) : (
+                    <EmptyState
+                      title="No doctors yet"
+                      description="Add your doctors and clinics so appointments and medications can reference them."
+                    />
+                  )}
+                </div>
+              </ModuleListCard>
+            </StaggerItem>
+          </div>
+        </StaggerGroup>
+      </div>
+    </AppShell>
+  );
 }
