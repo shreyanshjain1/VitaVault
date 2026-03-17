@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Pill,
   ShieldPlus,
+  Smartphone,
   Sparkles,
   Stethoscope,
   Syringe,
@@ -45,8 +46,14 @@ export const primaryRoutes: AppRouteItem[] = [
   {
     title: "Alert Center",
     href: "/alerts",
-    description: "Foundational alert view (coming soon)",
+    description: "Foundational alert view for future monitoring",
     icon: BellRing,
+  },
+  {
+    title: "Device Connections",
+    href: "/device-connections",
+    description: "Integration roadmap for phone and health devices",
+    icon: Smartphone,
   },
   {
     title: "Health Profile",
