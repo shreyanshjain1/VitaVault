@@ -3,6 +3,7 @@
 import { randomUUID } from "crypto";
 import { addDays } from "date-fns";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
@@ -11,6 +12,130 @@ import { CareAccessRole } from "@prisma/client";
 
 function boolFromForm(formData: FormData, key: string) {
   return formData.get(key) === "on";
+}
+
+async function activateInviteForActor(args: {
+  actorId: string;
+  actorEmail: string;
+  inviteId?: string;
+  token?: string;
+}) {
+  const invite = await db.careInvite.findFirst({
+    where: {
+      ...(args.inviteId ? { id: args.inviteId } : {}),
+      ...(args.token ? { token: args.token } : {}),
+      email: args.actorEmail.toLowerCase(),
+      status: "PENDING",
+      expiresAt: {
+        gt: new Date(),
+      },
+    },
+  });
+
+  if (!invite) {
+    throw new Error("Invite not found or expired.");
+  }
+
+  const access = await db.careAccess.upsert({
+    where: {
+      ownerUserId_memberUserId: {
+        ownerUserId: invite.ownerUserId,
+        memberUserId: args.actorId,
+      },
+    },
+    update: {
+      accessRole: invite.accessRole,
+      status: "ACTIVE",
+      canViewRecords: invite.canViewRecords,
+      canEditRecords: invite.canEditRecords,
+      canAddNotes: invite.canAddNotes,
+      canExport: invite.canExport,
+      canGenerateAIInsights: invite.canGenerateAIInsights,
+      grantedByUserId: invite.grantedByUserId,
+      note: invite.note,
+    },
+    create: {
+      ownerUserId: invite.ownerUserId,
+      memberUserId: args.actorId,
+      accessRole: invite.accessRole,
+      status: "ACTIVE",
+      canViewRecords: invite.canViewRecords,
+      canEditRecords: invite.canEditRecords,
+      canAddNotes: invite.canAddNotes,
+      canExport: invite.canExport,
+      canGenerateAIInsights: invite.canGenerateAIInsights,
+      grantedByUserId: invite.grantedByUserId,
+      note: invite.note,
+    },
+  });
+
+  await db.careInvite.update({
+    where: { id: invite.id },
+    data: {
+      status: "ACTIVE",
+      acceptedAt: new Date(),
+    },
+  });
+
+  await logAccessAudit({
+    ownerUserId: invite.ownerUserId,
+    actorUserId: args.actorId,
+    action: "CARE_INVITE_ACCEPTED",
+    targetType: "CareAccess",
+    targetId: access.id,
+    metadata: {
+      accessRole: access.accessRole,
+      viaToken: Boolean(args.token),
+    },
+  });
+
+  revalidatePath("/care-team");
+  revalidatePath(`/invite/${invite.token}`);
+
+  return invite;
+}
+
+async function declineInviteForActor(args: {
+  actorId: string;
+  actorEmail: string;
+  inviteId?: string;
+  token?: string;
+}) {
+  const invite = await db.careInvite.findFirst({
+    where: {
+      ...(args.inviteId ? { id: args.inviteId } : {}),
+      ...(args.token ? { token: args.token } : {}),
+      email: args.actorEmail.toLowerCase(),
+      status: "PENDING",
+    },
+  });
+
+  if (!invite) {
+    throw new Error("Invite not found.");
+  }
+
+  await db.careInvite.update({
+    where: { id: invite.id },
+    data: {
+      status: "DECLINED",
+    },
+  });
+
+  await logAccessAudit({
+    ownerUserId: invite.ownerUserId,
+    actorUserId: args.actorId,
+    action: "CARE_INVITE_DECLINED",
+    targetType: "CareInvite",
+    targetId: invite.id,
+    metadata: {
+      viaToken: Boolean(args.token),
+    },
+  });
+
+  revalidatePath("/care-team");
+  revalidatePath(`/invite/${invite.token}`);
+
+  return invite;
 }
 
 export async function inviteCareMemberAction(formData: FormData) {
@@ -75,6 +200,7 @@ export async function inviteCareMemberAction(formData: FormData) {
     metadata: {
       email,
       accessRole,
+      token: invite.token,
     },
   });
 
@@ -93,74 +219,13 @@ export async function acceptCareInviteAction(formData: FormData) {
     throw new Error("Your account must have an email to accept an invite.");
   }
 
-  const invite = await db.careInvite.findFirst({
-    where: {
-      id: inviteId,
-      email: actor.email.toLowerCase(),
-      status: "PENDING",
-      expiresAt: {
-        gt: new Date(),
-      },
-    },
+  await activateInviteForActor({
+    actorId: actor.id,
+    actorEmail: actor.email,
+    inviteId,
   });
 
-  if (!invite) {
-    throw new Error("Invite not found or expired.");
-  }
-
-  const access = await db.careAccess.upsert({
-    where: {
-      ownerUserId_memberUserId: {
-        ownerUserId: invite.ownerUserId,
-        memberUserId: actor.id,
-      },
-    },
-    update: {
-      accessRole: invite.accessRole,
-      status: "ACTIVE",
-      canViewRecords: invite.canViewRecords,
-      canEditRecords: invite.canEditRecords,
-      canAddNotes: invite.canAddNotes,
-      canExport: invite.canExport,
-      canGenerateAIInsights: invite.canGenerateAIInsights,
-      grantedByUserId: invite.grantedByUserId,
-      note: invite.note,
-    },
-    create: {
-      ownerUserId: invite.ownerUserId,
-      memberUserId: actor.id,
-      accessRole: invite.accessRole,
-      status: "ACTIVE",
-      canViewRecords: invite.canViewRecords,
-      canEditRecords: invite.canEditRecords,
-      canAddNotes: invite.canAddNotes,
-      canExport: invite.canExport,
-      canGenerateAIInsights: invite.canGenerateAIInsights,
-      grantedByUserId: invite.grantedByUserId,
-      note: invite.note,
-    },
-  });
-
-  await db.careInvite.update({
-    where: { id: invite.id },
-    data: {
-      status: "ACTIVE",
-      acceptedAt: new Date(),
-    },
-  });
-
-  await logAccessAudit({
-    ownerUserId: invite.ownerUserId,
-    actorUserId: actor.id,
-    action: "CARE_INVITE_ACCEPTED",
-    targetType: "CareAccess",
-    targetId: access.id,
-    metadata: {
-      accessRole: access.accessRole,
-    },
-  });
-
-  revalidatePath("/care-team");
+  redirect("/care-team");
 }
 
 export async function declineCareInviteAction(formData: FormData) {
@@ -175,34 +240,55 @@ export async function declineCareInviteAction(formData: FormData) {
     throw new Error("Your account must have an email to decline an invite.");
   }
 
-  const invite = await db.careInvite.findFirst({
-    where: {
-      id: inviteId,
-      email: actor.email.toLowerCase(),
-      status: "PENDING",
-    },
+  await declineInviteForActor({
+    actorId: actor.id,
+    actorEmail: actor.email,
+    inviteId,
   });
 
-  if (!invite) {
-    throw new Error("Invite not found.");
+  redirect("/care-team");
+}
+
+export async function acceptCareInviteByTokenAction(formData: FormData) {
+  const actor = await requireUser();
+  const token = String(formData.get("token") || "").trim();
+
+  if (!token) {
+    throw new Error("Invite token is required.");
   }
 
-  await db.careInvite.update({
-    where: { id: invite.id },
-    data: {
-      status: "DECLINED",
-    },
+  if (!actor.email) {
+    throw new Error("Your account must have an email to accept an invite.");
+  }
+
+  await activateInviteForActor({
+    actorId: actor.id,
+    actorEmail: actor.email,
+    token,
   });
 
-  await logAccessAudit({
-    ownerUserId: invite.ownerUserId,
-    actorUserId: actor.id,
-    action: "CARE_INVITE_DECLINED",
-    targetType: "CareInvite",
-    targetId: invite.id,
+  redirect("/care-team");
+}
+
+export async function declineCareInviteByTokenAction(formData: FormData) {
+  const actor = await requireUser();
+  const token = String(formData.get("token") || "").trim();
+
+  if (!token) {
+    throw new Error("Invite token is required.");
+  }
+
+  if (!actor.email) {
+    throw new Error("Your account must have an email to decline an invite.");
+  }
+
+  await declineInviteForActor({
+    actorId: actor.id,
+    actorEmail: actor.email,
+    token,
   });
 
-  revalidatePath("/care-team");
+  redirect("/care-team");
 }
 
 export async function revokeCareAccessAction(formData: FormData) {

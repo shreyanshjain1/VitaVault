@@ -1,9 +1,12 @@
 import Link from "next/link";
+import { headers } from "next/headers";
+import { Sparkles, UserRoundPlus, Users } from "lucide-react";
 
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { getSharedPatientCards } from "@/lib/access";
 import { AppShell } from "@/components/app-shell";
+import { CopyInviteField } from "@/components/copy-invite-field";
 import {
   acceptCareInviteAction,
   declineCareInviteAction,
@@ -14,6 +17,20 @@ import {
 
 export default async function CareTeamPage() {
   const user = await requireUser();
+  const headerStore = await headers();
+
+  const host =
+    headerStore.get("x-forwarded-host") ??
+    headerStore.get("host") ??
+    "";
+
+  const proto =
+    headerStore.get("x-forwarded-proto") ??
+    (host.includes("localhost") ? "http" : "https");
+
+  const origin =
+    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
+    (host ? `${proto}://${host}` : "");
 
   const [outgoingInvites, currentTeam, incomingInvites, sharedPatients] =
     await Promise.all([
@@ -67,31 +84,81 @@ export default async function CareTeamPage() {
   return (
     <AppShell>
       <div className="space-y-8">
-        <section className="rounded-2xl border bg-white p-6 shadow-sm dark:bg-zinc-900">
-          <h1 className="text-3xl font-semibold">Care Team Access</h1>
-          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            Invite caregivers and doctors, control permissions, and manage the patients shared with you.
-          </p>
+        <section className="overflow-hidden rounded-[32px] border border-zinc-200/70 bg-white/90 p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
+          <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr] lg:items-center">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-500">
+                Care Team
+              </p>
+              <h1 className="mt-3 text-3xl font-semibold tracking-tight">
+                Caregiver and doctor access
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+                Invite caregivers, doctors, or lab staff to collaborate securely. Every invite now includes a usable invite link, and shared members can open patient workspaces directly after acceptance.
+              </p>
+
+              <div className="mt-5 flex flex-wrap gap-3">
+                <Link
+                  href="/ai-insights"
+                  className="inline-flex rounded-2xl bg-zinc-950 px-4 py-2.5 text-sm font-medium text-white dark:bg-white dark:text-black"
+                >
+                  Open AI Insights
+                </Link>
+                <Link
+                  href="/dashboard"
+                  className="inline-flex rounded-2xl border px-4 py-2.5 text-sm font-medium"
+                >
+                  Back to dashboard
+                </Link>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+              <div className="rounded-3xl border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-950/50">
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Active team</p>
+                <p className="mt-2 text-3xl font-semibold">{currentTeam.length}</p>
+              </div>
+              <div className="rounded-3xl border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-950/50">
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Pending incoming</p>
+                <p className="mt-2 text-3xl font-semibold">{incomingInvites.length}</p>
+              </div>
+              <div className="rounded-3xl border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-950/50">
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Shared with me</p>
+                <p className="mt-2 text-3xl font-semibold">{sharedPatients.length}</p>
+              </div>
+            </div>
+          </div>
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-2">
-          <div className="rounded-2xl border bg-white p-6 shadow-sm dark:bg-zinc-900">
-            <h2 className="text-xl font-semibold">Invite a caregiver or doctor</h2>
-            <form action={inviteCareMemberAction} className="mt-5 grid gap-4">
+        <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+          <div className="rounded-[28px] border border-zinc-200/70 bg-white/90 p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl bg-zinc-950 p-2 text-white dark:bg-white dark:text-black">
+                <UserRoundPlus className="h-4 w-4" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold">Invite a caregiver or doctor</h2>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  An invite record is created immediately and a shareable link appears in the Outgoing Invites section.
+                </p>
+              </div>
+            </div>
+
+            <form action={inviteCareMemberAction} className="mt-6 grid gap-4">
               <div className="grid gap-2">
                 <label className="text-sm font-medium">Email</label>
                 <input
                   name="email"
                   type="email"
                   required
-                  className="rounded-xl border px-3 py-2"
+                  className="rounded-2xl border px-3 py-2.5"
                   placeholder="doctor@example.com"
                 />
               </div>
 
               <div className="grid gap-2">
                 <label className="text-sm font-medium">Access role</label>
-                <select name="accessRole" defaultValue="CAREGIVER" className="rounded-xl border px-3 py-2">
+                <select name="accessRole" defaultValue="CAREGIVER" className="rounded-2xl border px-3 py-2.5">
                   <option value="CAREGIVER">Caregiver</option>
                   <option value="DOCTOR">Doctor</option>
                   <option value="VIEWER">Viewer</option>
@@ -103,12 +170,12 @@ export default async function CareTeamPage() {
                 <label className="text-sm font-medium">Note</label>
                 <textarea
                   name="note"
-                  className="min-h-[100px] rounded-xl border px-3 py-2"
-                  placeholder="Optional note for the invited person"
+                  className="min-h-[110px] rounded-2xl border px-3 py-2.5"
+                  placeholder="Optional onboarding note"
                 />
               </div>
 
-              <div className="grid gap-2">
+              <div className="grid gap-3 rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4 dark:border-zinc-800 dark:bg-zinc-950/50">
                 <p className="text-sm font-medium">Permissions</p>
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" name="canViewRecords" defaultChecked />
@@ -134,21 +201,32 @@ export default async function CareTeamPage() {
 
               <button
                 type="submit"
-                className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-black"
+                className="rounded-2xl bg-zinc-950 px-4 py-2.5 text-sm font-medium text-white dark:bg-white dark:text-black"
               >
                 Send invite
               </button>
             </form>
           </div>
 
-          <div className="rounded-2xl border bg-white p-6 shadow-sm dark:bg-zinc-900">
-            <h2 className="text-xl font-semibold">Incoming invites</h2>
-            <div className="mt-5 space-y-4">
+          <div className="rounded-[28px] border border-zinc-200/70 bg-white/90 p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl bg-violet-600 p-2 text-white">
+                <Users className="h-4 w-4" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold">Incoming invites</h2>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  These appear when you are logged in with the same email that was invited.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-4">
               {incomingInvites.length === 0 ? (
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">No pending invites.</p>
               ) : (
                 incomingInvites.map((invite) => (
-                  <div key={invite.id} className="rounded-xl border p-4">
+                  <div key={invite.id} className="rounded-3xl border border-zinc-200/80 p-4 dark:border-zinc-800">
                     <div className="space-y-1">
                       <p className="font-medium">
                         {invite.owner.healthProfile?.fullName ?? invite.owner.name ?? "Patient"}
@@ -166,7 +244,7 @@ export default async function CareTeamPage() {
                         <input type="hidden" name="inviteId" value={invite.id} />
                         <button
                           type="submit"
-                          className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white"
+                          className="rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white"
                         >
                           Accept
                         </button>
@@ -176,11 +254,18 @@ export default async function CareTeamPage() {
                         <input type="hidden" name="inviteId" value={invite.id} />
                         <button
                           type="submit"
-                          className="rounded-xl border px-4 py-2 text-sm font-medium"
+                          className="rounded-2xl border px-4 py-2 text-sm font-medium"
                         >
                           Decline
                         </button>
                       </form>
+
+                      <Link
+                        href={`/invite/${invite.token}`}
+                        className="inline-flex rounded-2xl border px-4 py-2 text-sm font-medium"
+                      >
+                        Open invite page
+                      </Link>
                     </div>
                   </div>
                 ))
@@ -190,16 +275,20 @@ export default async function CareTeamPage() {
         </section>
 
         <section className="grid gap-6 xl:grid-cols-2">
-          <div className="rounded-2xl border bg-white p-6 shadow-sm dark:bg-zinc-900">
+          <div className="rounded-[28px] border border-zinc-200/70 bg-white/90 p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
             <h2 className="text-xl font-semibold">Patients shared with me</h2>
-            <div className="mt-5 space-y-4">
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+              Open patient workspaces where you already have active access.
+            </p>
+
+            <div className="mt-6 space-y-4">
               {sharedPatients.length === 0 ? (
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">
                   No patients are currently shared with you.
                 </p>
               ) : (
                 sharedPatients.map((grant) => (
-                  <div key={grant.id} className="rounded-xl border p-4">
+                  <div key={grant.id} className="rounded-3xl border border-zinc-200/80 p-4 dark:border-zinc-800">
                     <div className="space-y-1">
                       <p className="font-medium">
                         {grant.owner.healthProfile?.fullName ?? grant.owner.name ?? "Patient"}
@@ -213,13 +302,22 @@ export default async function CareTeamPage() {
                       </p>
                     </div>
 
-                    <div className="mt-4">
+                    <div className="mt-4 flex flex-wrap gap-3">
                       <Link
                         href={`/patient/${grant.owner.id}`}
-                        className="inline-flex rounded-xl bg-black px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-black"
+                        className="inline-flex rounded-2xl bg-zinc-950 px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-black"
                       >
                         Open patient workspace
                       </Link>
+
+                      {grant.canGenerateAIInsights ? (
+                        <Link
+                          href={`/patient/${grant.owner.id}`}
+                          className="inline-flex rounded-2xl border px-4 py-2 text-sm font-medium"
+                        >
+                          Open AI-enabled view
+                        </Link>
+                      ) : null}
                     </div>
                   </div>
                 ))
@@ -227,16 +325,20 @@ export default async function CareTeamPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border bg-white p-6 shadow-sm dark:bg-zinc-900">
+          <div className="rounded-[28px] border border-zinc-200/70 bg-white/90 p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
             <h2 className="text-xl font-semibold">My active care team</h2>
-            <div className="mt-5 space-y-5">
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+              Review and adjust permissions without leaving this page.
+            </p>
+
+            <div className="mt-6 space-y-5">
               {currentTeam.length === 0 ? (
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">
                   No active caregivers or doctors yet.
                 </p>
               ) : (
                 currentTeam.map((grant) => (
-                  <div key={grant.id} className="rounded-xl border p-4">
+                  <div key={grant.id} className="rounded-3xl border border-zinc-200/80 p-4 dark:border-zinc-800">
                     <div className="space-y-1">
                       <p className="font-medium">{grant.member.name ?? grant.member.email}</p>
                       <p className="text-sm text-zinc-600 dark:text-zinc-400">{grant.member.email}</p>
@@ -276,14 +378,14 @@ export default async function CareTeamPage() {
                       <textarea
                         name="note"
                         defaultValue={grant.note ?? ""}
-                        className="min-h-[80px] rounded-xl border px-3 py-2"
+                        className="min-h-[80px] rounded-2xl border px-3 py-2"
                         placeholder="Optional note"
                       />
 
                       <div className="flex flex-wrap gap-3">
                         <button
                           type="submit"
-                          className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-black"
+                          className="rounded-2xl bg-zinc-950 px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-black"
                         >
                           Update permissions
                         </button>
@@ -294,7 +396,7 @@ export default async function CareTeamPage() {
                       <input type="hidden" name="accessId" value={grant.id} />
                       <button
                         type="submit"
-                        className="rounded-xl border border-red-300 px-4 py-2 text-sm font-medium text-red-600"
+                        className="rounded-2xl border border-red-300 px-4 py-2 text-sm font-medium text-red-600"
                       >
                         Revoke access
                       </button>
@@ -306,23 +408,53 @@ export default async function CareTeamPage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border bg-white p-6 shadow-sm dark:bg-zinc-900">
-          <h2 className="text-xl font-semibold">Outgoing invites</h2>
-          <div className="mt-5 space-y-4">
+        <section className="rounded-[28px] border border-zinc-200/70 bg-white/90 p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl bg-emerald-600 p-2 text-white">
+              <Sparkles className="h-4 w-4" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold">Outgoing invites</h2>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Share the invite link with the exact email recipient. They can open the link, sign in, and accept.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-4">
             {outgoingInvites.length === 0 ? (
               <p className="text-sm text-zinc-600 dark:text-zinc-400">No pending or historical invites yet.</p>
             ) : (
-              outgoingInvites.map((invite) => (
-                <div key={invite.id} className="rounded-xl border p-4">
-                  <p className="font-medium">{invite.email}</p>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                    Role: {invite.accessRole} · Status: {invite.status}
-                  </p>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                    Expires: {invite.expiresAt.toLocaleString()}
-                  </p>
-                </div>
-              ))
+              outgoingInvites.map((invite) => {
+                const inviteLink = `${origin}/invite/${invite.token}`;
+
+                return (
+                  <div key={invite.id} className="rounded-3xl border border-zinc-200/80 p-4 dark:border-zinc-800">
+                    <div className="space-y-1">
+                      <p className="font-medium">{invite.email}</p>
+                      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                        Role: {invite.accessRole} · Status: {invite.status}
+                      </p>
+                      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                        Expires: {invite.expiresAt.toLocaleString()}
+                      </p>
+                    </div>
+
+                    <div className="mt-4">
+                      <CopyInviteField value={inviteLink} />
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      <Link
+                        href={`/invite/${invite.token}`}
+                        className="inline-flex rounded-2xl border px-4 py-2 text-sm font-medium"
+                      >
+                        Open invite preview
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
         </section>

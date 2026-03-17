@@ -2,16 +2,17 @@ import type { LucideIcon } from "lucide-react";
 import {
   Activity,
   CalendarClock,
+  ClipboardList,
   FileBarChart2,
   FileHeart,
   HeartPulse,
   LayoutDashboard,
   Pill,
   ShieldPlus,
+  Sparkles,
   Stethoscope,
   Syringe,
   Users,
-  ClipboardList,
 } from "lucide-react";
 
 export type AppRouteItem = {
@@ -25,8 +26,20 @@ export const primaryRoutes: AppRouteItem[] = [
   {
     title: "Dashboard",
     href: "/dashboard",
-    description: "Overview, reminders, alerts, and trends",
+    description: "Overview, reminders, trends, AI, and care-team activity",
     icon: LayoutDashboard,
+  },
+  {
+    title: "AI Insights",
+    href: "/ai-insights",
+    description: "Generate and review patient-ready AI summaries",
+    icon: Sparkles,
+  },
+  {
+    title: "Care Team",
+    href: "/care-team",
+    description: "Invite caregivers and doctors, manage shared access",
+    icon: Users,
   },
   {
     title: "Health Profile",
@@ -81,12 +94,6 @@ export const primaryRoutes: AppRouteItem[] = [
     href: "/doctors",
     description: "Doctors, clinics, and contact directory",
     icon: Stethoscope,
-  },
-  {
-    title: "Care Team",
-    href: "/care-team",
-    description: "Invite caregivers and doctors, manage shared access",
-    icon: Users,
   },
   {
     title: "Summary",

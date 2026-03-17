@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { usePathname } from "next/navigation";
-import { MoonStar, SunMedium } from "lucide-react";
+import { MoonStar, Sparkles, SunMedium } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
 
@@ -15,10 +15,10 @@ type AppShellProps = {
 
 function navLinkClasses(active: boolean) {
   return [
-    "flex items-start gap-3 rounded-2xl border px-3 py-3 transition",
+    "group flex items-start gap-3 rounded-2xl border px-3 py-3 transition-all duration-200",
     active
-      ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-black"
-      : "border-zinc-200 bg-white text-zinc-900 hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-zinc-700 dark:hover:bg-zinc-800",
+      ? "border-zinc-950 bg-zinc-950 text-white shadow-sm dark:border-white dark:bg-white dark:text-black"
+      : "border-zinc-200/80 bg-white/80 text-zinc-900 hover:-translate-y-0.5 hover:border-zinc-300 hover:bg-white hover:shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-100 dark:hover:border-zinc-700 dark:hover:bg-zinc-900",
   ].join(" ");
 }
 
@@ -32,28 +32,44 @@ export function AppShell({ children }: AppShellProps) {
   }, [pathname]);
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-50">
-      <div className="mx-auto grid min-h-screen max-w-[1600px] grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)]">
-        <aside className="border-b bg-white/90 p-5 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90 lg:border-b-0 lg:border-r">
-          <div className="flex items-center justify-between gap-3 lg:block">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-zinc-500">
-                VitaVault
-              </p>
-              <h1 className="mt-1 text-2xl font-semibold">Patient Workspace</h1>
-              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                Secure records, care-team access, and AI-backed insights.
-              </p>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(120,119,198,0.10),_transparent_32%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.08),_transparent_28%),linear-gradient(to_bottom,_#f8fafc,_#f4f4f5)] text-zinc-950 dark:bg-[radial-gradient(circle_at_top_left,_rgba(120,119,198,0.18),_transparent_32%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.12),_transparent_28%),linear-gradient(to_bottom,_#09090b,_#111827)] dark:text-zinc-50">
+      <div className="mx-auto grid min-h-screen max-w-[1680px] grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <aside className="border-b border-zinc-200/70 bg-white/80 p-5 backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/70 lg:border-b-0 lg:border-r">
+          <div className="rounded-3xl border border-zinc-200/70 bg-white/90 p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-zinc-500">
+                  VitaVault
+                </p>
+                <h1 className="mt-2 text-2xl font-semibold">Patient Workspace</h1>
+                <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+                  Secure records, care-team collaboration, and AI-backed health summaries.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="rounded-2xl border border-zinc-200 bg-white p-2.5 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                aria-label="Toggle theme"
+              >
+                {theme === "dark" ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
+              </button>
             </div>
 
-            <button
-              type="button"
-              className="rounded-xl border p-2 dark:border-zinc-800"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              aria-label="Toggle theme"
-            >
-              {theme === "dark" ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
-            </button>
+            <div className="mt-5 rounded-2xl border border-violet-200 bg-violet-50/80 p-4 dark:border-violet-900/60 dark:bg-violet-950/30">
+              <div className="flex items-start gap-3">
+                <div className="rounded-2xl bg-violet-600 p-2 text-white dark:bg-violet-500">
+                  <Sparkles className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">AI Insights ready</p>
+                  <p className="mt-1 text-xs leading-5 text-zinc-600 dark:text-zinc-400">
+                    Generate concise, patient-friendly summaries and follow-up talking points from existing records.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="mt-6 space-y-6">
@@ -68,7 +84,16 @@ export function AppShell({ children }: AppShellProps) {
 
                   return (
                     <Link key={item.href} href={item.href} className={navLinkClasses(active)}>
-                      <Icon className="mt-0.5 h-4 w-4 shrink-0" />
+                      <div
+                        className={
+                          active
+                            ? "rounded-2xl bg-white/10 p-2 dark:bg-black/10"
+                            : "rounded-2xl border border-zinc-200/80 bg-zinc-50 p-2 dark:border-zinc-800 dark:bg-zinc-950"
+                        }
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                      </div>
+
                       <div className="min-w-0">
                         <p className="text-sm font-semibold">{item.title}</p>
                         <p
@@ -98,7 +123,16 @@ export function AppShell({ children }: AppShellProps) {
 
                   return (
                     <Link key={item.href} href={item.href} className={navLinkClasses(active)}>
-                      <Icon className="mt-0.5 h-4 w-4 shrink-0" />
+                      <div
+                        className={
+                          active
+                            ? "rounded-2xl bg-white/10 p-2 dark:bg-black/10"
+                            : "rounded-2xl border border-zinc-200/80 bg-zinc-50 p-2 dark:border-zinc-800 dark:bg-zinc-950"
+                        }
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                      </div>
+
                       <div className="min-w-0">
                         <p className="text-sm font-semibold">{item.title}</p>
                         <p
@@ -117,13 +151,18 @@ export function AppShell({ children }: AppShellProps) {
               </nav>
             </div>
 
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
-              <p className="text-sm font-semibold">Current section</p>
-              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{activeTitle}</p>
+            <div className="rounded-3xl border border-zinc-200/70 bg-white/90 p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
+                Current section
+              </p>
+              <p className="mt-2 text-sm font-semibold">{activeTitle}</p>
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                Your workspace is authenticated and protected by server-side session checks.
+              </p>
 
               <button
                 type="button"
-                className="mt-4 inline-flex rounded-xl border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                className="mt-4 inline-flex w-full items-center justify-center rounded-2xl border border-zinc-300 px-4 py-2.5 text-sm font-medium transition hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
                 onClick={() => signOut({ callbackUrl: "/login" })}
               >
                 Logout
