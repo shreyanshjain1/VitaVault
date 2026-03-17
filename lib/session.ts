@@ -1,22 +1,17 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 
-export async function requireUser(): Promise<{
-  id: string;
-  name?: string | null;
-  email?: string | null;
-  image?: string | null;
-}> {
+export async function getCurrentUser() {
   const session = await auth();
+  return session?.user ?? null;
+}
 
-  if (!session?.user?.id) {
+export async function requireUser() {
+  const user = await getCurrentUser();
+
+  if (!user?.id) {
     redirect("/login");
   }
 
-  return {
-    id: session.user.id,
-    name: session.user.name,
-    email: session.user.email,
-    image: session.user.image,
-  };
+  return user;
 }

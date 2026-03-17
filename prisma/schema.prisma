@@ -7,6 +7,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum AppRole {
+  PATIENT
+  CAREGIVER
+  DOCTOR
+  LAB_STAFF
+  ADMIN
+}
+
 enum Sex {
   MALE
   FEMALE
@@ -62,28 +70,55 @@ enum DocumentType {
   OTHER
 }
 
+enum CareAccessRole {
+  CAREGIVER
+  DOCTOR
+  VIEWER
+  LAB_STAFF
+}
+
+enum CareAccessStatus {
+  PENDING
+  ACTIVE
+  REVOKED
+  DECLINED
+  EXPIRED
+}
+
 model User {
-  id             String   @id @default(cuid())
-  name           String?
-  email          String   @unique
-  emailVerified  DateTime?
-  image          String?
-  passwordHash   String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  accounts       Account[]
-  sessions       Session[]
-  healthProfile  HealthProfile?
-  doctors        Doctor[]
-  medications    Medication[]
+  id           String   @id @default(cuid())
+  name         String?
+  email        String   @unique
+  emailVerified DateTime?
+  image        String?
+  passwordHash String?
+  role         AppRole  @default(PATIENT)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  healthProfile HealthProfile?
+  doctors       Doctor[]
+  medications   Medication[]
   medicationLogs MedicationLog[]
-  appointments   Appointment[]
-  labResults     LabResult[]
-  vitalRecords   VitalRecord[]
+  appointments  Appointment[]
+  labResults    LabResult[]
+  vitalRecords  VitalRecord[]
   symptomEntries SymptomEntry[]
-  vaccinations   VaccinationRecord[]
-  documents      MedicalDocument[]
-  reminders      Reminder[]
+  vaccinations  VaccinationRecord[]
+  documents     MedicalDocument[]
+  reminders     Reminder[]
+
+  ownedCareAccessGrants    CareAccess[]    @relation("CareAccessOwner")
+  receivedCareAccessGrants CareAccess[]    @relation("CareAccessMember")
+  grantedCareAccessGrants  CareAccess[]    @relation("CareAccessGrantedBy")
+  ownedCareInvites         CareInvite[]    @relation("CareInviteOwner")
+  sentCareInvites          CareInvite[]    @relation("CareInviteGrantedBy")
+  ownedAccessAuditLogs     AccessAuditLog[] @relation("AccessAuditOwner")
+  actorAccessAuditLogs     AccessAuditLog[] @relation("AccessAuditActor")
+  ownedAiInsights          AiInsight[]     @relation("AiInsightOwner")
+  generatedAiInsights      AiInsight[]     @relation("AiInsightGeneratedBy")
 }
 
 model HealthProfile {
@@ -102,23 +137,25 @@ model HealthProfile {
   notes                 String?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Doctor {
-  id          String        @id @default(cuid())
-  userId      String
-  name        String
-  specialty   String?
-  clinic      String?
-  phone       String?
-  email       String?
-  address     String?
-  notes       String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  medications Medication[]
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  specialty String?
+  clinic    String?
+  phone     String?
+  email     String?
+  address   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medications  Medication[]
   appointments Appointment[]
 }
 
@@ -136,18 +173,20 @@ model Medication {
   active       Boolean          @default(true)
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
-  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  doctor       Doctor?          @relation(fields: [doctorId], references: [id], onDelete: SetNull)
-  schedules    MedicationSchedule[]
-  logs         MedicationLog[]
+
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  doctor    Doctor?             @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+  schedules MedicationSchedule[]
+  logs      MedicationLog[]
 }
 
 model MedicationSchedule {
-  id           String     @id @default(cuid())
+  id           String   @id @default(cuid())
   medicationId String
   timeOfDay    String
-  createdAt    DateTime   @default(now())
-  medication   Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+
+  medication Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
 }
 
 model MedicationLog {
@@ -158,8 +197,9 @@ model MedicationLog {
   loggedAt     DateTime            @default(now())
   status       MedicationLogStatus
   notes        String?
-  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  medication   Medication          @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medication Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
 }
 
 model Appointment {
@@ -176,8 +216,9 @@ model Appointment {
   status        AppointmentStatus @default(UPCOMING)
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
-  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  doctor        Doctor?           @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  doctor Doctor? @relation(fields: [doctorId], references: [id], onDelete: SetNull)
 }
 
 model LabResult {
@@ -192,7 +233,8 @@ model LabResult {
   fileName       String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VitalRecord {
@@ -208,7 +250,8 @@ model VitalRecord {
   weightKg         Float?
   notes            String?
   createdAt        DateTime @default(now())
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model SymptomEntry {
@@ -223,7 +266,8 @@ model SymptomEntry {
   notes     String?
   resolved  Boolean         @default(false)
   createdAt DateTime        @default(now())
-  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VaccinationRecord {
@@ -236,7 +280,8 @@ model VaccinationRecord {
   nextDueDate DateTime?
   notes       String?
   createdAt   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model MedicalDocument {
@@ -250,7 +295,8 @@ model MedicalDocument {
   sizeBytes Int
   notes     String?
   createdAt DateTime     @default(now())
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Reminder {
@@ -262,7 +308,94 @@ model Reminder {
   dueAt       DateTime
   completed   Boolean      @default(false)
   createdAt   DateTime     @default(now())
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CareAccess {
+  id                    String           @id @default(cuid())
+  ownerUserId           String
+  memberUserId          String
+  accessRole            CareAccessRole
+  status                CareAccessStatus @default(ACTIVE)
+  canViewRecords        Boolean          @default(true)
+  canEditRecords        Boolean          @default(false)
+  canAddNotes           Boolean          @default(false)
+  canExport             Boolean          @default(false)
+  canGenerateAIInsights Boolean          @default(false)
+  grantedByUserId       String?
+  note                  String?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  owner     User  @relation("CareAccessOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  member    User  @relation("CareAccessMember", fields: [memberUserId], references: [id], onDelete: Cascade)
+  grantedBy User? @relation("CareAccessGrantedBy", fields: [grantedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([ownerUserId, memberUserId])
+  @@index([memberUserId, status])
+}
+
+model CareInvite {
+  id                    String           @id @default(cuid())
+  ownerUserId           String
+  email                 String
+  accessRole            CareAccessRole
+  status                CareAccessStatus @default(PENDING)
+  token                 String           @unique
+  grantedByUserId       String
+  canViewRecords        Boolean          @default(true)
+  canEditRecords        Boolean          @default(false)
+  canAddNotes           Boolean          @default(false)
+  canExport             Boolean          @default(false)
+  canGenerateAIInsights Boolean          @default(false)
+  note                  String?
+  expiresAt             DateTime
+  acceptedAt            DateTime?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  owner     User @relation("CareInviteOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  grantedBy User @relation("CareInviteGrantedBy", fields: [grantedByUserId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerUserId, email])
+  @@index([email, status])
+}
+
+model AccessAuditLog {
+  id           String   @id @default(cuid())
+  ownerUserId  String
+  actorUserId  String?
+  action       String
+  targetType   String?
+  targetId     String?
+  metadataJson String?
+  createdAt    DateTime @default(now())
+
+  owner User  @relation("AccessAuditOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  actor User? @relation("AccessAuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([ownerUserId, createdAt])
+}
+
+model AiInsight {
+  id                    String   @id @default(cuid())
+  ownerUserId           String
+  generatedByUserId     String?
+  title                 String
+  summary               String
+  adherenceRisk         String
+  trendFlagsJson        String
+  suggestedQuestionsJson String
+  recommendedFollowUpJson String
+  disclaimer            String
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  owner       User  @relation("AiInsightOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  generatedBy User? @relation("AiInsightGeneratedBy", fields: [generatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([ownerUserId, createdAt])
 }
 
 model Account {
@@ -277,7 +410,9 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-  user              User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@id([provider, providerAccountId])
 }
 
@@ -285,7 +420,9 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@id([sessionToken])
 }
 
@@ -293,5 +430,6 @@ model VerificationToken {
   identifier String
   token      String   @unique
   expires    DateTime
+
   @@id([identifier, token])
 }
