@@ -48,30 +48,43 @@ export async function signupAction(
     };
   }
 
-  const email = parsed.data.email.toLowerCase();
+  const email = parsed.data.email.trim().toLowerCase();
+  const password = parsed.data.password;
+  const callbackUrl = safeCallbackUrl(formData.get("callbackUrl"));
+
   const exists = await db.user.findUnique({ where: { email } });
   if (exists) {
     return { error: "An account with that email already exists.", success: null };
   }
 
-  const passwordHash = await bcrypt.hash(parsed.data.password, 12);
+  const passwordHash = await bcrypt.hash(password, 12);
 
   await db.user.create({
     data: {
-      name: parsed.data.name,
+      name: parsed.data.name.trim(),
       email,
       passwordHash,
-      healthProfile: { create: { fullName: parsed.data.name } },
+      healthProfile: {
+        create: {
+          fullName: parsed.data.name.trim(),
+        },
+      },
     },
   });
 
-  await signIn("credentials", {
-    email,
-    password: parsed.data.password,
-    redirect: false,
-  });
+  try {
+    await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+  } catch {
+    return {
+      error: "Account created, but automatic sign-in failed. Please log in manually.",
+      success: null,
+    };
+  }
 
-  const callbackUrl = safeCallbackUrl(formData.get("callbackUrl"));
   redirect(callbackUrl);
 }
 
@@ -87,18 +100,43 @@ export async function loginAction(
     return { error: "Email and password are required.", success: null };
   }
 
-  try {
-    await signIn("credentials", { email, password, redirect: false });
-    redirect(callbackUrl);
-  } catch {
+  const user = await db.user.findUnique({
+    where: { email },
+    select: {
+      id: true,
+      passwordHash: true,
+    },
+  });
+
+  if (!user?.passwordHash) {
     return { error: "Invalid email or password.", success: null };
   }
+
+  const isValid = await bcrypt.compare(password, user.passwordHash);
+  if (!isValid) {
+    return { error: "Invalid email or password.", success: null };
+  }
+
+  try {
+    await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+  } catch {
+    return { error: "Unable to start session. Please try again.", success: null };
+  }
+
+  redirect(callbackUrl);
 }
 
 export async function saveHealthProfile(formData: FormData) {
   const user = await requireUser();
   const userId = user.id;
-  if (!userId) throw new Error("Unauthorized");
+
+  if (!userId) {
+    throw new Error("Unauthorized");
+  }
 
   const parsed = healthProfileSchema.safeParse({
     fullName: formData.get("fullName"),
@@ -119,10 +157,10 @@ export async function saveHealthProfile(formData: FormData) {
   }
 
   const profileData = {
-    fullName: parsed.data.fullName,
+    fullName: parsed.data.fullName.trim(),
     dateOfBirth: parsed.data.dateOfBirth ? new Date(parsed.data.dateOfBirth) : null,
-    sex: parsed.data.sex,
-    bloodType: parsed.data.bloodType || null,
+    sex: parsed.data.sex ?? null,
+    bloodType: parsed.data.bloodType?.trim() || null,
     heightCm:
       parsed.data.heightCm !== undefined && parsed.data.heightCm !== null
         ? Number(parsed.data.heightCm)
@@ -131,11 +169,11 @@ export async function saveHealthProfile(formData: FormData) {
       parsed.data.weightKg !== undefined && parsed.data.weightKg !== null
         ? Number(parsed.data.weightKg)
         : null,
-    emergencyContactName: parsed.data.emergencyContactName || null,
-    emergencyContactPhone: parsed.data.emergencyContactPhone || null,
-    chronicConditions: parsed.data.chronicConditions || null,
-    allergiesSummary: parsed.data.allergiesSummary || null,
-    notes: parsed.data.notes || null,
+    emergencyContactName: parsed.data.emergencyContactName?.trim() || null,
+    emergencyContactPhone: parsed.data.emergencyContactPhone?.trim() || null,
+    chronicConditions: parsed.data.chronicConditions?.trim() || null,
+    allergiesSummary: parsed.data.allergiesSummary?.trim() || null,
+    notes: parsed.data.notes?.trim() || null,
   };
 
   await db.healthProfile.upsert({

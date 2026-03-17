@@ -210,10 +210,10 @@ export default async function HealthProfilePage() {
                       <Label>Sex</Label>
                       <Select name="sex" defaultValue={profile?.sex ?? ""}>
                         <option value="">Select</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                        <option value="Prefer not to say">Prefer not to say</option>
+                        <option value="MALE">Male</option>
+                        <option value="FEMALE">Female</option>
+                        <option value="OTHER">Other</option>
+                        <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
                       </Select>
                     </div>
 
@@ -270,7 +270,7 @@ export default async function HealthProfilePage() {
                     <div className="rounded-2xl border border-border/60 bg-background/40 p-4 md:col-span-2">
                       <p className="text-sm font-medium">Future use in VitaVault</p>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        This section becomes more valuable later when Apple Health, Health Connect, smart scales,
+                        This section becomes more valuable later when Android Health Connect, smart scales,
                         and home vital devices begin syncing into the record.
                       </p>
                     </div>
