@@ -16,8 +16,13 @@ function parseJsonArray<T>(value: string | null): T[] {
   }
 }
 
-export default async function AiInsightsPage() {
+export default async function AiInsightsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ error?: string; success?: string }>;
+}) {
   const user = await requireUser();
+  const params = (await searchParams) ?? {};
 
   const [insights, sharedPatients] = await Promise.all([
     db.aiInsight.findMany({
@@ -96,13 +101,31 @@ export default async function AiInsightsPage() {
                 <div>
                   <p className="font-semibold">AI visibility fixed</p>
                   <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                    This page is now the main entry point for owner-generated AI insights, instead of hiding the feature only behind shared patient pages.
+                    This page is the main entry point for owner-generated AI insights.
                   </p>
                 </div>
               </div>
             </div>
           </div>
         </section>
+
+        {params.error === "quota" ? (
+          <section className="rounded-3xl border border-amber-300 bg-amber-50 p-5 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
+            OpenAI API quota is exhausted or billing is not active for this API project. Add credits / payment method in your OpenAI API billing, then try again.
+          </section>
+        ) : null}
+
+        {params.error === "general" ? (
+          <section className="rounded-3xl border border-red-300 bg-red-50 p-5 text-sm text-red-900 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-100">
+            AI insight generation failed. Please try again.
+          </section>
+        ) : null}
+
+        {params.success === "1" ? (
+          <section className="rounded-3xl border border-emerald-300 bg-emerald-50 p-5 text-sm text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100">
+            AI insight generated successfully.
+          </section>
+        ) : null}
 
         <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="rounded-[28px] border border-zinc-200/70 bg-white/90 p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
