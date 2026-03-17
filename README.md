@@ -11,13 +11,13 @@
 ![Recharts](https://img.shields.io/badge/Recharts-2.15-8884d8?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-A flagship personal health record companion for tracking medications, appointments, lab results, vitals, symptoms, documents, and health insights in one secure dashboard.
+A flagship personal health record and care-collaboration platform for tracking medications, appointments, lab results, vitals, symptoms, documents, AI insights, and shared care access in one secure dashboard.
 
 ---
 
 ## Overview
 
-VitaVault is a premium, portfolio-worthy health management web app designed to help users keep their personal health records organized in one place. It is built as a modern startup-style MVP with polished UI, secure authentication, clean data architecture, and analytics-driven health insights.
+VitaVault is a premium, portfolio-worthy health management web app designed to help users keep their personal health records organized in one place while preparing the product for real collaborative healthcare workflows. It is built as a modern startup-style MVP with polished UI, secure authentication, clean data architecture, AI-assisted insights, mobile-ready backend foundations, and investor-ready product direction.
 
 Users can securely manage:
 
@@ -34,14 +34,32 @@ Users can securely manage:
 - Medical documents
 - CSV exports
 - Printable health summary
+- AI-generated health insights
+- Care-team invites and shared access
+- Alert center foundation
+- Device connection roadmap
+- Android-ready mobile ingestion backend foundation
 
 ---
 
 ## What's New
 
+- Redesigns the dashboard into a more premium command-center experience
+- Adds a polished sidebar/app shell with grouped navigation and collapse support
+- Elevates AI Insights and Care Team as flagship product features
+- Improves care-team invite UX with clearer sender and recipient flows
+- Adds Alert Center foundation for future threshold/trend-based monitoring
+- Adds Device Connections roadmap page for sponsor/client demos
+- Redesigns Health Profile, Medications, Appointments, Labs, Vitals, Symptoms, Documents, Vaccinations, Doctors, Summary, and Exports pages into a more premium SaaS-style layout
 - Prevents duplicate same-day medication logs for the same medication schedule
 - Adds a **Skipped** medication action alongside **Taken** and **Missed**
 - Adds medication adherence summary cards on the Medications page
+- Adds mobile backend foundation for Android sync:
+  - mobile token auth
+  - device connection tracking
+  - sync job audit trail
+  - device reading ingestion endpoints
+  - mirrored supported readings into `VitalRecord`
 - Adds GitHub workflow polish with CI typecheck support and contribution templates
 - Keeps the app startup-style, premium, and portfolio-ready while improving real product behavior
 
@@ -55,6 +73,11 @@ Users can securely manage:
 | **Dashboard**<br><img src=".mkdir/Dashboard.jpg" alt="Dashboard" width="100%"> | **Health Profile**<br><img src=".mkdir/Health-Profile.jpg" alt="Health Profile" width="100%"> |
 | **Medications**<br><img src=".mkdir/Medications.jpg" alt="Medications" width="100%"> | **Appointments**<br><img src=".mkdir/Appointments.jpg" alt="Appointments" width="100%"> |
 | **Lab Results**<br><img src=".mkdir/Lab-Results.jpg" alt="Lab Results" width="100%"> | **Exports Page**<br><img src=".mkdir/Exports-Page.jpg" alt="Exports Page" width="100%"> |
+| **AI Insights**<br><img src=".mkdir/AI-Insights.jpg" alt="AI Insights" width="100%"> | **Care Team**<br><img src=".mkdir/Care-Team.jpg" alt="Care Team" width="100%"> |
+| **Device Connections**<br><img src=".mkdir/Device-Connections.jpg" alt="Device Connections" width="100%"> | **Alert Center**<br><img src=".mkdir/Alert-Center.jpg" alt="Alert Center" width="100%"> |
+| **Vaccinations**<br><img src=".mkdir/Vaccinations.jpg" alt="Vaccinations" width="100%"> | **Doctors**<br><img src=".mkdir/Doctors.jpg" alt="Doctors" width="100%"> |
+| **Summary**<br><img src=".mkdir/Summary.jpg" alt="Summary" width="100%"> | **Vitals**<br><img src=".mkdir/Vitals.jpg" alt="Vitals" width="100%"> |
+| **Symptoms**<br><img src=".mkdir/Symptoms.jpg" alt="Symptoms" width="100%"> | **Documents**<br><img src=".mkdir/Documents.jpg" alt="Documents" width="100%"> |
 
 ---
 
@@ -67,17 +90,19 @@ Users can securely manage:
 - Protected dashboard routes
 - Secure password hashing with bcrypt
 - Demo user seed
+- Separate mobile token authentication foundation for Android sync
 
 ### Dashboard
-- Welcome panel
+- Premium command-center layout
 - Profile completion card
 - Next medication reminder
 - Upcoming appointments
 - Latest lab results
 - Recent symptoms
 - Health alerts
-- Quick action cards
+- Quick module cards
 - Trend charts for blood pressure, weight, blood sugar, and medicine adherence
+- Stronger flagship placement for AI and care-team features
 
 ### Health Records
 - Health profile management
@@ -93,12 +118,33 @@ Users can securely manage:
 - Medical document uploads
 - Doctor and clinic directory
 - Reminder visibility from health data
+- Printable summary experience
+- CSV export support
+
+### Collaboration & AI
+- AI insight generation from stored records
+- AI-first product positioning with better empty/error states
+- Care-team invite creation and acceptance flow
+- Shared patient workspace foundation
+- Access-role and permission-based collaboration
+- Alert Center foundation for future escalation workflows
+
+### Mobile & Device Readiness
+- Device Connections roadmap page
+- Android-ready mobile backend ingestion foundation
+- Device connection tracking
+- Sync job history and auditability
+- Reading source modeling for manual and future connected health sources
+- Mirroring supported synced readings into `VitalRecord`
+- Designed for Health Connect as the first real mobile ingestion path
 
 ### Productivity
 - Search and filter support
 - CSV export routes
 - Printable summary page
 - Responsive premium layout for desktop and mobile
+- Sidebar collapse support
+- Premium animated page transitions and staggered UI motion
 
 ### Security
 - Route protection via middleware
@@ -108,6 +154,7 @@ Users can securely manage:
 - Environment-based secrets
 - File upload validation
 - Cross-user access prevention on data routes and exports
+- Mobile bearer-token auth foundation for app sync
 
 ### Developer Experience
 - TypeScript typecheck script
@@ -115,6 +162,7 @@ Users can securely manage:
 - GitHub issue templates
 - GitHub pull request template
 - Prisma-powered data modeling
+- Modular UI/page architecture for easier scaling
 
 ---
 
@@ -130,6 +178,7 @@ Users can securely manage:
 - **Zod**
 - **Recharts**
 - **lucide-react**
+- **framer-motion**
 
 ---
 
@@ -143,12 +192,19 @@ personal-health-record-companion/
 │   └── pull_request_template.md
 ├── app/
 │   ├── (auth)/
+│   ├── ai-insights/
+│   ├── alerts/
+│   ├── api/
+│   │   └── mobile/
 │   ├── appointments/
+│   ├── care-team/
 │   ├── dashboard/
+│   ├── device-connections/
 │   ├── doctors/
 │   ├── documents/
 │   ├── exports/
 │   ├── health-profile/
+│   ├── invite/
 │   ├── labs/
 │   ├── medications/
 │   ├── signup/
@@ -183,6 +239,10 @@ personal-health-record-companion/
 - `/login`
 - `/signup`
 - `/dashboard`
+- `/ai-insights`
+- `/care-team`
+- `/alerts`
+- `/device-connections`
 - `/health-profile`
 - `/medications`
 - `/appointments`
@@ -223,6 +283,8 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/phr_companion?schema
 AUTH_SECRET="your-long-random-secret"
 AUTH_TRUST_HOST="true"
 NEXTAUTH_URL="http://localhost:3000"
+OPENAI_API_KEY="your-openai-key"
+OPENAI_MODEL="gpt-4.1-mini"
 ```
 
 ### 3. Push the Prisma schema
@@ -283,6 +345,14 @@ The project includes the following main Prisma models:
 - VaccinationRecord
 - MedicalDocument
 - Reminder
+- CareAccess
+- CareInvite
+- AccessAuditLog
+- AiInsight
+- DeviceConnection
+- DeviceReading
+- MobileSessionToken
+- SyncJob
 
 ---
 
@@ -290,8 +360,9 @@ The project includes the following main Prisma models:
 
 - Built like a startup MVP, not just a CRUD school project
 - Covers multiple real healthcare record workflows in one product
+- Adds collaborative care and AI layers beyond a basic personal tracker
 - Blends premium UI with practical data handling
-- Includes analytics, adherence tracking, export flows, and printable summary support
+- Includes analytics, adherence tracking, export flows, printable summary support, and mobile-ready device ingestion foundations
 - Strong candidate for a pinned GitHub project and portfolio centerpiece
 
 ---
@@ -301,13 +372,16 @@ The project includes the following main Prisma models:
 - Edit and delete flows across all entities
 - Recurring reminder engine
 - Email and push notifications
-- Shared caregiver access
+- Full caregiver notification workflow
+- Android Health Connect production sync
+- Apple Health / wearable integrations
 - Better medical document categorization
-- Audit trail and activity log
+- Audit trail and activity log expansion
 - Cloud object storage for uploads
 - OCR support for prescriptions and lab reports
-- AI-assisted health summaries
+- Richer AI-assisted health summaries
 - PWA offline support
+- FHIR / interoperability direction for future clinical integrations
 
 ---
 
