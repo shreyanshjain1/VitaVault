@@ -15,6 +15,7 @@ import {
   Stethoscope,
   Syringe,
   Users,
+  Workflow,
 } from "lucide-react";
 
 export type AppRouteItem = {
@@ -51,7 +52,7 @@ export const primaryRoutes: AppRouteItem[] = [
   },
   {
     title: "Device Connections",
-    href: "/device-connections",
+    href: "/device-connection",
     description: "Integration roadmap for phone and health devices",
     icon: Smartphone,
   },
@@ -123,5 +124,11 @@ export const utilityRoutes: AppRouteItem[] = [
     href: "/exports",
     description: "Export records and reports",
     icon: FileBarChart2,
+  },
+  {
+    title: "Jobs",
+    href: "/jobs",
+    description: "Inspect worker queues, retries, and job runs",
+    icon: Workflow,
   },
 ];

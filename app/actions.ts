@@ -12,7 +12,7 @@ import {
 import { endOfDay, startOfDay } from "date-fns";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { signIn } from "@/lib/auth";
+import { auth, signIn } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { saveUpload } from "@/lib/upload";
@@ -131,42 +131,67 @@ export async function loginAction(
 }
 
 export async function saveHealthProfile(formData: FormData) {
-  const user = await requireUser();
-  const userId = user.id;
+  const session = await auth();
 
-  if (!userId) {
+  if (!session?.user?.id) {
     throw new Error("Unauthorized");
   }
 
+  const userId = session.user.id;
+  const userEmail = session.user.email?.trim().toLowerCase() ?? "";
+  const userName = session.user.name?.trim() || null;
+
+  const rawSex = String(formData.get("sex") || "").trim();
+  const rawBloodType = String(formData.get("bloodType") || "").trim();
+  const rawDateOfBirth = String(formData.get("dateOfBirth") || "").trim();
+  const rawHeightCm = String(formData.get("heightCm") || "").trim();
+  const rawWeightKg = String(formData.get("weightKg") || "").trim();
+
   const parsed = healthProfileSchema.safeParse({
-    fullName: formData.get("fullName"),
-    dateOfBirth: formData.get("dateOfBirth"),
-    sex: formData.get("sex") || undefined,
-    bloodType: formData.get("bloodType"),
-    heightCm: formData.get("heightCm") || undefined,
-    weightKg: formData.get("weightKg") || undefined,
-    emergencyContactName: formData.get("emergencyContactName"),
-    emergencyContactPhone: formData.get("emergencyContactPhone"),
-    chronicConditions: formData.get("chronicConditions"),
-    allergiesSummary: formData.get("allergiesSummary"),
-    notes: formData.get("notes"),
+    fullName: String(formData.get("fullName") || "").trim(),
+    dateOfBirth: rawDateOfBirth || undefined,
+    sex: rawSex || undefined,
+    bloodType: rawBloodType || undefined,
+    heightCm: rawHeightCm || undefined,
+    weightKg: rawWeightKg || undefined,
+    emergencyContactName:
+      String(formData.get("emergencyContactName") || "").trim() || undefined,
+    emergencyContactPhone:
+      String(formData.get("emergencyContactPhone") || "").trim() || undefined,
+    chronicConditions:
+      String(formData.get("chronicConditions") || "").trim() || undefined,
+    allergiesSummary:
+      String(formData.get("allergiesSummary") || "").trim() || undefined,
+    notes: String(formData.get("notes") || "").trim() || undefined,
   });
 
   if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? "Invalid input.");
+    throw new Error(
+      parsed.error.issues[0]?.message ?? "Invalid health profile data."
+    );
+  }
+
+  if (!userEmail) {
+    throw new Error("Signed-in user has no email address.");
   }
 
   const profileData = {
     fullName: parsed.data.fullName.trim(),
-    dateOfBirth: parsed.data.dateOfBirth ? new Date(parsed.data.dateOfBirth) : null,
+    dateOfBirth: parsed.data.dateOfBirth
+      ? new Date(parsed.data.dateOfBirth)
+      : null,
     sex: parsed.data.sex ?? null,
     bloodType: parsed.data.bloodType?.trim() || null,
     heightCm:
-      parsed.data.heightCm !== undefined && parsed.data.heightCm !== null
+      parsed.data.heightCm !== undefined &&
+      parsed.data.heightCm !== null &&
+      parsed.data.heightCm !== ""
         ? Number(parsed.data.heightCm)
         : null,
     weightKg:
-      parsed.data.weightKg !== undefined && parsed.data.weightKg !== null
+      parsed.data.weightKg !== undefined &&
+      parsed.data.weightKg !== null &&
+      parsed.data.weightKg !== ""
         ? Number(parsed.data.weightKg)
         : null,
     emergencyContactName: parsed.data.emergencyContactName?.trim() || null,
@@ -176,17 +201,33 @@ export async function saveHealthProfile(formData: FormData) {
     notes: parsed.data.notes?.trim() || null,
   };
 
+  await db.user.upsert({
+    where: { id: userId },
+    update: {
+      email: userEmail,
+      name: userName,
+    },
+    create: {
+      id: userId,
+      email: userEmail,
+      name: userName,
+      role: "PATIENT",
+    },
+  });
+
   await db.healthProfile.upsert({
     where: { userId },
     update: profileData,
     create: {
+      userId,
       ...profileData,
-      user: { connect: { id: userId } },
     },
   });
 
   revalidatePath("/health-profile");
   revalidatePath("/dashboard");
+
+  return { success: true };
 }
 
 export async function addDoctor(formData: FormData) {

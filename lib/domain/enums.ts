@@ -1,0 +1,88 @@
+export const APP_ROLES = {
+  PATIENT: "PATIENT",
+  CAREGIVER: "CAREGIVER",
+  DOCTOR: "DOCTOR",
+  LAB_STAFF: "LAB_STAFF",
+  ADMIN: "ADMIN",
+} as const;
+
+export type AppRoleValue = (typeof APP_ROLES)[keyof typeof APP_ROLES];
+
+export const APPOINTMENT_STATUS = {
+  UPCOMING: "UPCOMING",
+  COMPLETED: "COMPLETED",
+  CANCELLED: "CANCELLED",
+} as const;
+
+export type AppointmentStatusValue =
+  (typeof APPOINTMENT_STATUS)[keyof typeof APPOINTMENT_STATUS];
+
+export const REMINDER_TYPE = {
+  MEDICATION: "MEDICATION",
+  APPOINTMENT: "APPOINTMENT",
+  VACCINATION: "VACCINATION",
+  LAB_FOLLOW_UP: "LAB_FOLLOW_UP",
+  GENERAL: "GENERAL",
+} as const;
+
+export type ReminderTypeValue =
+  (typeof REMINDER_TYPE)[keyof typeof REMINDER_TYPE];
+
+export const READING_SOURCE = {
+  MANUAL: "MANUAL",
+  ANDROID_HEALTH_CONNECT: "ANDROID_HEALTH_CONNECT",
+  APPLE_HEALTH: "APPLE_HEALTH",
+  FITBIT: "FITBIT",
+  SMART_BP_MONITOR: "SMART_BP_MONITOR",
+  SMART_SCALE: "SMART_SCALE",
+  PULSE_OXIMETER: "PULSE_OXIMETER",
+  OTHER: "OTHER",
+} as const;
+
+export type ReadingSourceValue =
+  (typeof READING_SOURCE)[keyof typeof READING_SOURCE];
+
+export const DEVICE_READING_TYPE = {
+  STEPS: "STEPS",
+  HEART_RATE: "HEART_RATE",
+  WEIGHT: "WEIGHT",
+  BLOOD_PRESSURE: "BLOOD_PRESSURE",
+  OXYGEN_SATURATION: "OXYGEN_SATURATION",
+  BLOOD_GLUCOSE: "BLOOD_GLUCOSE",
+  TEMPERATURE: "TEMPERATURE",
+} as const;
+
+export type DeviceReadingTypeValue =
+  (typeof DEVICE_READING_TYPE)[keyof typeof DEVICE_READING_TYPE];
+
+export const SYNC_JOB_STATUS = {
+  QUEUED: "QUEUED",
+  RUNNING: "RUNNING",
+  SUCCEEDED: "SUCCEEDED",
+  PARTIAL: "PARTIAL",
+  FAILED: "FAILED",
+} as const;
+
+export type SyncJobStatusValue =
+  (typeof SYNC_JOB_STATUS)[keyof typeof SYNC_JOB_STATUS];
+
+export const JOB_KIND = {
+  ALERT_EVALUATION: "ALERT_EVALUATION",
+  REMINDER_GENERATION: "REMINDER_GENERATION",
+  DAILY_HEALTH_SUMMARY: "DAILY_HEALTH_SUMMARY",
+  DEVICE_SYNC_PROCESSING: "DEVICE_SYNC_PROCESSING",
+} as const;
+
+export type JobKindValue = (typeof JOB_KIND)[keyof typeof JOB_KIND];
+
+export const JOB_RUN_STATUS = {
+  QUEUED: "QUEUED",
+  ACTIVE: "ACTIVE",
+  COMPLETED: "COMPLETED",
+  FAILED: "FAILED",
+  RETRYING: "RETRYING",
+  CANCELLED: "CANCELLED",
+} as const;
+
+export type JobRunStatusValue =
+  (typeof JOB_RUN_STATUS)[keyof typeof JOB_RUN_STATUS];
