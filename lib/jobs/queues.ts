@@ -4,24 +4,74 @@ import { QUEUE_NAMES } from "@/lib/jobs/contracts";
 
 declare global {
   // eslint-disable-next-line no-var
-  var __vitavaultAlertQueue__: Queue | undefined;
+  var __vitavaultQueues__:
+    | {
+        alertsQueue: Queue;
+        remindersQueue: Queue;
+        dailySummaryQueue: Queue;
+        deviceSyncQueue: Queue;
+      }
+    | undefined;
+}
+
+function createQueues() {
+  const connection = getRedisConnection();
+
+  const defaultJobOptions = {
+    attempts: 3,
+    removeOnComplete: 100,
+    removeOnFail: 200,
+    backoff: {
+      type: "exponential" as const,
+      delay: 10_000,
+    },
+  };
+
+  return {
+    alertsQueue: new Queue(QUEUE_NAMES.alerts, {
+      connection,
+      defaultJobOptions,
+    }),
+    remindersQueue: new Queue(QUEUE_NAMES.reminders, {
+      connection,
+      defaultJobOptions,
+    }),
+    dailySummaryQueue: new Queue(QUEUE_NAMES.dailySummary, {
+      connection,
+      defaultJobOptions,
+    }),
+    deviceSyncQueue: new Queue(QUEUE_NAMES.deviceSync, {
+      connection,
+      defaultJobOptions,
+    }),
+  };
+}
+
+function getQueues() {
+  if (!global.__vitavaultQueues__) {
+    global.__vitavaultQueues__ = createQueues();
+  }
+
+  return global.__vitavaultQueues__;
 }
 
 export function getAlertQueue() {
-  if (!global.__vitavaultAlertQueue__) {
-    global.__vitavaultAlertQueue__ = new Queue(QUEUE_NAMES.alerts, {
-      connection: getRedisConnection(),
-      defaultJobOptions: {
-        attempts: 3,
-        removeOnComplete: 100,
-        removeOnFail: 200,
-        backoff: {
-          type: "exponential",
-          delay: 10_000,
-        },
-      },
-    });
-  }
-
-  return global.__vitavaultAlertQueue__;
+  return getQueues().alertsQueue;
 }
+
+export function getRemindersQueue() {
+  return getQueues().remindersQueue;
+}
+
+export function getDailySummaryQueue() {
+  return getQueues().dailySummaryQueue;
+}
+
+export function getDeviceSyncQueue() {
+  return getQueues().deviceSyncQueue;
+}
+
+export const alertsQueue = getAlertQueue();
+export const remindersQueue = getRemindersQueue();
+export const dailySummaryQueue = getDailySummaryQueue();
+export const deviceSyncQueue = getDeviceSyncQueue();

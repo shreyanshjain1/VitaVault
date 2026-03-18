@@ -1,60 +1,50 @@
-import { db } from "@/lib/db";
-import { APP_ROLES } from "@/lib/domain/enums";
-import { DEFAULT_JOB_DASHBOARD_LIMIT } from "@/lib/jobs/constants";
+import { JobType, Queue } from "bullmq";
 import {
   alertsQueue,
   dailySummaryQueue,
   deviceSyncQueue,
   remindersQueue,
 } from "@/lib/jobs/queues";
+import { db } from "@/lib/db";
 
-async function getSafeQueueCounts(
-  label: string,
-  queue: {
-    name: string;
-    getJobCounts: (...types: string[]) => Promise<Record<string, number>>;
-  }
-) {
+type SafeQueue = Queue;
+
+async function getSafeQueueCounts(label: string, queue: SafeQueue) {
   try {
     const counts = await queue.getJobCounts(
-      "waiting",
-      "active",
-      "completed",
-      "failed",
-      "delayed",
-      "paused"
+      "active" as JobType,
+      "completed" as JobType,
+      "delayed" as JobType,
+      "failed" as JobType,
+      "paused" as JobType,
+      "prioritized" as JobType,
+      "waiting" as JobType,
+      "waiting-children" as JobType
     );
 
     return {
       label,
-      queueName: queue.name,
-      healthy: true,
       counts,
-      error: null as string | null,
     };
-  } catch (error) {
+  } catch {
     return {
       label,
-      queueName: queue.name,
-      healthy: false,
       counts: {
-        waiting: 0,
         active: 0,
         completed: 0,
-        failed: 0,
         delayed: 0,
+        failed: 0,
         paused: 0,
+        prioritized: 0,
+        waiting: 0,
+        "waiting-children": 0,
       },
-      error: error instanceof Error ? error.message : "Unknown Redis error",
     };
   }
 }
 
-export async function getJobsDashboardData(viewer: {
-  id: string;
-  role: string;
-}) {
-  const [queues, recentRuns] = await Promise.all([
+export async function getJobsDashboardData() {
+  const [queueCounts, recentRuns] = await Promise.all([
     Promise.all([
       getSafeQueueCounts("Alert Evaluation", alertsQueue),
       getSafeQueueCounts("Reminder Generation", remindersQueue),
@@ -62,13 +52,13 @@ export async function getJobsDashboardData(viewer: {
       getSafeQueueCounts("Device Sync", deviceSyncQueue),
     ]),
     db.jobRun.findMany({
-      where:
-        viewer.role === APP_ROLES.ADMIN
-          ? undefined
-          : {
-              userId: viewer.id,
-            },
+      orderBy: { createdAt: "desc" },
+      take: 20,
       include: {
+        logs: {
+          orderBy: { createdAt: "desc" },
+          take: 5,
+        },
         user: {
           select: {
             id: true,
@@ -76,39 +66,12 @@ export async function getJobsDashboardData(viewer: {
             email: true,
           },
         },
-        connection: {
-          select: {
-            id: true,
-            deviceLabel: true,
-            source: true,
-            status: true,
-          },
-        },
-        syncJob: {
-          select: {
-            id: true,
-            status: true,
-            requestedCount: true,
-            mirroredCount: true,
-          },
-        },
-        logs: {
-          orderBy: {
-            createdAt: "desc",
-          },
-          take: 4,
-        },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
-      take: DEFAULT_JOB_DASHBOARD_LIMIT,
     }),
   ]);
 
   return {
-    queues,
+    queueCounts,
     recentRuns,
-    redisHealthy: queues.every((queue) => queue.healthy),
   };
 }

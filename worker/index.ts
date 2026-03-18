@@ -1,6 +1,10 @@
 import { Worker } from "bullmq";
 import { getRedisConnection } from "@/lib/jobs/connection";
-import { JOB_NAMES, QUEUE_NAMES, type AlertEvaluationJobPayload } from "@/lib/jobs/contracts";
+import {
+  JOB_NAMES,
+  QUEUE_NAMES,
+  type AlertEvaluationJobPayload,
+} from "@/lib/jobs/contracts";
 import { processAlertEvaluation } from "@/worker/processors/alert-evaluation";
 
 const connection = getRedisConnection();

@@ -1,6 +1,18 @@
-import { createJobRun, attachBullmqJobId } from "@/lib/jobs/job-run";
-import { JOB_NAMES, QUEUE_NAMES, type AlertEvaluationJobPayload } from "@/lib/jobs/contracts";
-import { getAlertQueue } from "@/lib/jobs/queues";
+import { attachBullmqJobId, createJobRun } from "@/lib/jobs/job-run";
+import {
+  JOB_NAMES,
+  QUEUE_NAMES,
+  type AlertEvaluationJobPayload,
+  type DailyHealthSummaryJobData,
+  type DeviceSyncProcessingJobData,
+  type ReminderGenerationJobData,
+} from "@/lib/jobs/contracts";
+import {
+  getAlertQueue,
+  getDailySummaryQueue,
+  getDeviceSyncQueue,
+  getRemindersQueue,
+} from "@/lib/jobs/queues";
 
 export async function enqueueAlertEvaluation(payload: AlertEvaluationJobPayload) {
   const queue = getAlertQueue();
@@ -25,6 +37,12 @@ export async function enqueueAlertEvaluation(payload: AlertEvaluationJobPayload)
   };
 }
 
+export async function enqueueAlertEvaluationJob(
+  payload: AlertEvaluationJobPayload
+) {
+  return enqueueAlertEvaluation(payload);
+}
+
 export async function enqueueAlertScheduledScan(userId: string) {
   const payload: AlertEvaluationJobPayload = {
     userId,
@@ -35,4 +53,79 @@ export async function enqueueAlertScheduledScan(userId: string) {
   };
 
   return enqueueAlertEvaluation(payload);
+}
+
+export async function enqueueReminderGenerationJob(
+  payload: ReminderGenerationJobData
+) {
+  const queue = getRemindersQueue();
+
+  const jobRun = await createJobRun({
+    queueName: QUEUE_NAMES.reminders,
+    jobName: JOB_NAMES.reminderGeneration,
+    userId: payload.userId,
+    input: payload as Record<string, unknown>,
+    maxAttempts: 3,
+  });
+
+  const job = await queue.add(JOB_NAMES.reminderGeneration, payload, {
+    jobId: `reminder-generation:${payload.userId}:${Date.now()}`,
+  });
+
+  await attachBullmqJobId(jobRun.id, String(job.id));
+
+  return {
+    jobRunId: jobRun.id,
+    bullmqJobId: String(job.id),
+  };
+}
+
+export async function enqueueDailyHealthSummaryJob(
+  payload: DailyHealthSummaryJobData
+) {
+  const queue = getDailySummaryQueue();
+
+  const jobRun = await createJobRun({
+    queueName: QUEUE_NAMES.dailySummary,
+    jobName: JOB_NAMES.dailyHealthSummary,
+    userId: payload.userId,
+    input: payload as Record<string, unknown>,
+    maxAttempts: 3,
+  });
+
+  const job = await queue.add(JOB_NAMES.dailyHealthSummary, payload, {
+    jobId: `daily-health-summary:${payload.userId}:${Date.now()}`,
+  });
+
+  await attachBullmqJobId(jobRun.id, String(job.id));
+
+  return {
+    jobRunId: jobRun.id,
+    bullmqJobId: String(job.id),
+  };
+}
+
+export async function enqueueDeviceSyncProcessingJob(
+  payload: DeviceSyncProcessingJobData
+) {
+  const queue = getDeviceSyncQueue();
+
+  const jobRun = await createJobRun({
+    queueName: QUEUE_NAMES.deviceSync,
+    jobName: JOB_NAMES.deviceSyncProcessing,
+    userId: payload.userId,
+    input: payload as Record<string, unknown>,
+    maxAttempts: 3,
+  });
+
+  const job = await queue.add(JOB_NAMES.deviceSyncProcessing, payload, {
+    jobId: `device-sync-processing:${payload.userId}:${Date.now()}`,
+  });
+
+  await attachBullmqJobId(jobRun.id, String(job.id));
+
+  return {
+    jobRunId: jobRun.id,
+    bullmqJobId: String(job.id),
+  };
 }

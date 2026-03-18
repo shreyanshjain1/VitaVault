@@ -64,9 +64,12 @@ export default async function AlertDetailPage({
           title={alert.title}
           description={alert.message}
           action={
-            <Button asChild variant="outline">
-              <Link href={`/alerts?ownerUserId=${ownerUserId}`}>Back to alerts</Link>
-            </Button>
+            <Link
+              href={`/alerts?ownerUserId=${ownerUserId}`}
+              className="inline-flex items-center justify-center rounded-xl border border-border px-4 py-2 text-sm font-medium transition hover:bg-muted"
+            >
+              Back to alerts
+            </Link>
           }
         />
 

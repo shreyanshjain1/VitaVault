@@ -1,126 +1,52 @@
-import { addDays, endOfDay, startOfDay, subDays } from "date-fns";
+import { addDays, endOfDay, startOfDay } from "date-fns";
+import { ReadingSource, ReminderType, SyncJobStatus } from "@prisma/client";
 import { db } from "@/lib/db";
-import type {
-  AlertEvaluationJobData,
-  AlertEvaluationJobResult,
-  DailyHealthSummaryJobData,
-  DailyHealthSummaryJobResult,
-  DeviceSyncProcessingJobData,
-  DeviceSyncProcessingJobResult,
-  ReminderGenerationJobData,
-  ReminderGenerationJobResult,
-} from "@/lib/jobs/contracts";
-import { appendJobRunLog } from "@/lib/jobs/job-run-store";
 import {
-  APPOINTMENT_STATUS,
-  DEVICE_READING_TYPE,
-  JOB_KIND,
-  READING_SOURCE,
-  REMINDER_TYPE,
-  SYNC_JOB_STATUS,
-} from "@/lib/domain/enums";
+  type AlertEvaluationJobData,
+  type AlertEvaluationJobResult,
+  type DailyHealthSummaryJobData,
+  type DailyHealthSummaryJobResult,
+  type DeviceSyncProcessingJobData,
+  type DeviceSyncProcessingJobResult,
+  type ReminderGenerationJobData,
+  type ReminderGenerationJobResult,
+} from "@/lib/jobs/contracts";
+import { appendJobRunLog } from "@/lib/jobs/job-run";
+import { runAlertEvaluation } from "@/lib/alerts/service";
 
-function buildDateAtTime(baseDate: Date, timeOfDay: string) {
-  const [hoursRaw, minutesRaw] = timeOfDay.split(":");
-  const hours = Number(hoursRaw);
-  const minutes = Number(minutesRaw);
-
-  if (
-    Number.isNaN(hours) ||
-    Number.isNaN(minutes) ||
-    hours < 0 ||
-    hours > 23 ||
-    minutes < 0 ||
-    minutes > 59
-  ) {
-    return null;
+function logByJobId(
+  jobRunId: string | undefined,
+  level: string,
+  message: string,
+  context?: Record<string, unknown>
+) {
+  if (!jobRunId) {
+    return Promise.resolve();
   }
 
-  const d = new Date(baseDate);
-  d.setHours(hours, minutes, 0, 0);
-  return d;
+  return appendJobRunLog({
+    bullmqJobId: jobRunId,
+    level,
+    message,
+    context: context ?? null,
+  });
 }
 
 export async function handleAlertEvaluationJob(
   payload: AlertEvaluationJobData
 ): Promise<AlertEvaluationJobResult> {
-  const vitals = await db.vitalRecord.findMany({
-    where: {
-      userId: payload.userId,
-      recordedAt: {
-        gte: subDays(new Date(), 30),
-      },
-    },
-    orderBy: {
-      recordedAt: "desc",
-    },
-    take: 20,
-  });
-
-  const alerts: string[] = [];
-
-  for (const record of vitals) {
-    if (
-      typeof record.systolic === "number" &&
-      typeof record.diastolic === "number" &&
-      (record.systolic >= 140 || record.diastolic >= 90)
-    ) {
-      alerts.push(
-        `Elevated blood pressure trend detected (${record.systolic}/${record.diastolic}).`
-      );
-      break;
-    }
-  }
-
-  for (const record of vitals) {
-    if (
-      typeof record.oxygenSaturation === "number" &&
-      record.oxygenSaturation < 92
-    ) {
-      alerts.push(
-        `Low oxygen saturation reading detected (${record.oxygenSaturation}%).`
-      );
-      break;
-    }
-  }
-
-  for (const record of vitals) {
-    if (typeof record.bloodSugar === "number" && record.bloodSugar >= 180) {
-      alerts.push(`High blood sugar reading detected (${record.bloodSugar}).`);
-      break;
-    }
-  }
-
-  for (const record of vitals) {
-    if (typeof record.temperatureC === "number" && record.temperatureC >= 38) {
-      alerts.push(`Elevated temperature detected (${record.temperatureC}°C).`);
-      break;
-    }
-  }
-
-  for (const record of vitals) {
-    if (
-      typeof record.heartRate === "number" &&
-      (record.heartRate > 120 || record.heartRate < 50)
-    ) {
-      alerts.push(`Out-of-range heart rate detected (${record.heartRate} bpm).`);
-      break;
-    }
-  }
-
-  await appendJobRunLog(payload.jobRunId, "INFO", "Alert evaluation completed.", {
+  const result = await runAlertEvaluation({
     userId: payload.userId,
-    evaluatedVitals: vitals.length,
-    alerts,
-    informationalOnly: true,
-    kind: JOB_KIND.ALERT_EVALUATION,
+    sourceType: payload.sourceType ?? null,
+    sourceId: payload.sourceId ?? null,
+    sourceRecordedAt: payload.sourceRecordedAt ?? null,
+    initiatedBy: payload.initiatedBy ?? "manual_scan",
   });
 
   return {
-    evaluatedVitals: vitals.length,
-    alerts,
-    informationalOnly: true,
-    inspectedAt: new Date().toISOString(),
+    evaluatedRuleCount: result.evaluatedRuleCount,
+    createdAlertCount: result.createdAlertCount,
+    createdAlertIds: result.createdAlertIds,
   };
 }
 
@@ -128,9 +54,9 @@ export async function handleReminderGenerationJob(
   payload: ReminderGenerationJobData
 ): Promise<ReminderGenerationJobResult> {
   const today = new Date();
-  const horizonEnd = addDays(today, payload.horizonDays);
+  const horizonEnd = addDays(today, 7);
 
-  const [activeMedications, appointments] = await Promise.all([
+  const [medications, appointments] = await Promise.all([
     db.medication.findMany({
       where: {
         userId: payload.userId,
@@ -139,453 +65,341 @@ export async function handleReminderGenerationJob(
       include: {
         schedules: true,
       },
-      orderBy: {
-        createdAt: "desc",
-      },
     }),
     db.appointment.findMany({
       where: {
         userId: payload.userId,
-        status: APPOINTMENT_STATUS.UPCOMING,
         scheduledAt: {
-          gte: today,
-          lte: horizonEnd,
+          gte: startOfDay(today),
+          lte: endOfDay(horizonEnd),
         },
-      },
-      orderBy: {
-        scheduledAt: "asc",
+        status: "UPCOMING",
       },
     }),
   ]);
 
-  let created = 0;
-  let skippedDuplicates = 0;
-  let appointmentsCreated = 0;
-  let medicationRemindersCreated = 0;
-
-  for (const appointment of appointments) {
-    const title = `Appointment: ${appointment.purpose}`;
-    const dueAt = appointment.scheduledAt;
-
-    const existing = await db.reminder.findFirst({
-      where: {
-        userId: payload.userId,
-        type: REMINDER_TYPE.APPOINTMENT,
-        title,
-        dueAt,
-      },
-    });
-
-    if (existing) {
-      skippedDuplicates += 1;
-      continue;
-    }
-
-    await db.reminder.create({
-      data: {
-        userId: payload.userId,
-        type: REMINDER_TYPE.APPOINTMENT,
-        title,
-        description: `${appointment.doctorName} at ${appointment.clinic}`,
-        dueAt,
-      },
-    });
-
-    created += 1;
-    appointmentsCreated += 1;
-  }
-
-  const tomorrow = addDays(today, 1);
-
-  for (const medication of activeMedications) {
+  for (const medication of medications) {
     for (const schedule of medication.schedules) {
-      const nextReminderTime = buildDateAtTime(today, schedule.timeOfDay);
-      if (!nextReminderTime) {
-        skippedDuplicates += 1;
-        continue;
-      }
-
-      const candidateDueAt =
-        nextReminderTime < today
-          ? buildDateAtTime(tomorrow, schedule.timeOfDay)
-          : nextReminderTime;
-
-      if (!candidateDueAt) {
-        skippedDuplicates += 1;
-        continue;
-      }
-
-      const title = `Medication: ${medication.name}`;
       const existing = await db.reminder.findFirst({
         where: {
           userId: payload.userId,
-          type: REMINDER_TYPE.MEDICATION,
-          title,
-          dueAt: candidateDueAt,
+          type: ReminderType.MEDICATION,
+          title: `${medication.name} reminder`,
+          completed: false,
         },
       });
 
-      if (existing) {
-        skippedDuplicates += 1;
-        continue;
+      if (!existing) {
+        const dueAt = new Date();
+        await db.reminder.create({
+          data: {
+            userId: payload.userId,
+            type: ReminderType.MEDICATION,
+            title: `${medication.name} reminder`,
+            description: `Scheduled dose at ${schedule.timeOfDay}`,
+            dueAt,
+          },
+        });
       }
-
-      await db.reminder.create({
-        data: {
-          userId: payload.userId,
-          type: REMINDER_TYPE.MEDICATION,
-          title,
-          description: `${medication.dosage} • ${medication.frequency}`,
-          dueAt: candidateDueAt,
-        },
-      });
-
-      created += 1;
-      medicationRemindersCreated += 1;
     }
   }
 
-  await appendJobRunLog(payload.jobRunId, "INFO", "Reminder generation completed.", {
-    userId: payload.userId,
-    created,
-    skippedDuplicates,
-    appointmentsCreated,
-    medicationRemindersCreated,
-  });
+  for (const appointment of appointments) {
+    const existing = await db.reminder.findFirst({
+      where: {
+        userId: payload.userId,
+        type: ReminderType.APPOINTMENT,
+        title: `Appointment: ${appointment.doctorName}`,
+        dueAt: appointment.scheduledAt,
+      },
+    });
+
+    if (!existing) {
+      await db.reminder.create({
+        data: {
+          userId: payload.userId,
+          type: ReminderType.APPOINTMENT,
+          title: `Appointment: ${appointment.doctorName}`,
+          description: appointment.clinic,
+          dueAt: appointment.scheduledAt,
+        },
+      });
+    }
+  }
 
   return {
-    created,
-    skippedDuplicates,
-    appointmentsCreated,
-    medicationRemindersCreated,
+    ok: true,
   };
 }
 
 export async function handleDailyHealthSummaryJob(
   payload: DailyHealthSummaryJobData
 ): Promise<DailyHealthSummaryJobResult> {
-  const targetDate = payload.targetDate ? new Date(payload.targetDate) : new Date();
-  const dayStart = startOfDay(targetDate);
-  const dayEnd = endOfDay(targetDate);
-
-  const [profile, vitals, medications, reminders, logs, labs] = await Promise.all([
+  const [profile, vitals, symptoms, medications, alerts] = await Promise.all([
     db.healthProfile.findUnique({
       where: { userId: payload.userId },
     }),
     db.vitalRecord.findMany({
-      where: {
-        userId: payload.userId,
-        recordedAt: {
-          gte: subDays(targetDate, 7),
-          lte: dayEnd,
-        },
-      },
-      orderBy: {
-        recordedAt: "desc",
-      },
-      take: 15,
+      where: { userId: payload.userId },
+      orderBy: { recordedAt: "desc" },
+      take: 10,
+    }),
+    db.symptomEntry.findMany({
+      where: { userId: payload.userId },
+      orderBy: { createdAt: "desc" },
+      take: 10,
     }),
     db.medication.findMany({
-      where: {
-        userId: payload.userId,
-        active: true,
-      },
-      include: {
-        schedules: true,
-      },
+      where: { userId: payload.userId, active: true },
+      orderBy: { createdAt: "desc" },
+      take: 10,
     }),
-    db.reminder.findMany({
-      where: {
-        userId: payload.userId,
-        completed: false,
-        dueAt: {
-          gte: dayStart,
-          lte: addDays(dayEnd, 2),
-        },
-      },
-      orderBy: {
-        dueAt: "asc",
-      },
-      take: 8,
-    }),
-    db.medicationLog.findMany({
-      where: {
-        userId: payload.userId,
-        loggedAt: {
-          gte: subDays(targetDate, 7),
-          lte: dayEnd,
-        },
-      },
-      orderBy: {
-        loggedAt: "desc",
-      },
-      take: 50,
-    }),
-    db.labResult.findMany({
-      where: {
-        userId: payload.userId,
-      },
-      orderBy: {
-        dateTaken: "desc",
-      },
-      take: 5,
+    db.alertEvent.findMany({
+      where: { userId: payload.userId, status: "OPEN" },
+      orderBy: { createdAt: "desc" },
+      take: 10,
     }),
   ]);
 
-  const takenCount = logs.filter((item) => item.status === "TAKEN").length;
-  const missedCount = logs.filter((item) => item.status === "MISSED").length;
-  const skippedCount = logs.filter((item) => item.status === "SKIPPED").length;
-
-  const trendFlags: string[] = [];
-  const suggestedQuestions: string[] = [];
-  const recommendedFollowUp: string[] = [];
-
-  const latestVital = vitals[0] ?? null;
-  if (latestVital?.systolic && latestVital?.diastolic) {
-    trendFlags.push(
-      `Latest blood pressure: ${latestVital.systolic}/${latestVital.diastolic}`
-    );
-  }
-  if (latestVital?.bloodSugar) {
-    trendFlags.push(`Latest blood sugar: ${latestVital.bloodSugar}`);
-  }
-  if (latestVital?.oxygenSaturation) {
-    trendFlags.push(`Latest oxygen saturation: ${latestVital.oxygenSaturation}%`);
-  }
-  if (latestVital?.weightKg) {
-    trendFlags.push(`Latest weight: ${latestVital.weightKg} kg`);
-  }
-
-  if (missedCount > 0) {
-    suggestedQuestions.push("What caused missed doses this week?");
-    recommendedFollowUp.push("Review medication timings and reminder coverage.");
-  }
-  if (reminders.length > 0) {
-    suggestedQuestions.push("Which upcoming reminders need confirmation?");
-    recommendedFollowUp.push("Check next appointment and medication schedule.");
-  }
-  if (labs.some((lab) => lab.flag !== "NORMAL")) {
-    suggestedQuestions.push("Do recent lab flags need follow-up with a clinician?");
-    recommendedFollowUp.push("Review abnormal or borderline lab values.");
-  }
-  if (!suggestedQuestions.length) {
-    suggestedQuestions.push("Are there any symptom or lifestyle changes worth tracking?");
-  }
-  if (!recommendedFollowUp.length) {
-    recommendedFollowUp.push("Continue routine logging for clearer trends.");
-  }
-
-  const adherenceRisk =
-    missedCount >= 3 ? "HIGH" : missedCount >= 1 || skippedCount >= 2 ? "MEDIUM" : "LOW";
-
-  const title = `Daily Health Summary - ${dayStart.toISOString().slice(0, 10)}`;
-
   const summaryLines = [
-    `Patient: ${profile?.fullName ?? "Unknown"}`,
+    `Profile: ${profile?.fullName ?? "Unknown patient"}`,
+    `Recent vitals logged: ${vitals.length}`,
+    `Recent symptom entries: ${symptoms.length}`,
     `Active medications: ${medications.length}`,
-    `Upcoming open reminders: ${reminders.length}`,
-    `Medication logs (7d): taken ${takenCount}, missed ${missedCount}, skipped ${skippedCount}.`,
-    latestVital
-      ? `Latest vital captured on ${latestVital.recordedAt.toISOString()}.`
-      : "No recent vitals captured.",
-    labs.length
-      ? `Recent labs reviewed: ${labs.length}.`
-      : "No recent lab entries found.",
+    `Open alerts: ${alerts.length}`,
   ];
 
-  const insight = await db.aiInsight.create({
+  await db.aiInsight.create({
     data: {
       ownerUserId: payload.userId,
-      generatedByUserId: payload.requestedByUserId ?? null,
-      title,
-      summary: summaryLines.join(" "),
-      adherenceRisk,
-      trendFlagsJson: JSON.stringify(trendFlags),
-      suggestedQuestionsJson: JSON.stringify(suggestedQuestions),
-      recommendedFollowUpJson: JSON.stringify(recommendedFollowUp),
+      generatedByUserId: null,
+      title: "Daily Health Summary",
+      summary: summaryLines.join("\n"),
+      adherenceRisk: alerts.length > 0 ? "Needs review" : "Stable",
+      trendFlagsJson: JSON.stringify({
+        vitalsCount: vitals.length,
+        symptomsCount: symptoms.length,
+        alertsCount: alerts.length,
+      }),
+      suggestedQuestionsJson: JSON.stringify([
+        "Were all medications taken today?",
+        "Any worsening symptoms since the last update?",
+        "Do any open alerts need review?",
+      ]),
+      recommendedFollowUpJson: JSON.stringify([
+        "Review open alerts",
+        "Update vitals if readings are available",
+        "Check upcoming medications and appointments",
+      ]),
       disclaimer:
-        "Informational summary only. This does not diagnose, treat, or replace a licensed clinician.",
+        "AI-generated summary for informational use only and not a medical diagnosis.",
     },
   });
 
-  await appendJobRunLog(payload.jobRunId, "INFO", "Daily health summary generated.", {
-    aiInsightId: insight.id,
-    adherenceRisk,
-    trendFlags,
-    suggestedQuestions,
-  });
-
   return {
-    aiInsightId: insight.id,
-    title: insight.title,
-    trendFlags,
-    suggestedQuestions,
+    ok: true,
   };
 }
 
 export async function handleDeviceSyncProcessingJob(
   payload: DeviceSyncProcessingJobData
 ): Promise<DeviceSyncProcessingJobResult> {
-  const syncJob = await db.syncJob.findUnique({
-    where: { id: payload.syncJobId },
-  });
+  const syncJob =
+    payload.syncJobId != null
+      ? await db.syncJob.findUnique({
+          where: { id: payload.syncJobId },
+        })
+      : null;
 
-  if (!syncJob) {
-    throw new Error(`SyncJob ${payload.syncJobId} not found.`);
+  const connection =
+    payload.connectionId != null
+      ? await db.deviceConnection.findUnique({
+          where: { id: payload.connectionId },
+        })
+      : null;
+
+  if (payload.syncJobId) {
+    await db.syncJob.update({
+      where: { id: payload.syncJobId },
+      data: {
+        status: SyncJobStatus.RUNNING,
+        startedAt: new Date(),
+      },
+    });
   }
-
-  const connection = await db.deviceConnection.findUnique({
-    where: { id: payload.connectionId },
-  });
-
-  if (!connection) {
-    throw new Error(`DeviceConnection ${payload.connectionId} not found.`);
-  }
-
-  await db.syncJob.update({
-    where: { id: payload.syncJobId },
-    data: {
-      status: SYNC_JOB_STATUS.RUNNING,
-      startedAt: new Date(),
-      errorMessage: null,
-    },
-  });
 
   const readings = await db.deviceReading.findMany({
     where: {
-      connectionId: payload.connectionId,
       userId: payload.userId,
+      ...(payload.connectionId ? { connectionId: payload.connectionId } : {}),
     },
-    orderBy: {
-      capturedAt: "asc",
-    },
-    take: 500,
+    orderBy: { capturedAt: "asc" },
+    take: 200,
   });
-
-  let mirroredVitals = 0;
-  let skippedReadings = 0;
 
   for (const reading of readings) {
-    const existingVital = await db.vitalRecord.findFirst({
-      where: {
-        externalReadingId: reading.id,
-      },
-      select: {
-        id: true,
-      },
-    });
+    if (reading.readingType === "HEART_RATE") {
+      const externalReadingId = `device:${reading.id}:hr`;
 
-    if (existingVital) {
-      skippedReadings += 1;
-      continue;
+      const existing = await db.vitalRecord.findFirst({
+        where: { externalReadingId },
+      });
+
+      if (!existing) {
+        await db.vitalRecord.create({
+          data: {
+            userId: payload.userId,
+            recordedAt: reading.capturedAt,
+            heartRate: reading.valueInt ?? null,
+            externalReadingId,
+            readingSource:
+              connection?.source && Object.values(ReadingSource).includes(connection.source)
+                ? connection.source
+                : ReadingSource.OTHER,
+          },
+        });
+      }
     }
 
-    const vitalData: {
-      userId: string;
-      recordedAt: Date;
-      readingSource: string;
-      externalReadingId: string;
-      heartRate?: number;
-      weightKg?: number;
-      systolic?: number;
-      diastolic?: number;
-      oxygenSaturation?: number;
-      bloodSugar?: number;
-      temperatureC?: number;
-      notes?: string;
-    } = {
-      userId: payload.userId,
-      recordedAt: reading.capturedAt,
-      readingSource: reading.source,
-      externalReadingId: reading.id,
-      notes: `Mirrored from ${reading.readingType} via background job.`,
-    };
+    if (reading.readingType === "WEIGHT") {
+      const externalReadingId = `device:${reading.id}:weight`;
 
-    let canMirror = true;
+      const existing = await db.vitalRecord.findFirst({
+        where: { externalReadingId },
+      });
 
-    switch (reading.readingType) {
-      case DEVICE_READING_TYPE.HEART_RATE:
-        vitalData.heartRate = reading.valueInt ?? Math.round(reading.valueFloat ?? 0);
-        break;
-      case DEVICE_READING_TYPE.WEIGHT:
-        vitalData.weightKg = reading.valueFloat ?? reading.valueInt ?? undefined;
-        break;
-      case DEVICE_READING_TYPE.BLOOD_PRESSURE:
-        vitalData.systolic = reading.systolic ?? undefined;
-        vitalData.diastolic = reading.diastolic ?? undefined;
-        break;
-      case DEVICE_READING_TYPE.OXYGEN_SATURATION:
-        vitalData.oxygenSaturation =
-          reading.valueInt ?? Math.round(reading.valueFloat ?? 0);
-        break;
-      case DEVICE_READING_TYPE.BLOOD_GLUCOSE:
-        vitalData.bloodSugar = reading.valueFloat ?? reading.valueInt ?? undefined;
-        break;
-      case DEVICE_READING_TYPE.TEMPERATURE:
-        vitalData.temperatureC = reading.valueFloat ?? reading.valueInt ?? undefined;
-        break;
-      case DEVICE_READING_TYPE.STEPS:
-        canMirror = false;
-        break;
-      default:
-        canMirror = false;
-        break;
+      if (!existing) {
+        await db.vitalRecord.create({
+          data: {
+            userId: payload.userId,
+            recordedAt: reading.capturedAt,
+            weightKg: reading.valueFloat ?? null,
+            externalReadingId,
+            readingSource:
+              connection?.source && Object.values(ReadingSource).includes(connection.source)
+                ? connection.source
+                : ReadingSource.OTHER,
+          },
+        });
+      }
     }
 
-    if (!canMirror) {
-      skippedReadings += 1;
-      continue;
+    if (reading.readingType === "BLOOD_PRESSURE") {
+      const externalReadingId = `device:${reading.id}:bp`;
+
+      const existing = await db.vitalRecord.findFirst({
+        where: { externalReadingId },
+      });
+
+      if (!existing) {
+        await db.vitalRecord.create({
+          data: {
+            userId: payload.userId,
+            recordedAt: reading.capturedAt,
+            systolic: reading.systolic ?? null,
+            diastolic: reading.diastolic ?? null,
+            externalReadingId,
+            readingSource:
+              connection?.source && Object.values(ReadingSource).includes(connection.source)
+                ? connection.source
+                : ReadingSource.OTHER,
+          },
+        });
+      }
     }
 
-    await db.vitalRecord.create({
-      data: vitalData,
-    });
+    if (reading.readingType === "BLOOD_GLUCOSE") {
+      const externalReadingId = `device:${reading.id}:glucose`;
 
-    mirroredVitals += 1;
+      const existing = await db.vitalRecord.findFirst({
+        where: { externalReadingId },
+      });
+
+      if (!existing) {
+        await db.vitalRecord.create({
+          data: {
+            userId: payload.userId,
+            recordedAt: reading.capturedAt,
+            bloodSugar: reading.valueFloat ?? null,
+            externalReadingId,
+            readingSource:
+              connection?.source && Object.values(ReadingSource).includes(connection.source)
+                ? connection.source
+                : ReadingSource.OTHER,
+          },
+        });
+      }
+    }
+
+    if (reading.readingType === "OXYGEN_SATURATION") {
+      const externalReadingId = `device:${reading.id}:oxygen`;
+
+      const existing = await db.vitalRecord.findFirst({
+        where: { externalReadingId },
+      });
+
+      if (!existing) {
+        await db.vitalRecord.create({
+          data: {
+            userId: payload.userId,
+            recordedAt: reading.capturedAt,
+            oxygenSaturation: reading.valueInt ?? null,
+            externalReadingId,
+            readingSource:
+              connection?.source && Object.values(ReadingSource).includes(connection.source)
+                ? connection.source
+                : ReadingSource.OTHER,
+          },
+        });
+      }
+    }
+
+    if (reading.readingType === "TEMPERATURE") {
+      const externalReadingId = `device:${reading.id}:temp`;
+
+      const existing = await db.vitalRecord.findFirst({
+        where: { externalReadingId },
+      });
+
+      if (!existing) {
+        await db.vitalRecord.create({
+          data: {
+            userId: payload.userId,
+            recordedAt: reading.capturedAt,
+            temperatureC: reading.valueFloat ?? null,
+            externalReadingId,
+            readingSource:
+              connection?.source && Object.values(ReadingSource).includes(connection.source)
+                ? connection.source
+                : ReadingSource.OTHER,
+          },
+        });
+      }
+    }
   }
 
-  const finalStatus =
-    mirroredVitals > 0 && skippedReadings > 0
-      ? SYNC_JOB_STATUS.PARTIAL
-      : skippedReadings > 0 && mirroredVitals === 0
-      ? SYNC_JOB_STATUS.PARTIAL
-      : SYNC_JOB_STATUS.SUCCEEDED;
+  if (payload.connectionId) {
+    await db.deviceConnection.update({
+      where: { id: payload.connectionId },
+      data: {
+        lastSyncedAt: new Date(),
+        lastError: null,
+      },
+    });
+  }
 
-  await db.syncJob.update({
-    where: { id: payload.syncJobId },
-    data: {
-      status: finalStatus,
-      requestedCount: readings.length,
-      acceptedCount: readings.length,
-      mirroredCount: mirroredVitals,
-      finishedAt: new Date(),
-      metadataJson: JSON.stringify({
-        triggeredBy: payload.triggeredBy,
-        skippedReadings,
-      }),
-    },
-  });
-
-  await db.deviceConnection.update({
-    where: { id: payload.connectionId },
-    data: {
-      lastSyncedAt: new Date(),
-      lastError: null,
-    },
-  });
-
-  await appendJobRunLog(payload.jobRunId, "INFO", "Device sync processing completed.", {
-    syncJobId: payload.syncJobId,
-    connectionId: payload.connectionId,
-    inspectedReadings: readings.length,
-    mirroredVitals,
-    skippedReadings,
-  });
+  if (payload.syncJobId) {
+    await db.syncJob.update({
+      where: { id: payload.syncJobId },
+      data: {
+        status: SyncJobStatus.SUCCEEDED,
+        finishedAt: new Date(),
+        errorMessage: null,
+      },
+    });
+  }
 
   return {
-    syncJobId: payload.syncJobId,
-    inspectedReadings: readings.length,
-    mirroredVitals,
-    skippedReadings,
+    ok: true,
   };
 }

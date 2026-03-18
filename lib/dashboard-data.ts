@@ -78,6 +78,59 @@ export async function getDashboardData(userId: string) {
     };
   });
 
+  const bloodPressureTrend = vitals
+    .filter((v) => v.systolic != null && v.diastolic != null)
+    .slice()
+    .reverse()
+    .map((v) => ({
+      label: format(v.recordedAt, "MMM d"),
+      systolic: v.systolic ?? 0,
+      diastolic: v.diastolic ?? 0,
+    }));
+
+  const weightTrend = vitals
+    .filter((v) => v.weightKg != null)
+    .slice()
+    .reverse()
+    .map((v) => ({
+      label: format(v.recordedAt, "MMM d"),
+      value: v.weightKg ?? 0,
+    }));
+
+  const sugarTrend = vitals
+    .filter((v) => v.bloodSugar != null)
+    .slice()
+    .reverse()
+    .map((v) => ({
+      label: format(v.recordedAt, "MMM d"),
+      value: v.bloodSugar ?? 0,
+    }));
+
+  const nextMedication = medications[0] ?? null;
+
+  const profileFields = profile
+    ? [
+        profile.fullName,
+        profile.dateOfBirth,
+        profile.sex,
+        profile.bloodType,
+        profile.heightCm,
+        profile.weightKg,
+        profile.emergencyContactName,
+        profile.emergencyContactPhone,
+        profile.allergiesSummary,
+        profile.chronicConditions,
+      ]
+    : [];
+
+  const filledProfileFields = profileFields.filter(
+    (value) => value !== null && value !== undefined && value !== ""
+  ).length;
+
+  const profileCompletion = profile
+    ? Math.round((filledProfileFields / profileFields.length) * 100)
+    : 0;
+
   return {
     profile,
     medications,
@@ -88,6 +141,12 @@ export async function getDashboardData(userId: string) {
     reminders,
     medicationLogs,
     adherenceByDay,
+    adherenceTrend: adherenceByDay,
     openAlerts,
+    nextMedication,
+    profileCompletion,
+    bloodPressureTrend,
+    weightTrend,
+    sugarTrend,
   };
 }
