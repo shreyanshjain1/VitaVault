@@ -303,8 +303,8 @@ export default async function DashboardPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {data.healthAlerts.length ? (
-                data.healthAlerts.map((alert, i) => (
+              {data.openAlerts?.length ? (
+  data.openAlerts.map((alert, i) => (
                   <div key={i} className="rounded-3xl border border-border/60 bg-background/40 p-4">
                     <p className="text-sm font-semibold">{`Alert ${i + 1}`}</p>
                     <p className="mt-1 text-sm text-muted-foreground">{alert}</p>
