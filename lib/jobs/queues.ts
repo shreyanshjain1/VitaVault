@@ -6,18 +6,24 @@ declare global {
   // eslint-disable-next-line no-var
   var __vitavaultQueues__:
     | {
-        alertsQueue: Queue;
-        remindersQueue: Queue;
-        dailySummaryQueue: Queue;
-        deviceSyncQueue: Queue;
+        alertsQueue?: Queue;
+        remindersQueue?: Queue;
+        dailySummaryQueue?: Queue;
+        deviceSyncQueue?: Queue;
       }
     | undefined;
 }
 
-function createQueues() {
-  const connection = getRedisConnection();
+function getQueueStore() {
+  if (!global.__vitavaultQueues__) {
+    global.__vitavaultQueues__ = {};
+  }
 
-  const defaultJobOptions = {
+  return global.__vitavaultQueues__;
+}
+
+function getDefaultJobOptions() {
+  return {
     attempts: 3,
     removeOnComplete: 100,
     removeOnFail: 200,
@@ -26,52 +32,56 @@ function createQueues() {
       delay: 10_000,
     },
   };
-
-  return {
-    alertsQueue: new Queue(QUEUE_NAMES.alerts, {
-      connection,
-      defaultJobOptions,
-    }),
-    remindersQueue: new Queue(QUEUE_NAMES.reminders, {
-      connection,
-      defaultJobOptions,
-    }),
-    dailySummaryQueue: new Queue(QUEUE_NAMES.dailySummary, {
-      connection,
-      defaultJobOptions,
-    }),
-    deviceSyncQueue: new Queue(QUEUE_NAMES.deviceSync, {
-      connection,
-      defaultJobOptions,
-    }),
-  };
-}
-
-function getQueues() {
-  if (!global.__vitavaultQueues__) {
-    global.__vitavaultQueues__ = createQueues();
-  }
-
-  return global.__vitavaultQueues__;
 }
 
 export function getAlertQueue() {
-  return getQueues().alertsQueue;
+  const store = getQueueStore();
+
+  if (!store.alertsQueue) {
+    store.alertsQueue = new Queue(QUEUE_NAMES.alerts, {
+      connection: getRedisConnection(),
+      defaultJobOptions: getDefaultJobOptions(),
+    });
+  }
+
+  return store.alertsQueue;
 }
 
 export function getRemindersQueue() {
-  return getQueues().remindersQueue;
+  const store = getQueueStore();
+
+  if (!store.remindersQueue) {
+    store.remindersQueue = new Queue(QUEUE_NAMES.reminders, {
+      connection: getRedisConnection(),
+      defaultJobOptions: getDefaultJobOptions(),
+    });
+  }
+
+  return store.remindersQueue;
 }
 
 export function getDailySummaryQueue() {
-  return getQueues().dailySummaryQueue;
+  const store = getQueueStore();
+
+  if (!store.dailySummaryQueue) {
+    store.dailySummaryQueue = new Queue(QUEUE_NAMES.dailySummary, {
+      connection: getRedisConnection(),
+      defaultJobOptions: getDefaultJobOptions(),
+    });
+  }
+
+  return store.dailySummaryQueue;
 }
 
 export function getDeviceSyncQueue() {
-  return getQueues().deviceSyncQueue;
-}
+  const store = getQueueStore();
 
-export const alertsQueue = getAlertQueue();
-export const remindersQueue = getRemindersQueue();
-export const dailySummaryQueue = getDailySummaryQueue();
-export const deviceSyncQueue = getDeviceSyncQueue();
+  if (!store.deviceSyncQueue) {
+    store.deviceSyncQueue = new Queue(QUEUE_NAMES.deviceSync, {
+      connection: getRedisConnection(),
+      defaultJobOptions: getDefaultJobOptions(),
+    });
+  }
+
+  return store.deviceSyncQueue;
+}

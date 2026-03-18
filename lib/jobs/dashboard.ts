@@ -1,16 +1,18 @@
 import { JobType, Queue } from "bullmq";
-import {
-  alertsQueue,
-  dailySummaryQueue,
-  deviceSyncQueue,
-  remindersQueue,
-} from "@/lib/jobs/queues";
 import { db } from "@/lib/db";
+import {
+  getAlertQueue,
+  getDailySummaryQueue,
+  getDeviceSyncQueue,
+  getRemindersQueue,
+} from "@/lib/jobs/queues";
 
 type SafeQueue = Queue;
 
-async function getSafeQueueCounts(label: string, queue: SafeQueue) {
+async function getSafeQueueCounts(label: string, queueFactory: () => SafeQueue) {
   try {
+    const queue = queueFactory();
+
     const counts = await queue.getJobCounts(
       "active" as JobType,
       "completed" as JobType,
@@ -46,10 +48,10 @@ async function getSafeQueueCounts(label: string, queue: SafeQueue) {
 export async function getJobsDashboardData() {
   const [queueCounts, recentRuns] = await Promise.all([
     Promise.all([
-      getSafeQueueCounts("Alert Evaluation", alertsQueue),
-      getSafeQueueCounts("Reminder Generation", remindersQueue),
-      getSafeQueueCounts("Daily Summary", dailySummaryQueue),
-      getSafeQueueCounts("Device Sync", deviceSyncQueue),
+      getSafeQueueCounts("Alert Evaluation", getAlertQueue),
+      getSafeQueueCounts("Reminder Generation", getRemindersQueue),
+      getSafeQueueCounts("Daily Summary", getDailySummaryQueue),
+      getSafeQueueCounts("Device Sync", getDeviceSyncQueue),
     ]),
     db.jobRun.findMany({
       orderBy: { createdAt: "desc" },
