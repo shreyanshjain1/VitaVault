@@ -6,7 +6,8 @@ export type AccessPermission =
   | "edit"
   | "notes"
   | "export"
-  | "ai";
+  | "ai"
+  | "alerts";
 
 export type OwnerAccessContext = {
   ownerUserId: string;
@@ -54,15 +55,15 @@ export async function requireOwnerAccess(
   }
 
   const allowed =
-    permission === "view"
+    permission === "view" || permission === "alerts"
       ? grant.canViewRecords
       : permission === "edit"
-        ? grant.canEditRecords
-        : permission === "notes"
-          ? grant.canAddNotes
-          : permission === "export"
-            ? grant.canExport
-            : grant.canGenerateAIInsights;
+      ? grant.canEditRecords
+      : permission === "notes"
+      ? grant.canAddNotes
+      : permission === "export"
+      ? grant.canExport
+      : grant.canGenerateAIInsights;
 
   if (!allowed) {
     throw new Error("You do not have permission for this action.");

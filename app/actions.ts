@@ -185,13 +185,13 @@ export async function saveHealthProfile(formData: FormData) {
     heightCm:
       parsed.data.heightCm !== undefined &&
       parsed.data.heightCm !== null &&
-      parsed.data.heightCm !== ""
+      parsed.data.heightCm !== null
         ? Number(parsed.data.heightCm)
         : null,
     weightKg:
       parsed.data.weightKg !== undefined &&
       parsed.data.weightKg !== null &&
-      parsed.data.weightKg !== ""
+      parsed.data.weightKg !== null
         ? Number(parsed.data.weightKg)
         : null,
     emergencyContactName: parsed.data.emergencyContactName?.trim() || null,

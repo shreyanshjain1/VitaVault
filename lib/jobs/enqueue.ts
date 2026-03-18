@@ -1,212 +1,131 @@
-import type { JobsOptions } from "bullmq";
-import type {
-  AlertEvaluationJobData,
-  DailyHealthSummaryJobData,
-  DeviceSyncProcessingJobData,
-  ReminderGenerationJobData,
+import { attachBullmqJobId, createJobRun } from "@/lib/jobs/job-run";
+import {
+  JOB_NAMES,
+  QUEUE_NAMES,
+  type AlertEvaluationJobPayload,
+  type DailyHealthSummaryJobData,
+  type DeviceSyncProcessingJobData,
+  type ReminderGenerationJobData,
 } from "@/lib/jobs/contracts";
 import {
-  JOB_ATTEMPTS_BY_KIND,
-  JOB_BACKOFF_DELAY_MS,
-} from "@/lib/jobs/constants";
-import {
-  appendJobRunLog,
-  attachBullmqJobId,
-  createQueuedJobRun,
-  markJobRunFailed,
-} from "@/lib/jobs/job-run-store";
-import {
-  alertsQueue,
-  dailySummaryQueue,
-  deviceSyncQueue,
-  getJobNameForKind,
-  remindersQueue,
+  getAlertQueue,
+  getDailySummaryQueue,
+  getDeviceSyncQueue,
+  getRemindersQueue,
 } from "@/lib/jobs/queues";
-import { JOB_KIND, type JobKindValue } from "@/lib/domain/enums";
 
-function buildJobOptions(kind: JobKindValue): JobsOptions {
+export async function enqueueAlertEvaluation(payload: AlertEvaluationJobPayload) {
+  const queue = getAlertQueue();
+
+  const jobRun = await createJobRun({
+    queueName: QUEUE_NAMES.alerts,
+    jobName: JOB_NAMES.alertEvaluation,
+    userId: payload.userId,
+    input: payload as Record<string, unknown>,
+    maxAttempts: 3,
+  });
+
+  const job = await queue.add(JOB_NAMES.alertEvaluation, payload, {
+    jobId: `alert-evaluation:${payload.userId}:${Date.now()}`,
+  });
+
+  await attachBullmqJobId(jobRun.id, String(job.id));
+
   return {
-    attempts: JOB_ATTEMPTS_BY_KIND[kind],
-    backoff: {
-      type: "exponential",
-      delay: JOB_BACKOFF_DELAY_MS[kind],
-    },
-    jobId: undefined,
-    removeOnComplete: 100,
-    removeOnFail: 250,
+    jobRunId: jobRun.id,
+    bullmqJobId: String(job.id),
   };
 }
 
-export async function enqueueAlertEvaluationJob(input: {
-  userId: string;
-  requestedByUserId?: string | null;
-  source?: AlertEvaluationJobData["source"];
-}) {
-  const kind = JOB_KIND.ALERT_EVALUATION;
-  const jobRun = await createQueuedJobRun({
-    kind,
-    userId: input.userId,
-    input,
-  });
-
-  const payload: AlertEvaluationJobData = {
-    jobRunId: jobRun.id,
-    userId: input.userId,
-    requestedByUserId: input.requestedByUserId ?? null,
-    source: input.source ?? "manual",
-  };
-
-  try {
-    const job = await alertsQueue.add(getJobNameForKind(kind), payload, {
-      ...buildJobOptions(kind),
-      jobId: jobRun.id,
-    });
-
-    await attachBullmqJobId(jobRun.id, String(job.id));
-    await appendJobRunLog(jobRun.id, "INFO", "Alert evaluation job queued.", {
-      queue: alertsQueue.name,
-      bullmqJobId: job.id,
-    });
-
-    return { jobRunId: jobRun.id, bullmqJobId: String(job.id) };
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unable to enqueue alert evaluation job.";
-    await markJobRunFailed(jobRun.id, 0, message);
-    await appendJobRunLog(jobRun.id, "ERROR", message);
-    throw error;
-  }
+export async function enqueueAlertEvaluationJob(
+  payload: AlertEvaluationJobPayload
+) {
+  return enqueueAlertEvaluation(payload);
 }
 
-export async function enqueueReminderGenerationJob(input: {
-  userId: string;
-  requestedByUserId?: string | null;
-  horizonDays?: number;
-}) {
-  const kind = JOB_KIND.REMINDER_GENERATION;
-  const jobRun = await createQueuedJobRun({
-    kind,
-    userId: input.userId,
-    input,
-  });
-
-  const payload: ReminderGenerationJobData = {
-    jobRunId: jobRun.id,
-    userId: input.userId,
-    requestedByUserId: input.requestedByUserId ?? null,
-    horizonDays: input.horizonDays ?? 7,
+export async function enqueueAlertScheduledScan(userId: string) {
+  const payload: AlertEvaluationJobPayload = {
+    userId,
+    sourceType: "SCHEDULED_SCAN",
+    sourceId: null,
+    sourceRecordedAt: new Date().toISOString(),
+    initiatedBy: "scheduled_scan",
   };
 
-  try {
-    const job = await remindersQueue.add(getJobNameForKind(kind), payload, {
-      ...buildJobOptions(kind),
-      jobId: jobRun.id,
-    });
-
-    await attachBullmqJobId(jobRun.id, String(job.id));
-    await appendJobRunLog(jobRun.id, "INFO", "Reminder generation job queued.", {
-      queue: remindersQueue.name,
-      bullmqJobId: job.id,
-      horizonDays: payload.horizonDays,
-    });
-
-    return { jobRunId: jobRun.id, bullmqJobId: String(job.id) };
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unable to enqueue reminder generation job.";
-    await markJobRunFailed(jobRun.id, 0, message);
-    await appendJobRunLog(jobRun.id, "ERROR", message);
-    throw error;
-  }
+  return enqueueAlertEvaluation(payload);
 }
 
-export async function enqueueDailyHealthSummaryJob(input: {
-  userId: string;
-  requestedByUserId?: string | null;
-  targetDate?: string;
-}) {
-  const kind = JOB_KIND.DAILY_HEALTH_SUMMARY;
-  const jobRun = await createQueuedJobRun({
-    kind,
-    userId: input.userId,
-    input,
+export async function enqueueReminderGenerationJob(
+  payload: ReminderGenerationJobData
+) {
+  const queue = getRemindersQueue();
+
+  const jobRun = await createJobRun({
+    queueName: QUEUE_NAMES.reminders,
+    jobName: JOB_NAMES.reminderGeneration,
+    userId: payload.userId,
+    input: payload as Record<string, unknown>,
+    maxAttempts: 3,
   });
 
-  const payload: DailyHealthSummaryJobData = {
+  const job = await queue.add(JOB_NAMES.reminderGeneration, payload, {
+    jobId: `reminder-generation:${payload.userId}:${Date.now()}`,
+  });
+
+  await attachBullmqJobId(jobRun.id, String(job.id));
+
+  return {
     jobRunId: jobRun.id,
-    userId: input.userId,
-    requestedByUserId: input.requestedByUserId ?? null,
-    targetDate: input.targetDate,
+    bullmqJobId: String(job.id),
   };
-
-  try {
-    const job = await dailySummaryQueue.add(getJobNameForKind(kind), payload, {
-      ...buildJobOptions(kind),
-      jobId: jobRun.id,
-    });
-
-    await attachBullmqJobId(jobRun.id, String(job.id));
-    await appendJobRunLog(jobRun.id, "INFO", "Daily summary job queued.", {
-      queue: dailySummaryQueue.name,
-      bullmqJobId: job.id,
-      targetDate: payload.targetDate ?? null,
-    });
-
-    return { jobRunId: jobRun.id, bullmqJobId: String(job.id) };
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unable to enqueue daily health summary job.";
-    await markJobRunFailed(jobRun.id, 0, message);
-    await appendJobRunLog(jobRun.id, "ERROR", message);
-    throw error;
-  }
 }
 
-export async function enqueueDeviceSyncProcessingJob(input: {
-  userId: string;
-  connectionId: string;
-  syncJobId: string;
-  requestedByUserId?: string | null;
-  triggeredBy?: DeviceSyncProcessingJobData["triggeredBy"];
-}) {
-  const kind = JOB_KIND.DEVICE_SYNC_PROCESSING;
-  const jobRun = await createQueuedJobRun({
-    kind,
-    userId: input.userId,
-    connectionId: input.connectionId,
-    syncJobId: input.syncJobId,
-    input,
+export async function enqueueDailyHealthSummaryJob(
+  payload: DailyHealthSummaryJobData
+) {
+  const queue = getDailySummaryQueue();
+
+  const jobRun = await createJobRun({
+    queueName: QUEUE_NAMES.dailySummary,
+    jobName: JOB_NAMES.dailyHealthSummary,
+    userId: payload.userId,
+    input: payload as Record<string, unknown>,
+    maxAttempts: 3,
   });
 
-  const payload: DeviceSyncProcessingJobData = {
+  const job = await queue.add(JOB_NAMES.dailyHealthSummary, payload, {
+    jobId: `daily-health-summary:${payload.userId}:${Date.now()}`,
+  });
+
+  await attachBullmqJobId(jobRun.id, String(job.id));
+
+  return {
     jobRunId: jobRun.id,
-    userId: input.userId,
-    requestedByUserId: input.requestedByUserId ?? null,
-    connectionId: input.connectionId,
-    syncJobId: input.syncJobId,
-    triggeredBy: input.triggeredBy ?? "manual",
+    bullmqJobId: String(job.id),
   };
+}
 
-  try {
-    const job = await deviceSyncQueue.add(getJobNameForKind(kind), payload, {
-      ...buildJobOptions(kind),
-      jobId: jobRun.id,
-    });
+export async function enqueueDeviceSyncProcessingJob(
+  payload: DeviceSyncProcessingJobData
+) {
+  const queue = getDeviceSyncQueue();
 
-    await attachBullmqJobId(jobRun.id, String(job.id));
-    await appendJobRunLog(jobRun.id, "INFO", "Device sync processing job queued.", {
-      queue: deviceSyncQueue.name,
-      bullmqJobId: job.id,
-      connectionId: input.connectionId,
-      syncJobId: input.syncJobId,
-    });
+  const jobRun = await createJobRun({
+    queueName: QUEUE_NAMES.deviceSync,
+    jobName: JOB_NAMES.deviceSyncProcessing,
+    userId: payload.userId,
+    input: payload as Record<string, unknown>,
+    maxAttempts: 3,
+  });
 
-    return { jobRunId: jobRun.id, bullmqJobId: String(job.id) };
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unable to enqueue device sync processing job.";
-    await markJobRunFailed(jobRun.id, 0, message);
-    await appendJobRunLog(jobRun.id, "ERROR", message);
-    throw error;
-  }
+  const job = await queue.add(JOB_NAMES.deviceSyncProcessing, payload, {
+    jobId: `device-sync-processing:${payload.userId}:${Date.now()}`,
+  });
+
+  await attachBullmqJobId(jobRun.id, String(job.id));
+
+  return {
+    jobRunId: jobRun.id,
+    bullmqJobId: String(job.id),
+  };
 }
