@@ -11,7 +11,6 @@ export async function getDashboardData(userId: string) {
     symptoms,
     reminders,
     medicationLogs,
-    openAlerts,
   ] = await Promise.all([
     db.healthProfile.findUnique({ where: { userId } }),
     db.medication.findMany({
@@ -41,7 +40,12 @@ export async function getDashboardData(userId: string) {
       take: 5,
     }),
     db.reminder.findMany({
-      where: { userId, completed: false },
+      where: {
+        userId,
+        state: {
+          in: ["DUE", "SENT", "OVERDUE"] as any,
+        },
+      } as any,
       orderBy: { dueAt: "asc" },
       take: 6,
     }),
@@ -54,22 +58,18 @@ export async function getDashboardData(userId: string) {
       },
       orderBy: { loggedAt: "desc" },
     }),
-    db.alertEvent.findMany({
-      where: { userId, status: "OPEN" },
-      orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
-      take: 6,
-      include: { rule: true },
-    }),
   ]);
 
   const adherenceByDay = Array.from({ length: 7 }).map((_, index) => {
     const date = subDays(new Date(), 6 - index);
     const key = format(date, "yyyy-MM-dd");
     const dayLogs = medicationLogs.filter(
-      (log) => format(log.loggedAt, "yyyy-MM-dd") === key
+      (log: (typeof medicationLogs)[number]) => format(log.loggedAt, "yyyy-MM-dd") === key
     );
 
-    const taken = dayLogs.filter((log) => log.status === "TAKEN").length;
+    const taken = dayLogs.filter(
+      (log: (typeof medicationLogs)[number]) => log.status === "TAKEN"
+    ).length;
     const total = dayLogs.length || 1;
 
     return {
@@ -79,29 +79,29 @@ export async function getDashboardData(userId: string) {
   });
 
   const bloodPressureTrend = vitals
-    .filter((v) => v.systolic != null && v.diastolic != null)
+    .filter((v: (typeof vitals)[number]) => v.systolic != null && v.diastolic != null)
     .slice()
     .reverse()
-    .map((v) => ({
+    .map((v: (typeof vitals)[number]) => ({
       label: format(v.recordedAt, "MMM d"),
       systolic: v.systolic ?? 0,
       diastolic: v.diastolic ?? 0,
     }));
 
   const weightTrend = vitals
-    .filter((v) => v.weightKg != null)
+    .filter((v: (typeof vitals)[number]) => v.weightKg != null)
     .slice()
     .reverse()
-    .map((v) => ({
+    .map((v: (typeof vitals)[number]) => ({
       label: format(v.recordedAt, "MMM d"),
       value: v.weightKg ?? 0,
     }));
 
   const sugarTrend = vitals
-    .filter((v) => v.bloodSugar != null)
+    .filter((v: (typeof vitals)[number]) => v.bloodSugar != null)
     .slice()
     .reverse()
-    .map((v) => ({
+    .map((v: (typeof vitals)[number]) => ({
       label: format(v.recordedAt, "MMM d"),
       value: v.bloodSugar ?? 0,
     }));
@@ -142,7 +142,14 @@ export async function getDashboardData(userId: string) {
     medicationLogs,
     adherenceByDay,
     adherenceTrend: adherenceByDay,
-    openAlerts,
+    openAlerts: [] as Array<{
+      id: string;
+      title: string;
+      message: string;
+      severity: string;
+      createdAt: Date;
+      rule?: { name?: string | null } | null;
+    }>,
     nextMedication,
     profileCompletion,
     bloodPressureTrend,

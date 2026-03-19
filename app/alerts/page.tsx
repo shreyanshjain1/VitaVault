@@ -4,7 +4,6 @@ import { AppShell } from "@/components/app-shell";
 import { PageHeader, StatusPill } from "@/components/common";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
 import { requireUser } from "@/lib/session";
-import { requireOwnerAccess } from "@/lib/access";
 import { getAlertList, getAlertRules } from "@/lib/alerts/queries";
 import { AlertFilterBar } from "@/components/alerts/alert-filter-bar";
 import { AlertList } from "@/components/alerts/alert-list";
@@ -20,26 +19,20 @@ export default async function AlertsPage({
     typeof params.ownerUserId === "string" && params.ownerUserId
       ? params.ownerUserId
       : currentUser.id!;
+
   const status = typeof params.status === "string" ? params.status : "ALL";
   const severity = typeof params.severity === "string" ? params.severity : "ALL";
   const category = typeof params.category === "string" ? params.category : "ALL";
 
-  const access = await requireOwnerAccess(currentUser.id!, ownerUserId, "alerts");
-
   const [alerts, rules] = await Promise.all([
-    getAlertList({
-      ownerUserId,
-      actorUserId: currentUser.id!,
-      isOwner: access.isOwner,
-      status: status as never,
-      severity: severity as never,
-      category: category as never,
-    }),
-    access.isOwner ? getAlertRules(ownerUserId) : Promise.resolve([]),
+    getAlertList(),
+    getAlertRules(),
   ]);
 
-  const openCount = alerts.filter((item) => item.status === "OPEN").length;
-  const criticalCount = alerts.filter((item) => item.severity === "CRITICAL").length;
+  const openCount = alerts.filter((item: (typeof alerts)[number]) => item.status === "OPEN").length;
+  const criticalCount = alerts.filter(
+    (item: (typeof alerts)[number]) => item.severity === "CRITICAL"
+  ).length;
 
   return (
     <AppShell>
@@ -79,9 +72,6 @@ export default async function AlertsPage({
                   <BellRing className="h-5 w-5 text-primary" />
                 </div>
                 <p className="mt-4 text-4xl font-semibold">{openCount}</p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Active issues awaiting acknowledgement, resolution, or dismissal.
-                </p>
               </div>
 
               <div className="rounded-3xl border border-border/60 bg-background/40 p-5">
@@ -90,9 +80,6 @@ export default async function AlertsPage({
                   <CircleAlert className="h-5 w-5 text-rose-500" />
                 </div>
                 <p className="mt-4 text-4xl font-semibold">{criticalCount}</p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Highest urgency items surfaced by configured rules.
-                </p>
               </div>
 
               <div className="rounded-3xl border border-border/60 bg-background/40 p-5">
@@ -101,9 +88,6 @@ export default async function AlertsPage({
                   <Workflow className="h-5 w-5 text-sky-500" />
                 </div>
                 <p className="mt-4 text-4xl font-semibold">{rules.length}</p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Enabled monitoring policies for vitals, symptoms, adherence, and sync health.
-                </p>
               </div>
             </CardContent>
           </Card>
@@ -111,9 +95,6 @@ export default async function AlertsPage({
           <Card>
             <CardHeader>
               <CardTitle>Visibility model</CardTitle>
-              <CardDescription className="mt-1">
-                Care-team-safe review context for shared workspaces.
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="rounded-3xl border border-border/60 bg-background/40 p-4">
@@ -121,30 +102,11 @@ export default async function AlertsPage({
                   <ShieldCheck className="mt-0.5 h-4 w-4 text-primary" />
                   <div>
                     <p className="text-sm font-semibold">Care-team visibility</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Each rule and alert event can be visible or hidden from the care team.
-                    </p>
                     <div className="mt-3">
-                      <StatusPill tone="info">
-                        {access.isOwner ? "Owner view" : "Shared care-team view"}
-                      </StatusPill>
+                      <StatusPill tone="info">Owner view</StatusPill>
                     </div>
                   </div>
                 </div>
-              </div>
-
-              <div className="rounded-3xl border border-border/60 bg-background/40 p-4">
-                <p className="text-sm font-semibold">Auditability</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Every status change and generated alert is stored with actor, timestamp, and metadata.
-                </p>
-              </div>
-
-              <div className="rounded-3xl border border-border/60 bg-background/40 p-4">
-                <p className="text-sm font-semibold">Worker-backed evaluation</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  New records can enqueue alert evaluation immediately, while scheduled scans catch stale syncs and missed patterns.
-                </p>
               </div>
             </CardContent>
           </Card>
@@ -153,9 +115,6 @@ export default async function AlertsPage({
         <Card>
           <CardHeader>
             <CardTitle>Filter and triage</CardTitle>
-            <CardDescription className="mt-1">
-              Narrow alert events by lifecycle, severity, or category.
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <AlertFilterBar

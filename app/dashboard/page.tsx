@@ -228,7 +228,7 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {recentAlerts.length ? (
-                recentAlerts.map((alert) => (
+                recentAlerts.map((alert: (typeof recentAlerts)[number]) => (
                   <div
                     key={alert.id}
                     className="rounded-[26px] border border-border/60 bg-background/40 p-5"
@@ -269,7 +269,7 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {recentReminders.length ? (
-                recentReminders.map((reminder) => (
+                recentReminders.map((reminder: (typeof recentReminders)[number]) => (
                   <div
                     key={reminder.id}
                     className="rounded-[26px] border border-border/60 bg-background/40 p-4"
@@ -307,7 +307,7 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {recentVitals.length ? (
-                recentVitals.map((vital) => (
+                recentVitals.map((vital: (typeof recentVitals)[number]) => (
                   <div
                     key={vital.id}
                     className="rounded-[26px] border border-border/60 bg-background/40 p-5"
@@ -349,7 +349,7 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {recentAppointments.length ? (
-                recentAppointments.map((appointment) => (
+                recentAppointments.map((appointment: (typeof recentAppointments)[number]) => (
                   <div
                     key={appointment.id}
                     className="rounded-[26px] border border-border/60 bg-background/40 p-5"
