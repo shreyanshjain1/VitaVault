@@ -6,6 +6,7 @@ import {
   type DailyHealthSummaryJobData,
   type DeviceSyncProcessingJobData,
   type ReminderGenerationJobData,
+  type ReminderOverdueEvaluationJobData,
 } from "@/lib/jobs/contracts";
 import {
   getAlertQueue,
@@ -37,27 +38,21 @@ export async function enqueueAlertEvaluation(payload: AlertEvaluationJobPayload)
   };
 }
 
-export async function enqueueAlertEvaluationJob(
-  payload: AlertEvaluationJobPayload
-) {
+export async function enqueueAlertEvaluationJob(payload: AlertEvaluationJobPayload) {
   return enqueueAlertEvaluation(payload);
 }
 
 export async function enqueueAlertScheduledScan(userId: string) {
-  const payload: AlertEvaluationJobPayload = {
+  return enqueueAlertEvaluation({
     userId,
     sourceType: "SCHEDULED_SCAN",
     sourceId: null,
     sourceRecordedAt: new Date().toISOString(),
     initiatedBy: "scheduled_scan",
-  };
-
-  return enqueueAlertEvaluation(payload);
+  });
 }
 
-export async function enqueueReminderGenerationJob(
-  payload: ReminderGenerationJobData
-) {
+export async function enqueueReminderGenerationJob(payload: ReminderGenerationJobData) {
   const queue = getRemindersQueue();
 
   const jobRun = await createJobRun({
@@ -80,9 +75,32 @@ export async function enqueueReminderGenerationJob(
   };
 }
 
-export async function enqueueDailyHealthSummaryJob(
-  payload: DailyHealthSummaryJobData
+export async function enqueueReminderOverdueEvaluationJob(
+  payload: ReminderOverdueEvaluationJobData
 ) {
+  const queue = getRemindersQueue();
+
+  const jobRun = await createJobRun({
+    queueName: QUEUE_NAMES.reminders,
+    jobName: JOB_NAMES.reminderOverdueEvaluation,
+    userId: payload.userId,
+    input: payload as Record<string, unknown>,
+    maxAttempts: 3,
+  });
+
+  const job = await queue.add(JOB_NAMES.reminderOverdueEvaluation, payload, {
+    jobId: `reminder-overdue:${payload.userId}:${Date.now()}`,
+  });
+
+  await attachBullmqJobId(jobRun.id, String(job.id));
+
+  return {
+    jobRunId: jobRun.id,
+    bullmqJobId: String(job.id),
+  };
+}
+
+export async function enqueueDailyHealthSummaryJob(payload: DailyHealthSummaryJobData) {
   const queue = getDailySummaryQueue();
 
   const jobRun = await createJobRun({
@@ -105,9 +123,7 @@ export async function enqueueDailyHealthSummaryJob(
   };
 }
 
-export async function enqueueDeviceSyncProcessingJob(
-  payload: DeviceSyncProcessingJobData
-) {
+export async function enqueueDeviceSyncProcessingJob(payload: DeviceSyncProcessingJobData) {
   const queue = getDeviceSyncQueue();
 
   const jobRun = await createJobRun({

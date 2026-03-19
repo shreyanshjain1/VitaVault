@@ -130,7 +130,7 @@ export async function loginAction(
   redirect(callbackUrl);
 }
 
-export async function saveHealthProfile(formData: FormData) {
+export async function saveHealthProfile(formData: FormData): Promise<void> {
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -183,17 +183,9 @@ export async function saveHealthProfile(formData: FormData) {
     sex: parsed.data.sex ?? null,
     bloodType: parsed.data.bloodType?.trim() || null,
     heightCm:
-      parsed.data.heightCm !== undefined &&
-      parsed.data.heightCm !== null &&
-      parsed.data.heightCm !== null
-        ? Number(parsed.data.heightCm)
-        : null,
+      parsed.data.heightCm != null ? Number(parsed.data.heightCm) : null,
     weightKg:
-      parsed.data.weightKg !== undefined &&
-      parsed.data.weightKg !== null &&
-      parsed.data.weightKg !== null
-        ? Number(parsed.data.weightKg)
-        : null,
+      parsed.data.weightKg != null ? Number(parsed.data.weightKg) : null,
     emergencyContactName: parsed.data.emergencyContactName?.trim() || null,
     emergencyContactPhone: parsed.data.emergencyContactPhone?.trim() || null,
     chronicConditions: parsed.data.chronicConditions?.trim() || null,
@@ -226,8 +218,6 @@ export async function saveHealthProfile(formData: FormData) {
 
   revalidatePath("/health-profile");
   revalidatePath("/dashboard");
-
-  return { success: true };
 }
 
 export async function addDoctor(formData: FormData) {

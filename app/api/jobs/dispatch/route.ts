@@ -5,13 +5,21 @@ import {
   enqueueDailyHealthSummaryJob,
   enqueueDeviceSyncProcessingJob,
   enqueueReminderGenerationJob,
+  enqueueReminderOverdueEvaluationJob,
 } from "@/lib/jobs/enqueue";
 
 type DispatchBody =
   | {
       jobType: "alert-evaluation";
       userId?: string;
-      sourceType?: "VITAL_RECORD" | "MEDICATION_LOG" | "SYMPTOM_ENTRY" | "SYNC_JOB" | "DEVICE_READING" | "SCHEDULED_SCAN" | null;
+      sourceType?:
+        | "VITAL_RECORD"
+        | "MEDICATION_LOG"
+        | "SYMPTOM_ENTRY"
+        | "SYNC_JOB"
+        | "DEVICE_READING"
+        | "SCHEDULED_SCAN"
+        | null;
       sourceId?: string | null;
       sourceRecordedAt?: string | null;
       initiatedBy?: "record_create" | "scheduled_scan" | "manual_scan" | "sync_finish";
@@ -19,10 +27,18 @@ type DispatchBody =
   | {
       jobType: "reminder-generation";
       userId?: string;
+      timezone?: string | null;
+      targetDate?: string | null;
+    }
+  | {
+      jobType: "reminder-overdue-evaluation";
+      userId?: string;
+      timezone?: string | null;
     }
   | {
       jobType: "daily-health-summary";
       userId?: string;
+      targetDate?: string | null;
     }
   | {
       jobType: "device-sync-processing";
@@ -57,6 +73,19 @@ export async function POST(request: Request) {
       case "reminder-generation": {
         const result = await enqueueReminderGenerationJob({
           userId,
+          timezone: body.timezone ?? null,
+          targetDate: body.targetDate ?? null,
+          requestedByUserId: currentUser.id!,
+        });
+
+        return NextResponse.json({ ok: true, jobType: body.jobType, ...result });
+      }
+
+      case "reminder-overdue-evaluation": {
+        const result = await enqueueReminderOverdueEvaluationJob({
+          userId,
+          timezone: body.timezone ?? null,
+          requestedByUserId: currentUser.id!,
         });
 
         return NextResponse.json({ ok: true, jobType: body.jobType, ...result });
@@ -65,6 +94,8 @@ export async function POST(request: Request) {
       case "daily-health-summary": {
         const result = await enqueueDailyHealthSummaryJob({
           userId,
+          targetDate: body.targetDate ?? null,
+          requestedByUserId: currentUser.id!,
         });
 
         return NextResponse.json({ ok: true, jobType: body.jobType, ...result });
@@ -75,6 +106,7 @@ export async function POST(request: Request) {
           userId,
           connectionId: body.connectionId ?? null,
           syncJobId: body.syncJobId ?? null,
+          triggeredBy: currentUser.id!,
         });
 
         return NextResponse.json({ ok: true, jobType: body.jobType, ...result });

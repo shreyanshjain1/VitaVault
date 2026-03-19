@@ -1,5 +1,4 @@
-import { addDays, endOfDay, startOfDay } from "date-fns";
-import { ReadingSource, ReminderType, SyncJobStatus } from "@prisma/client";
+import { AppointmentStatus, ReadingSource, SyncJobStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
   type AlertEvaluationJobData,
@@ -10,132 +9,62 @@ import {
   type DeviceSyncProcessingJobResult,
   type ReminderGenerationJobData,
   type ReminderGenerationJobResult,
+  type ReminderOverdueEvaluationJobData,
+  type ReminderOverdueEvaluationJobResult,
 } from "@/lib/jobs/contracts";
-import { appendJobRunLog } from "@/lib/jobs/job-run";
 import { runAlertEvaluation } from "@/lib/alerts/service";
-
-function logByJobId(
-  jobRunId: string | undefined,
-  level: string,
-  message: string,
-  context?: Record<string, unknown>
-) {
-  if (!jobRunId) {
-    return Promise.resolve();
-  }
-
-  return appendJobRunLog({
-    bullmqJobId: jobRunId,
-    level,
-    message,
-    context: context ?? null,
-  });
-}
+import {
+  generateReminderInstances,
+  markDueRemindersAsOverdue,
+} from "@/lib/reminders/service";
 
 export async function handleAlertEvaluationJob(
   payload: AlertEvaluationJobData
 ): Promise<AlertEvaluationJobResult> {
-  const result = await runAlertEvaluation({
+  return runAlertEvaluation({
     userId: payload.userId,
     sourceType: payload.sourceType ?? null,
     sourceId: payload.sourceId ?? null,
     sourceRecordedAt: payload.sourceRecordedAt ?? null,
     initiatedBy: payload.initiatedBy ?? "manual_scan",
   });
-
-  return {
-    evaluatedRuleCount: result.evaluatedRuleCount,
-    createdAlertCount: result.createdAlertCount,
-    createdAlertIds: result.createdAlertIds,
-  };
 }
 
 export async function handleReminderGenerationJob(
   payload: ReminderGenerationJobData
 ): Promise<ReminderGenerationJobResult> {
-  const today = new Date();
-  const horizonEnd = addDays(today, 7);
-
-  const [medications, appointments] = await Promise.all([
-    db.medication.findMany({
-      where: {
-        userId: payload.userId,
-        active: true,
-      },
-      include: {
-        schedules: true,
-      },
-    }),
-    db.appointment.findMany({
-      where: {
-        userId: payload.userId,
-        scheduledAt: {
-          gte: startOfDay(today),
-          lte: endOfDay(horizonEnd),
-        },
-        status: "UPCOMING",
-      },
-    }),
-  ]);
-
-  for (const medication of medications) {
-    for (const schedule of medication.schedules) {
-      const existing = await db.reminder.findFirst({
-        where: {
-          userId: payload.userId,
-          type: ReminderType.MEDICATION,
-          title: `${medication.name} reminder`,
-          completed: false,
-        },
-      });
-
-      if (!existing) {
-        const dueAt = new Date();
-        await db.reminder.create({
-          data: {
-            userId: payload.userId,
-            type: ReminderType.MEDICATION,
-            title: `${medication.name} reminder`,
-            description: `Scheduled dose at ${schedule.timeOfDay}`,
-            dueAt,
-          },
-        });
-      }
-    }
-  }
-
-  for (const appointment of appointments) {
-    const existing = await db.reminder.findFirst({
-      where: {
-        userId: payload.userId,
-        type: ReminderType.APPOINTMENT,
-        title: `Appointment: ${appointment.doctorName}`,
-        dueAt: appointment.scheduledAt,
-      },
-    });
-
-    if (!existing) {
-      await db.reminder.create({
-        data: {
-          userId: payload.userId,
-          type: ReminderType.APPOINTMENT,
-          title: `Appointment: ${appointment.doctorName}`,
-          description: appointment.clinic,
-          dueAt: appointment.scheduledAt,
-        },
-      });
-    }
-  }
+  const result = await generateReminderInstances({
+    userId: payload.userId,
+    targetDate: payload.targetDate ? new Date(payload.targetDate) : new Date(),
+    requestedByUserId: payload.requestedByUserId ?? null,
+  });
 
   return {
     ok: true,
+    created: result.created,
+    deduped: result.deduped,
+  };
+}
+
+export async function handleReminderOverdueEvaluationJob(
+  payload: ReminderOverdueEvaluationJobData
+): Promise<ReminderOverdueEvaluationJobResult> {
+  const result = await markDueRemindersAsOverdue({
+    userId: payload.userId,
+    requestedByUserId: payload.requestedByUserId ?? null,
+  });
+
+  return {
+    ok: true,
+    overdueMarked: result.overdueMarked,
+    missedMarked: result.missedMarked,
   };
 }
 
 export async function handleDailyHealthSummaryJob(
   payload: DailyHealthSummaryJobData
 ): Promise<DailyHealthSummaryJobResult> {
-  const [profile, vitals, symptoms, medications, alerts] = await Promise.all([
+  const [profile, vitals, symptoms, medications] = await Promise.all([
     db.healthProfile.findUnique({
       where: { userId: payload.userId },
     }),
@@ -154,40 +83,44 @@ export async function handleDailyHealthSummaryJob(
       orderBy: { createdAt: "desc" },
       take: 10,
     }),
-    db.alertEvent.findMany({
-      where: { userId: payload.userId, status: "OPEN" },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-    }),
   ]);
+
+  const openReminderCount = await db.reminder.count({
+    where: {
+      userId: payload.userId,
+      state: {
+        in: ["DUE", "SENT", "OVERDUE"] as any,
+      },
+    } as any,
+  });
 
   const summaryLines = [
     `Profile: ${profile?.fullName ?? "Unknown patient"}`,
     `Recent vitals logged: ${vitals.length}`,
     `Recent symptom entries: ${symptoms.length}`,
     `Active medications: ${medications.length}`,
-    `Open alerts: ${alerts.length}`,
+    `Open reminders: ${openReminderCount}`,
   ];
 
   await db.aiInsight.create({
     data: {
       ownerUserId: payload.userId,
-      generatedByUserId: null,
+      generatedByUserId: payload.requestedByUserId ?? null,
       title: "Daily Health Summary",
       summary: summaryLines.join("\n"),
-      adherenceRisk: alerts.length > 0 ? "Needs review" : "Stable",
+      adherenceRisk: openReminderCount > 0 ? "Needs review" : "Stable",
       trendFlagsJson: JSON.stringify({
         vitalsCount: vitals.length,
         symptomsCount: symptoms.length,
-        alertsCount: alerts.length,
+        reminderCount: openReminderCount,
       }),
       suggestedQuestionsJson: JSON.stringify([
         "Were all medications taken today?",
         "Any worsening symptoms since the last update?",
-        "Do any open alerts need review?",
+        "Are any reminders overdue or missed?",
       ]),
       recommendedFollowUpJson: JSON.stringify([
-        "Review open alerts",
+        "Review pending reminders",
         "Update vitals if readings are available",
         "Check upcoming medications and appointments",
       ]),
@@ -196,21 +129,12 @@ export async function handleDailyHealthSummaryJob(
     },
   });
 
-  return {
-    ok: true,
-  };
+  return { ok: true };
 }
 
 export async function handleDeviceSyncProcessingJob(
   payload: DeviceSyncProcessingJobData
 ): Promise<DeviceSyncProcessingJobResult> {
-  const syncJob =
-    payload.syncJobId != null
-      ? await db.syncJob.findUnique({
-          where: { id: payload.syncJobId },
-        })
-      : null;
-
   const connection =
     payload.connectionId != null
       ? await db.deviceConnection.findUnique({
@@ -240,10 +164,7 @@ export async function handleDeviceSyncProcessingJob(
   for (const reading of readings) {
     if (reading.readingType === "HEART_RATE") {
       const externalReadingId = `device:${reading.id}:hr`;
-
-      const existing = await db.vitalRecord.findFirst({
-        where: { externalReadingId },
-      });
+      const existing = await db.vitalRecord.findFirst({ where: { externalReadingId } });
 
       if (!existing) {
         await db.vitalRecord.create({
@@ -263,10 +184,7 @@ export async function handleDeviceSyncProcessingJob(
 
     if (reading.readingType === "WEIGHT") {
       const externalReadingId = `device:${reading.id}:weight`;
-
-      const existing = await db.vitalRecord.findFirst({
-        where: { externalReadingId },
-      });
+      const existing = await db.vitalRecord.findFirst({ where: { externalReadingId } });
 
       if (!existing) {
         await db.vitalRecord.create({
@@ -286,10 +204,7 @@ export async function handleDeviceSyncProcessingJob(
 
     if (reading.readingType === "BLOOD_PRESSURE") {
       const externalReadingId = `device:${reading.id}:bp`;
-
-      const existing = await db.vitalRecord.findFirst({
-        where: { externalReadingId },
-      });
+      const existing = await db.vitalRecord.findFirst({ where: { externalReadingId } });
 
       if (!existing) {
         await db.vitalRecord.create({
@@ -310,10 +225,7 @@ export async function handleDeviceSyncProcessingJob(
 
     if (reading.readingType === "BLOOD_GLUCOSE") {
       const externalReadingId = `device:${reading.id}:glucose`;
-
-      const existing = await db.vitalRecord.findFirst({
-        where: { externalReadingId },
-      });
+      const existing = await db.vitalRecord.findFirst({ where: { externalReadingId } });
 
       if (!existing) {
         await db.vitalRecord.create({
@@ -333,10 +245,7 @@ export async function handleDeviceSyncProcessingJob(
 
     if (reading.readingType === "OXYGEN_SATURATION") {
       const externalReadingId = `device:${reading.id}:oxygen`;
-
-      const existing = await db.vitalRecord.findFirst({
-        where: { externalReadingId },
-      });
+      const existing = await db.vitalRecord.findFirst({ where: { externalReadingId } });
 
       if (!existing) {
         await db.vitalRecord.create({
@@ -356,10 +265,7 @@ export async function handleDeviceSyncProcessingJob(
 
     if (reading.readingType === "TEMPERATURE") {
       const externalReadingId = `device:${reading.id}:temp`;
-
-      const existing = await db.vitalRecord.findFirst({
-        where: { externalReadingId },
-      });
+      const existing = await db.vitalRecord.findFirst({ where: { externalReadingId } });
 
       if (!existing) {
         await db.vitalRecord.create({
@@ -399,7 +305,5 @@ export async function handleDeviceSyncProcessingJob(
     });
   }
 
-  return {
-    ok: true,
-  };
+  return { ok: true };
 }

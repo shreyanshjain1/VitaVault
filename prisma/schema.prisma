@@ -8,26 +8,26 @@ datasource db {
 }
 
 model User {
-  id                       String              @id @default(cuid())
+  id                       String               @id @default(cuid())
   name                     String?
-  email                    String              @unique
+  email                    String               @unique
   emailVerified            DateTime?
   image                    String?
   passwordHash             String?
-  role                     AppRole             @default(PATIENT)
-  createdAt                DateTime            @default(now())
-  updatedAt                DateTime            @updatedAt
-  actorAccessAuditLogs     AccessAuditLog[]    @relation("AccessAuditActor")
-  ownedAccessAuditLogs     AccessAuditLog[]    @relation("AccessAuditOwner")
+  role                     AppRole              @default(PATIENT)
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+  actorAccessAuditLogs     AccessAuditLog[]     @relation("AccessAuditActor")
+  ownedAccessAuditLogs     AccessAuditLog[]     @relation("AccessAuditOwner")
   accounts                 Account[]
-  generatedAiInsights      AiInsight[]         @relation("AiInsightGeneratedBy")
-  ownedAiInsights          AiInsight[]         @relation("AiInsightOwner")
+  generatedAiInsights      AiInsight[]          @relation("AiInsightGeneratedBy")
+  ownedAiInsights          AiInsight[]          @relation("AiInsightOwner")
   appointments             Appointment[]
-  grantedCareAccessGrants  CareAccess[]        @relation("CareAccessGrantedBy")
-  receivedCareAccessGrants CareAccess[]        @relation("CareAccessMember")
-  ownedCareAccessGrants    CareAccess[]        @relation("CareAccessOwner")
-  sentCareInvites          CareInvite[]        @relation("CareInviteGrantedBy")
-  ownedCareInvites         CareInvite[]        @relation("CareInviteOwner")
+  grantedCareAccessGrants  CareAccess[]         @relation("CareAccessGrantedBy")
+  receivedCareAccessGrants CareAccess[]         @relation("CareAccessMember")
+  ownedCareAccessGrants    CareAccess[]         @relation("CareAccessOwner")
+  sentCareInvites          CareInvite[]         @relation("CareInviteGrantedBy")
+  ownedCareInvites         CareInvite[]         @relation("CareInviteOwner")
   deviceConnections        DeviceConnection[]
   deviceReadings           DeviceReading[]
   doctors                  Doctor[]
@@ -44,15 +44,13 @@ model User {
   vaccinations             VaccinationRecord[]
   vitalRecords             VitalRecord[]
   jobRuns                  JobRun[]
-  alertAuditEntries         AlertAuditLog[]
-  alertRules               AlertRule[]
-  alerts                   AlertEvent[]
-  alertAuditLogs           AlertAuditLog[]     @relation("AlertAuditActor")
+  reminderAuditEntries   ReminderAuditLog[]
+  reminderAuditActorLogs ReminderAuditLog[] @relation("ReminderAuditActor")
 }
 
 model HealthProfile {
-  id                    String   @id @default(cuid())
-  userId                String   @unique
+  id                    String    @id @default(cuid())
+  userId                String    @unique
   fullName              String
   dateOfBirth           DateTime?
   sex                   Sex?
@@ -64,9 +62,9 @@ model HealthProfile {
   chronicConditions     String?
   allergiesSummary      String?
   notes                 String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Doctor {
@@ -87,7 +85,7 @@ model Doctor {
 }
 
 model Medication {
-  id           String              @id @default(cuid())
+  id           String               @id @default(cuid())
   userId       String
   doctorId     String?
   name         String
@@ -96,12 +94,12 @@ model Medication {
   instructions String?
   startDate    DateTime
   endDate      DateTime?
-  status       MedicationStatus    @default(ACTIVE)
-  active       Boolean             @default(true)
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
-  doctor       Doctor?             @relation(fields: [doctorId], references: [id])
-  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status       MedicationStatus     @default(ACTIVE)
+  active       Boolean              @default(true)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  doctor       Doctor?              @relation(fields: [doctorId], references: [id])
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   logs         MedicationLog[]
   schedules    MedicationSchedule[]
 }
@@ -145,58 +143,58 @@ model Appointment {
 }
 
 model LabResult {
-  id            String   @id @default(cuid())
-  userId        String
-  testName      String
-  dateTaken     DateTime
-  resultSummary String
+  id             String   @id @default(cuid())
+  userId         String
+  testName       String
+  dateTaken      DateTime
+  resultSummary  String
   referenceRange String?
-  flag          LabFlag  @default(NORMAL)
-  filePath      String?
-  fileName      String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flag           LabFlag  @default(NORMAL)
+  filePath       String?
+  fileName       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VitalRecord {
-  id               String        @id @default(cuid())
-  userId           String
-  recordedAt       DateTime      @default(now())
-  systolic         Int?
-  diastolic        Int?
-  heartRate        Int?
-  bloodSugar       Float?
-  oxygenSaturation Int?
-  temperatureC     Float?
-  weightKg         Float?
-  notes            String?
-  createdAt        DateTime      @default(now())
-  externalReadingId String?      @unique
-  readingSource    ReadingSource @default(MANUAL)
-  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String        @id @default(cuid())
+  userId            String
+  recordedAt        DateTime      @default(now())
+  systolic          Int?
+  diastolic         Int?
+  heartRate         Int?
+  bloodSugar        Float?
+  oxygenSaturation  Int?
+  temperatureC      Float?
+  weightKg          Float?
+  notes             String?
+  createdAt         DateTime      @default(now())
+  externalReadingId String?       @unique
+  readingSource     ReadingSource @default(MANUAL)
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, recordedAt])
   @@index([userId, readingSource])
 }
 
 model SymptomEntry {
-  id         String          @id @default(cuid())
-  userId     String
-  title      String
-  severity   SymptomSeverity
-  bodyArea   String?
-  startedAt  DateTime
-  duration   String?
-  trigger    String?
-  notes      String?
-  resolved   Boolean         @default(false)
-  createdAt  DateTime        @default(now())
-  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String          @id @default(cuid())
+  userId    String
+  title     String
+  severity  SymptomSeverity
+  bodyArea  String?
+  startedAt DateTime
+  duration  String?
+  trigger   String?
+  notes     String?
+  resolved  Boolean         @default(false)
+  createdAt DateTime        @default(now())
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VaccinationRecord {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   userId      String
   vaccineName String
   doseNumber  Int
@@ -204,34 +202,72 @@ model VaccinationRecord {
   location    String?
   nextDueDate DateTime?
   notes       String?
-  createdAt   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model MedicalDocument {
-  id         String       @id @default(cuid())
-  userId     String
-  title      String
-  type       DocumentType
-  filePath   String
-  fileName   String
-  mimeType   String
-  sizeBytes  Int
-  notes      String?
-  createdAt  DateTime     @default(now())
-  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String       @id @default(cuid())
+  userId    String
+  title     String
+  type      DocumentType
+  filePath  String
+  fileName  String
+  mimeType  String
+  sizeBytes Int
+  notes     String?
+  createdAt DateTime     @default(now())
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Reminder {
-  id          String       @id @default(cuid())
-  userId      String
-  type        ReminderType
-  title       String
-  description String?
-  dueAt       DateTime
-  completed   Boolean      @default(false)
-  createdAt   DateTime     @default(now())
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String           @id @default(cuid())
+  userId             String
+  type               ReminderType
+  title              String
+  description        String?
+  dueAt              DateTime
+  completed          Boolean          @default(false)
+  state              ReminderState    @default(DUE)
+  channel            ReminderChannel  @default(IN_APP)
+  sentAt             DateTime?
+  overdueAt          DateTime?
+  skippedAt          DateTime?
+  completedAt        DateTime?
+  missedAt           DateTime?
+  gracePeriodMinutes Int              @default(60)
+  quietHoursStart    String?
+  quietHoursEnd      String?
+  timezone           String?
+  sourceType         ReminderSourceType?
+  sourceId           String?
+  scheduleId         String?
+  dedupeKey          String?          @unique
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  auditLogs          ReminderAuditLog[]
+
+  @@index([userId, dueAt])
+  @@index([userId, state, dueAt])
+  @@index([userId, type, dueAt])
+}
+
+model ReminderAuditLog {
+  id           String    @id @default(cuid())
+  userId       String
+  reminderId   String?
+  actorUserId  String?
+  action       String
+  note         String?
+  metadataJson String?
+  createdAt    DateTime  @default(now())
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reminder     Reminder? @relation(fields: [reminderId], references: [id], onDelete: Cascade)
+  actor        User?     @relation("ReminderAuditActor", fields: [actorUserId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([reminderId, createdAt])
 }
 
 model CareAccess {
@@ -298,42 +334,42 @@ model AccessAuditLog {
 }
 
 model AiInsight {
-  id                       String   @id @default(cuid())
-  ownerUserId              String
-  generatedByUserId        String?
-  title                    String
-  summary                  String
-  adherenceRisk            String
-  trendFlagsJson           String
-  suggestedQuestionsJson   String
-  recommendedFollowUpJson  String
-  disclaimer               String
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
-  generatedBy              User?    @relation("AiInsightGeneratedBy", fields: [generatedByUserId], references: [id])
-  owner                    User     @relation("AiInsightOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  id                      String   @id @default(cuid())
+  ownerUserId             String
+  generatedByUserId       String?
+  title                   String
+  summary                 String
+  adherenceRisk           String
+  trendFlagsJson          String
+  suggestedQuestionsJson  String
+  recommendedFollowUpJson String
+  disclaimer              String
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  generatedBy             User?    @relation("AiInsightGeneratedBy", fields: [generatedByUserId], references: [id])
+  owner                   User     @relation("AiInsightOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
 
   @@index([ownerUserId, createdAt])
 }
 
 model DeviceConnection {
-  id            String                 @id @default(cuid())
-  userId        String
-  source        ReadingSource
-  platform      DevicePlatform
+  id             String                 @id @default(cuid())
+  userId         String
+  source         ReadingSource
+  platform       DevicePlatform
   clientDeviceId String
-  deviceLabel   String?
-  appVersion    String?
-  status        DeviceConnectionStatus @default(ACTIVE)
-  scopesJson    String?
-  lastSyncedAt  DateTime?
-  lastError     String?
-  createdAt     DateTime               @default(now())
-  updatedAt     DateTime               @updatedAt
-  user          User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  readings      DeviceReading[]
-  syncJobs      SyncJob[]
-  jobRuns       JobRun[]
+  deviceLabel    String?
+  appVersion     String?
+  status         DeviceConnectionStatus @default(ACTIVE)
+  scopesJson     String?
+  lastSyncedAt   DateTime?
+  lastError      String?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  user           User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readings       DeviceReading[]
+  syncJobs       SyncJob[]
+  jobRuns        JobRun[]
 
   @@unique([userId, source, clientDeviceId])
   @@index([userId, source, status])
@@ -365,38 +401,38 @@ model DeviceReading {
 }
 
 model MobileSessionToken {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   userId     String
   name       String?
-  tokenHash  String   @unique
+  tokenHash  String    @unique
   expiresAt  DateTime
   lastUsedAt DateTime?
   revokedAt  DateTime?
-  createdAt  DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
 }
 
 model SyncJob {
-  id            String        @id @default(cuid())
-  userId        String
-  connectionId  String?
-  source        ReadingSource
-  platform      DevicePlatform
-  status        SyncJobStatus @default(QUEUED)
-  requestedCount Int          @default(0)
-  acceptedCount Int           @default(0)
-  mirroredCount Int           @default(0)
-  startedAt     DateTime?
-  finishedAt    DateTime?
-  errorMessage  String?
-  metadataJson  String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  connection    DeviceConnection? @relation(fields: [connectionId], references: [id])
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobRuns       JobRun[]
+  id             String            @id @default(cuid())
+  userId         String
+  connectionId   String?
+  source         ReadingSource
+  platform       DevicePlatform
+  status         SyncJobStatus     @default(QUEUED)
+  requestedCount Int               @default(0)
+  acceptedCount  Int               @default(0)
+  mirroredCount  Int               @default(0)
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  errorMessage   String?
+  metadataJson   String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  connection     DeviceConnection? @relation(fields: [connectionId], references: [id])
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobRuns        JobRun[]
 
   @@index([userId, createdAt])
   @@index([connectionId, createdAt])
@@ -421,10 +457,11 @@ model JobRun {
   finishedAt   DateTime?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
-  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
-  connection   DeviceConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
-  syncJob      SyncJob?     @relation(fields: [syncJobId], references: [id], onDelete: SetNull)
-  logs         JobRunLog[]
+
+  user       User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  connection DeviceConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  syncJob    SyncJob?          @relation(fields: [syncJobId], references: [id], onDelete: SetNull)
+  logs       JobRunLog[]
 
   @@index([jobKind, createdAt])
   @@index([status, createdAt])
@@ -445,87 +482,6 @@ model JobRunLog {
   @@index([jobRunId, createdAt])
 }
 
-model AlertRule {
-  id                       String              @id @default(cuid())
-  userId                   String
-  name                     String
-  description              String?
-  category                 AlertRuleCategory
-  metricKey                String?
-  sourceType               AlertSourceType?
-  sourceId                 String?
-  enabled                  Boolean             @default(true)
-  severity                 AlertSeverity       @default(MEDIUM)
-  visibleToCareTeam        Boolean             @default(true)
-  cooldownMinutes          Int                 @default(180)
-  lookbackHours            Int                 @default(24)
-  thresholdOperator        ThresholdOperator?
-  thresholdValue           Float?
-  thresholdValueSecondary  Float?
-  symptomSeverity          SymptomSeverity?
-  medicationMissedCount    Int?
-  syncStaleHours           Int?
-  metadataJson             String?
-  createdAt                DateTime            @default(now())
-  updatedAt                DateTime            @updatedAt
-  user                     User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  alerts                   AlertEvent[]
-  auditLogs                AlertAuditLog[]     @relation("AlertAuditRule")
-
-  @@index([userId, enabled, category])
-  @@index([userId, visibleToCareTeam])
-}
-
-model AlertEvent {
-  id                       String              @id @default(cuid())
-  userId                   String
-  ruleId                   String?
-  title                    String
-  message                  String
-  category                 AlertRuleCategory
-  severity                 AlertSeverity
-  status                   AlertStatus         @default(OPEN)
-  visibleToCareTeam        Boolean             @default(true)
-  ownerAcknowledgedAt      DateTime?
-  resolvedAt               DateTime?
-  dismissedAt              DateTime?
-  sourceType               AlertSourceType?
-  sourceId                 String?
-  sourceRecordedAt         DateTime?
-  dedupeKey                String?             @unique
-  contextJson              String?
-  createdAt                DateTime            @default(now())
-  updatedAt                DateTime            @updatedAt
-  user                     User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  rule                     AlertRule?          @relation(fields: [ruleId], references: [id], onDelete: SetNull)
-  auditLogs                AlertAuditLog[]     @relation("AlertAuditEvent")
-
-  @@index([userId, status, createdAt])
-  @@index([userId, category, createdAt])
-  @@index([ruleId, createdAt])
-  @@index([sourceType, sourceId])
-}
-
-model AlertAuditLog {
-  id           String   @id @default(cuid())
-  userId       String
-  alertId      String?
-  ruleId       String?
-  actorUserId  String?
-  action       String
-  note         String?
-  metadataJson String?
-  createdAt    DateTime @default(now())
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  alert        AlertEvent? @relation("AlertAuditEvent", fields: [alertId], references: [id], onDelete: Cascade)
-  rule         AlertRule?  @relation("AlertAuditRule", fields: [ruleId], references: [id], onDelete: Cascade)
-  actor        User?    @relation("AlertAuditActor", fields: [actorUserId], references: [id])
-
-  @@index([userId, createdAt])
-  @@index([alertId, createdAt])
-  @@index([ruleId, createdAt])
-}
-
 model Account {
   userId            String
   type              String
@@ -538,7 +494,7 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-  user              User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([provider, providerAccountId])
 }
@@ -556,6 +512,29 @@ model VerificationToken {
   expires    DateTime
 
   @@id([identifier, token])
+}
+
+enum ReminderState {
+  DUE
+  SENT
+  OVERDUE
+  SKIPPED
+  COMPLETED
+  MISSED
+}
+
+enum ReminderChannel {
+  IN_APP
+  EMAIL
+  PUSH
+}
+
+enum ReminderSourceType {
+  MEDICATION_SCHEDULE
+  APPOINTMENT
+  VACCINATION
+  LAB_FOLLOW_UP
+  GENERAL
 }
 
 enum AppRole {
@@ -693,42 +672,4 @@ enum JobRunStatus {
   FAILED
   RETRYING
   CANCELLED
-}
-
-enum AlertRuleCategory {
-  VITAL_THRESHOLD
-  MEDICATION_ADHERENCE
-  SYMPTOM_SEVERITY
-  SYNC_HEALTH
-}
-
-enum AlertSeverity {
-  LOW
-  MEDIUM
-  HIGH
-  CRITICAL
-}
-
-enum AlertStatus {
-  OPEN
-  ACKNOWLEDGED
-  RESOLVED
-  DISMISSED
-}
-
-enum ThresholdOperator {
-  GT
-  GTE
-  LT
-  LTE
-  BETWEEN
-}
-
-enum AlertSourceType {
-  VITAL_RECORD
-  MEDICATION_LOG
-  SYMPTOM_ENTRY
-  SYNC_JOB
-  DEVICE_READING
-  SCHEDULED_SCAN
 }

@@ -1,5 +1,6 @@
 import { JobType, Queue } from "bullmq";
 import { db } from "@/lib/db";
+import { DEFAULT_JOB_DASHBOARD_LIMIT } from "@/lib/jobs/constants";
 import {
   getAlertQueue,
   getDailySummaryQueue,
@@ -24,10 +25,7 @@ async function getSafeQueueCounts(label: string, queueFactory: () => SafeQueue) 
       "waiting-children" as JobType
     );
 
-    return {
-      label,
-      counts,
-    };
+    return { label, counts };
   } catch {
     return {
       label,
@@ -55,7 +53,7 @@ export async function getJobsDashboardData() {
     ]),
     db.jobRun.findMany({
       orderBy: { createdAt: "desc" },
-      take: 20,
+      take: DEFAULT_JOB_DASHBOARD_LIMIT,
       include: {
         logs: {
           orderBy: { createdAt: "desc" },

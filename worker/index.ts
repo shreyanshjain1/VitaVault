@@ -4,12 +4,18 @@ import {
   JOB_NAMES,
   QUEUE_NAMES,
   type AlertEvaluationJobPayload,
+  type ReminderGenerationJobData,
+  type ReminderOverdueEvaluationJobData,
 } from "@/lib/jobs/contracts";
 import { processAlertEvaluation } from "@/worker/processors/alert-evaluation";
+import {
+  handleReminderGenerationJob,
+  handleReminderOverdueEvaluationJob,
+} from "@/lib/jobs/handlers";
 
 const connection = getRedisConnection();
 
-const worker = new Worker<AlertEvaluationJobPayload>(
+const alertsWorker = new Worker<AlertEvaluationJobPayload>(
   QUEUE_NAMES.alerts,
   async (job) => {
     switch (job.name) {
@@ -17,7 +23,7 @@ const worker = new Worker<AlertEvaluationJobPayload>(
       case JOB_NAMES.alertScheduledScan:
         return processAlertEvaluation(job);
       default:
-        throw new Error(`Unsupported job name: ${job.name}`);
+        throw new Error(`Unsupported alert job name: ${job.name}`);
     }
   },
   {
@@ -26,18 +32,40 @@ const worker = new Worker<AlertEvaluationJobPayload>(
   }
 );
 
-worker.on("ready", () => {
+const remindersWorker = new Worker<
+  ReminderGenerationJobData | ReminderOverdueEvaluationJobData
+>(
+  QUEUE_NAMES.reminders,
+  async (job) => {
+    switch (job.name) {
+      case JOB_NAMES.reminderGeneration:
+        return handleReminderGenerationJob(job.data as ReminderGenerationJobData);
+      case JOB_NAMES.reminderOverdueEvaluation:
+        return handleReminderOverdueEvaluationJob(
+          job.data as ReminderOverdueEvaluationJobData
+        );
+      default:
+        throw new Error(`Unsupported reminder job name: ${job.name}`);
+    }
+  },
+  {
+    connection,
+    concurrency: 5,
+  }
+);
+
+alertsWorker.on("ready", () => {
   console.log("[worker] alerts worker ready");
 });
 
-worker.on("completed", (job) => {
-  console.log(`[worker] completed ${job.name} (${job.id})`);
+remindersWorker.on("ready", () => {
+  console.log("[worker] reminders worker ready");
 });
 
-worker.on("failed", (job, error) => {
+alertsWorker.on("failed", (job, error) => {
   console.error(`[worker] failed ${job?.name} (${job?.id})`, error);
 });
 
-worker.on("error", (error) => {
-  console.error("[worker] fatal error", error);
+remindersWorker.on("failed", (job, error) => {
+  console.error(`[worker] failed ${job?.name} (${job?.id})`, error);
 });
