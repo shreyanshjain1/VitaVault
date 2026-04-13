@@ -1,5 +1,6 @@
 import { AppointmentStatus, LabFlag, ReminderState, SymptomSeverity } from "@prisma/client";
 import { db } from "@/lib/db";
+import { buildRecordHref } from "@/lib/record-focus";
 
 export type TimelineTone = "info" | "neutral" | "success" | "warning" | "danger";
 
@@ -116,7 +117,7 @@ export async function getTimelineItems(userId: string, limit = 100): Promise<Tim
       title: item.doctorName || item.clinic || "Appointment",
       description: item.purpose,
       occurredAt: item.scheduledAt,
-      href: "/appointments",
+      href: buildRecordHref("/appointments", item.id),
       tone: getAppointmentTone(item.status),
     })),
     ...labs.map((item): TimelineItem => ({
@@ -125,7 +126,7 @@ export async function getTimelineItems(userId: string, limit = 100): Promise<Tim
       title: item.testName,
       description: item.resultSummary,
       occurredAt: item.dateTaken,
-      href: "/labs",
+      href: buildRecordHref("/labs", item.id),
       tone: getLabTone(item.flag),
     })),
     ...vitals.map((item): TimelineItem => ({
@@ -143,7 +144,7 @@ export async function getTimelineItems(userId: string, limit = 100): Promise<Tim
           .filter(Boolean)
           .join(" • ") || "Vital record added",
       occurredAt: item.recordedAt,
-      href: "/vitals",
+      href: buildRecordHref("/vitals", item.id),
       tone: "info",
     })),
     ...symptoms.map((item): TimelineItem => ({
@@ -152,7 +153,7 @@ export async function getTimelineItems(userId: string, limit = 100): Promise<Tim
       title: item.title,
       description: item.notes || item.bodyArea || item.duration || "Symptom recorded",
       occurredAt: item.startedAt,
-      href: "/symptoms",
+      href: buildRecordHref("/symptoms", item.id),
       tone: getSymptomTone(item.severity, item.resolved),
     })),
     ...vaccinations.map((item): TimelineItem => ({
@@ -161,7 +162,7 @@ export async function getTimelineItems(userId: string, limit = 100): Promise<Tim
       title: item.vaccineName,
       description: `Dose ${item.doseNumber}${item.location ? ` • ${item.location}` : ""}`,
       occurredAt: item.dateTaken,
-      href: "/vaccinations",
+      href: buildRecordHref("/vaccinations", item.id),
       tone: "success",
     })),
     ...documents.map((item): TimelineItem => ({
@@ -170,7 +171,7 @@ export async function getTimelineItems(userId: string, limit = 100): Promise<Tim
       title: item.title,
       description: `${item.type} • ${item.fileName}`,
       occurredAt: item.createdAt,
-      href: "/documents",
+      href: buildRecordHref("/documents", item.id),
       tone: "neutral",
     })),
     ...reminders.map((item): TimelineItem => ({
@@ -179,7 +180,7 @@ export async function getTimelineItems(userId: string, limit = 100): Promise<Tim
       title: item.title,
       description: item.description || item.type.replaceAll("_", " "),
       occurredAt: item.dueAt,
-      href: "/reminders",
+      href: buildRecordHref("/reminders", item.id),
       tone: getReminderTone(item.state, item.completed),
     })),
     ...alerts.map((item): TimelineItem => ({

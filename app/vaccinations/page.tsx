@@ -23,8 +23,14 @@ function dateInputValue(value: Date | null) {
   return value ? format(value, "yyyy-MM-dd") : "";
 }
 
-export default async function VaccinationsPage() {
+export default async function VaccinationsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = await requireUser();
+  const params = (await searchParams) ?? {};
+  const focus = typeof params.focus === "string" ? params.focus : undefined;
 
   const records = await db.vaccinationRecord.findMany({
     where: { userId: user.id },
@@ -134,7 +140,11 @@ export default async function VaccinationsPage() {
                   <div className="space-y-4">
                     {records.length ? (
                       records.map((record) => (
-                        <DataCard key={record.id}>
+                        <DataCard
+                          key={record.id}
+                          id={`item-${record.id}`}
+                          className={getFocusedCardClass(focus, record.id)}
+                        >
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <div>
                               <h3 className="text-lg font-semibold">{record.vaccineName}</h3>

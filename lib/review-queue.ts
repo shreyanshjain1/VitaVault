@@ -1,5 +1,6 @@
 import { LabFlag, ReminderState, SymptomSeverity } from "@prisma/client";
 import { db } from "@/lib/db";
+import { buildRecordHref } from "@/lib/record-focus";
 
 export type ReviewQueueCategory =
   | "OVERDUE_REMINDER"
@@ -58,7 +59,7 @@ export async function getReviewQueueData(userId: string) {
     title: item.title,
     description: item.description ?? "Reminder is overdue and needs attention.",
     occurredAt: item.dueAt,
-    href: "/reminders",
+    href: buildRecordHref("/reminders", item.id),
     tone: "warning",
   }));
 
@@ -68,7 +69,7 @@ export async function getReviewQueueData(userId: string) {
     title: item.title,
     description: item.description ?? "Reminder was missed and may require follow-up.",
     occurredAt: item.missedAt ?? item.dueAt,
-    href: "/reminders",
+    href: buildRecordHref("/reminders", item.id),
     tone: "danger",
   }));
 
@@ -78,7 +79,7 @@ export async function getReviewQueueData(userId: string) {
     title: item.title,
     description: item.notes ?? `Severe symptom${item.bodyArea ? ` • ${item.bodyArea}` : ""}`,
     occurredAt: item.startedAt ?? item.createdAt,
-    href: "/symptoms",
+    href: buildRecordHref("/symptoms", item.id),
     tone: "danger",
   }));
 
@@ -88,7 +89,7 @@ export async function getReviewQueueData(userId: string) {
     title: `${item.testName} • ${item.flag}`,
     description: item.resultSummary || `Flagged lab result (${item.flag}).`,
     occurredAt: item.dateTaken,
-    href: "/labs",
+    href: buildRecordHref("/labs", item.id),
     tone: "danger",
   }));
 

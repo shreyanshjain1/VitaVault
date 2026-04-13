@@ -16,13 +16,20 @@ import {
 import { formatDateTime } from "@/lib/utils";
 import { ModuleFormCard, ModuleHero, ModuleListCard, DataCard } from "@/components/module-sections";
 import { PageTransition, StaggerGroup, StaggerItem } from "@/components/page-transition";
+import { getFocusedCardClass } from "@/lib/record-focus";
 
 function toInputDateTime(value: Date) {
   return format(value, "yyyy-MM-dd'T'HH:mm");
 }
 
-export default async function AppointmentsPage() {
+export default async function AppointmentsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = await requireUser();
+  const params = (await searchParams) ?? {};
+  const focus = typeof params.focus === "string" ? params.focus : undefined;
 
   const [appointments, doctors] = await Promise.all([
     db.appointment.findMany({
@@ -163,7 +170,11 @@ export default async function AppointmentsPage() {
                   <div className="space-y-4">
                     {appointments.length ? (
                       appointments.map((appointment) => (
-                        <DataCard key={appointment.id}>
+                        <DataCard
+                          key={appointment.id}
+                          id={`item-${appointment.id}`}
+                          className={getFocusedCardClass(focus, appointment.id)}
+                        >
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <div>
                               <h3 className="text-lg font-semibold">{appointment.purpose}</h3>

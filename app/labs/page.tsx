@@ -15,16 +15,18 @@ import {
 import { formatDate } from "@/lib/utils";
 import { ModuleFormCard, ModuleHero, ModuleListCard, DataCard } from "@/components/module-sections";
 import { PageTransition, StaggerGroup, StaggerItem } from "@/components/page-transition";
+import { getFocusedCardClass } from "@/lib/record-focus";
 
 export default async function LabsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; flag?: string }>;
+  searchParams: Promise<{ q?: string; flag?: string; focus?: string }>;
 }) {
   const user = await requireUser();
   const params = await searchParams;
   const q = params.q ?? "";
   const flag = params.flag ?? "";
+  const focus = params.focus ?? "";
 
   const results = await db.labResult.findMany({
     where: {
@@ -179,7 +181,11 @@ export default async function LabsPage({
                 <div className="space-y-4">
                   {results.length ? (
                     results.map((result) => (
-                      <DataCard key={result.id}>
+                      <DataCard
+                        key={result.id}
+                        id={`item-${result.id}`}
+                        className={getFocusedCardClass(focus, result.id)}
+                      >
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
                             <h3 className="text-lg font-semibold">{result.testName}</h3>

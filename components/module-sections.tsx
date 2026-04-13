@@ -102,12 +102,15 @@ export function ModuleListCard({
 export function DataCard({
   children,
   className,
+  id,
 }: {
   children: React.ReactNode;
   className?: string;
+  id?: string;
 }) {
   return (
     <div
+      id={id}
       className={cn(
         "rounded-[28px] border border-border/60 bg-background/40 p-5",
         className

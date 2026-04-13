@@ -23,8 +23,14 @@ function dateTimeLocalValue(value: Date) {
   return format(value, "yyyy-MM-dd'T'HH:mm");
 }
 
-export default async function VitalsPage() {
+export default async function VitalsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = await requireUser();
+  const params = (await searchParams) ?? {};
+  const focus = typeof params.focus === "string" ? params.focus : undefined;
 
   const vitals = await db.vitalRecord.findMany({
     where: { userId: user.id },
@@ -148,7 +154,11 @@ export default async function VitalsPage() {
                 <div className="space-y-4">
                   {vitals.length ? (
                     vitals.map((vital) => (
-                      <DataCard key={vital.id}>
+                      <DataCard
+                          key={vital.id}
+                          id={`item-${vital.id}`}
+                          className={getFocusedCardClass(focus, vital.id)}
+                        >
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
                             <h3 className="text-lg font-semibold">{formatDateTime(vital.recordedAt)}</h3>
