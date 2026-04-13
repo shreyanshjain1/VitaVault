@@ -28,7 +28,7 @@ const categoryLabel: Record<string, string> = {
 
 export default async function ReviewQueuePage() {
   const user = await requireUser();
-  const data = await getReviewQueueData({ userId: user.id! });
+  const data = await getReviewQueueData(user.id!);
   const stats = data.stats;
 
   return (

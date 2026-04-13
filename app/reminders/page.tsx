@@ -17,7 +17,7 @@ import {
 } from "@/lib/reminders/constants";
 import {
   completeReminderAction,
-  regenerateReminderAction,
+  regenerateRemindersAction,
   skipReminderAction,
   snoozeReminderAction,
 } from "./actions";
@@ -56,7 +56,7 @@ export default async function RemindersPage({
           title="Reminder Center"
           description="Medication and appointment reminders with due-state tracking, snooze controls, and regeneration tools."
           action={
-            <form action={regenerateReminderAction} className="flex items-center gap-3">
+            <form action={regenerateRemindersAction} className="flex items-center gap-3">
               <input
                 type="date"
                 name="targetDate"
