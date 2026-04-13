@@ -530,3 +530,26 @@ npm run typecheck
 ```
 
 If `npm run db:validate` fails with `Environment variable not found: DATABASE_URL`, your `.env` file is missing or `DATABASE_URL` is not set yet.
+
+
+## Vercel deployment essentials
+
+Before deploying on Vercel, make sure these environment variables are set in **Project Settings → Environment Variables**:
+
+```env
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DB_NAME?schema=public"
+AUTH_SECRET="your-long-random-secret"
+AUTH_TRUST_HOST="true"
+NEXTAUTH_URL="https://your-project.vercel.app"
+REDIS_URL="redis://HOST:6379"
+```
+
+Optional but recommended:
+
+```env
+OPENAI_API_KEY="your-openai-key"
+OPENAI_MODEL="gpt-5-mini"
+```
+
+The build now runs an environment validation step before Prisma and Next.js so missing deployment variables fail early with a clearer message. For the full checklist, see `docs/VERCEL_DEPLOYMENT_CHECKLIST.md`.
+
