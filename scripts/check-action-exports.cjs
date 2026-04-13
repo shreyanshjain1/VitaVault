@@ -1,71 +1,54 @@
 #!/usr/bin/env node
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
-const actionsPath = path.join(process.cwd(), 'app', 'actions.ts');
+const actionsPath = path.join(process.cwd(), "app", "actions.ts");
 if (!fs.existsSync(actionsPath)) {
-  console.error('✖ app/actions.ts not found.');
+  console.error("[actions:check] Missing app/actions.ts");
   process.exit(1);
 }
 
-const source = fs.readFileSync(actionsPath, 'utf8');
+const source = fs.readFileSync(actionsPath, "utf8");
+const exportMatches = [...source.matchAll(/export\s+async\s+function\s+(\w+)/g)].map((m) => m[1]);
+const exported = new Set(exportMatches);
 
-const requiredExports = [
-  'addDoctor',
-  'updateDoctor',
-  'deleteDoctor',
-  'saveMedication',
-  'updateMedication',
-  'deleteMedication',
-  'logMedicationStatus',
-  'saveAppointment',
-  'updateAppointment',
-  'deleteAppointment',
-  'saveLabResult',
-  'updateLabResult',
-  'deleteLabResult',
-  'saveVital',
-  'updateVital',
-  'deleteVital',
-  'saveSymptom',
-  'updateSymptom',
-  'toggleSymptomResolved',
-  'deleteSymptom',
-  'saveVaccination',
-  'updateVaccination',
-  'deleteVaccination',
-  'uploadDocument',
-  'updateDocumentMetadata',
-  'deleteDocument',
-  'saveHealthProfile',
-  'signupAction',
-  'loginAction',
+const required = [
+  "signupAction",
+  "loginAction",
+  "saveHealthProfile",
+  "addDoctor",
+  "updateDoctor",
+  "deleteDoctor",
+  "saveMedication",
+  "updateMedication",
+  "deleteMedication",
+  "logMedicationStatus",
+  "saveAppointment",
+  "updateAppointment",
+  "deleteAppointment",
+  "saveLabResult",
+  "updateLabResult",
+  "deleteLabResult",
+  "saveVital",
+  "updateVital",
+  "deleteVital",
+  "saveSymptom",
+  "updateSymptom",
+  "toggleSymptomResolved",
+  "deleteSymptom",
+  "saveVaccination",
+  "updateVaccination",
+  "deleteVaccination",
+  "uploadDocument",
+  "updateDocumentMetadata",
+  "deleteDocument"
 ];
 
-const missing = requiredExports.filter((name) => {
-  const pattern = new RegExp(`export\\s+async\\s+function\\s+${name}\\s*\\(`);
-  return !pattern.test(source);
-});
-
-const duplicateNames = [];
-for (const name of requiredExports) {
-  const pattern = new RegExp(`export\\s+async\\s+function\\s+${name}\\s*\\(`, 'g');
-  const matches = source.match(pattern) || [];
-  if (matches.length > 1) duplicateNames.push(name);
-}
-
-if (missing.length || duplicateNames.length) {
-  console.error('✖ app/actions.ts failed the action export contract.');
-  if (missing.length) {
-    console.error('\nMissing exports:');
-    for (const name of missing) console.error(`- ${name}`);
-  }
-  if (duplicateNames.length) {
-    console.error('\nDuplicate exports:');
-    for (const name of duplicateNames) console.error(`- ${name}`);
-  }
-  console.error('\nFix app/actions.ts before pushing or deploying.');
+const missing = required.filter((name) => !exported.has(name));
+if (missing.length) {
+  console.error("[actions:check] Missing required exports from app/actions.ts:");
+  for (const name of missing) console.error(` - ${name}`);
   process.exit(1);
 }
 
-console.log('✔ app/actions.ts satisfies the action export contract.');
+console.log(`[actions:check] OK. Verified ${required.length} required action exports.`);

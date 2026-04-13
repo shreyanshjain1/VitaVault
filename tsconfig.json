@@ -40,9 +40,14 @@
     "**/phase03_patch/**",
     "*_patch",
     "**/*_patch/**",
+    "phase*_patch",
+    "**/phase*_patch/**",
     "**/*.tmp",
-    "**/*.tmp.*",
     "**/*.bak",
-    "**/*.backup"
+    "**/*.orig",
+    "**/*.rej",
+    "**/* copy.ts",
+    "**/* copy.tsx",
+    "**/app_actions_fixed.ts"
   ]
 }

@@ -1,65 +1,40 @@
+
 # Action Export Contract
 
-This project currently relies on a **single shared server action file** at `app/actions.ts`.
+`app/actions.ts` is a shared public server-action surface used by multiple pages.
 
-Because several pages import actions directly from that file, later patches can accidentally overwrite it and silently remove older exports. That was the root cause behind repeated deployment and typecheck regressions.
+## Rule
 
-## Required exports
+If a page imports from `@/app/actions`, the imported symbol must continue to be exported until that page is updated in the same change.
 
-The following exports must continue to exist unless the page imports are refactored at the same time:
+## Why this exists
 
-- `signupAction`
-- `loginAction`
-- `saveHealthProfile`
-- `addDoctor`
-- `updateDoctor`
-- `deleteDoctor`
-- `saveMedication`
-- `updateMedication`
-- `deleteMedication`
-- `logMedicationStatus`
-- `saveAppointment`
-- `updateAppointment`
-- `deleteAppointment`
-- `saveLabResult`
-- `updateLabResult`
-- `deleteLabResult`
-- `saveVital`
-- `updateVital`
-- `deleteVital`
-- `saveSymptom`
-- `updateSymptom`
-- `toggleSymptomResolved`
-- `deleteSymptom`
-- `saveVaccination`
-- `updateVaccination`
-- `deleteVaccination`
-- `uploadDocument`
-- `updateDocumentMetadata`
-- `deleteDocument`
+The project previously had regressions where a later patch replaced `app/actions.ts` and accidentally dropped older CRUD exports. The pages still imported those names, which caused local and Vercel type/build failures.
 
-## Workflow rule
-
-Before pushing or deploying, run:
+## Required checks before push
 
 ```bash
 npm run actions:check
+npm run actions:imports
+npm run actions:shadow
+npm run typecheck
+npm run build
 ```
 
-For a stronger local safety pass, run:
+## Current protected action surface
 
-```bash
-npm run verify
-```
+- signupAction
+- loginAction
+- saveHealthProfile
+- addDoctor / updateDoctor / deleteDoctor
+- saveMedication / updateMedication / deleteMedication / logMedicationStatus
+- saveAppointment / updateAppointment / deleteAppointment
+- saveLabResult / updateLabResult / deleteLabResult
+- saveVital / updateVital / deleteVital
+- saveSymptom / updateSymptom / toggleSymptomResolved / deleteSymptom
+- saveVaccination / updateVaccination / deleteVaccination
+- uploadDocument / updateDocumentMetadata / deleteDocument
 
-## Why this phase exists
+## Next safe refactor path
 
-This does **not** fully split actions by domain yet. That would be a bigger refactor and carries more risk.
-
-This phase is intentionally conservative:
-
-- keep the current import shape working
-- stop regressions from accidental overwrites
-- add a cheap safety net before future feature patches
-
-Once the app is more stable, the next refactor can move actions into domain files and reduce the size of `app/actions.ts` safely.
+If you later split `app/actions.ts` into domain modules, keep `app/actions.ts` as a stable facade that re-exports the same public names until all callers are migrated.

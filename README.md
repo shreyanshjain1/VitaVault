@@ -14,27 +14,6 @@ A full-stack personal health record platform for structured health tracking, sha
 
 ---
 
-
-## Stability Workflow
-
-Before pushing feature work, run this safer local sequence:
-
-```bash
-npm run actions:check
-npm run typecheck
-npm run build
-```
-
-For a broader pre-push pass, use:
-
-```bash
-npm run verify
-```
-
-This protects the shared `app/actions.ts` file from accidental export regressions that can break both local typecheck and Vercel deployment.
-
----
-
 ## Overview
 
 VitaVault is a Next.js healthcare workspace that brings personal record management, collaboration controls, and operational backend infrastructure into one authenticated app.
@@ -551,3 +530,24 @@ npm run typecheck
 ```
 
 If `npm run db:validate` fails with `Environment variable not found: DATABASE_URL`, your `.env` file is missing or `DATABASE_URL` is not set yet.
+
+---
+
+## Action Layer Safety Checks
+
+Before pushing changes that touch `app/actions.ts` or any page importing from it, run:
+
+```bash
+npm run actions:check
+npm run actions:imports
+npm run actions:shadow
+npm run typecheck
+```
+
+What these do:
+
+- `actions:check` verifies the expected action export contract still exists.
+- `actions:imports` scans page imports from `@/app/actions` and confirms every imported symbol is actually exported.
+- `actions:shadow` catches temp files, backup files, and patch leftovers that can confuse future maintenance.
+
+This is meant to stop regressions where a later patch accidentally replaces `app/actions.ts` and drops older exports that existing pages still rely on.
