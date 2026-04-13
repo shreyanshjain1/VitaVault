@@ -25,7 +25,7 @@ export default async function AlertsPage({
   const category = typeof params.category === "string" ? params.category : "ALL";
 
   const [alerts, rules] = await Promise.all([
-    getAlertList({ ownerUserId, status, severity, category }),
+    getAlertList({ userId: ownerUserId, status, severity, category }),
     getAlertRules(ownerUserId),
   ]);
 
@@ -41,10 +41,10 @@ export default async function AlertsPage({
           action={
             <div className="flex flex-wrap gap-3">
               <Link
-                href="/alerts/rules"
+                href="/timeline"
                 className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"
               >
-                Manage rules
+                Open timeline
               </Link>
               <Link
                 href="/dashboard"
@@ -106,6 +106,9 @@ export default async function AlertsPage({
                   <ShieldCheck className="mt-0.5 h-4 w-4 text-primary" />
                   <div>
                     <p className="text-sm font-semibold">Care-team visibility</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Rules can expose alerts to collaborators when clinical follow-up matters.
+                    </p>
                     <div className="mt-3">
                       <StatusPill tone="info">Owner view</StatusPill>
                     </div>

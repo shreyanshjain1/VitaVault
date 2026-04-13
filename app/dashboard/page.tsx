@@ -176,6 +176,11 @@ export default async function DashboardPage() {
                   description: "Review open alert events and rule-driven triage.",
                 },
                 {
+                  href: "/timeline",
+                  label: "Timeline",
+                  description: "See the patient story across modules in one chronological feed.",
+                },
+                {
                   href: "/medications",
                   label: "Medications",
                   description: "Track plans, schedules, and adherence activity.",

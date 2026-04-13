@@ -7,7 +7,7 @@ export async function createAlertAuditLog(args: {
   actorUserId?: string | null;
   action: string;
   note?: string | null;
-  metadata?: Record<string, unknown> | null;
+  metadataJson?: string | null;
 }) {
   return db.alertAuditLog.create({
     data: {
@@ -16,8 +16,8 @@ export async function createAlertAuditLog(args: {
       ruleId: args.ruleId ?? null,
       actorUserId: args.actorUserId ?? null,
       action: args.action,
-      note: args.note?.trim() || null,
-      metadataJson: args.metadata ? JSON.stringify(args.metadata) : null,
+      note: args.note ?? null,
+      metadataJson: args.metadataJson ?? null,
     },
   });
 }

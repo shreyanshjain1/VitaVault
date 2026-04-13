@@ -4,19 +4,15 @@ import { AppShell } from "@/components/app-shell";
 import { PageHeader, StatusPill } from "@/components/common";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
 import { AlertStatusForm } from "@/components/alerts/alert-status-form";
-import {
-  alertCategoryLabel,
-  alertSeverityLabel,
-  alertSourceLabel,
-  alertStatusLabel,
-} from "@/lib/alerts/constants";
-import { getAlertDetail } from "@/lib/alerts/queries";
-import { requireOwnerAccess } from "@/lib/access";
 import { requireUser } from "@/lib/session";
+import { getAlertDetail } from "@/lib/alerts/queries";
+import { alertCategoryLabel, alertSeverityLabel, alertSourceLabel, alertStatusLabel } from "@/lib/alerts/constants";
 
-function formatDateTime(value?: Date | null) {
-  if (!value) return "—";
-  return new Date(value).toLocaleString();
+function toneForSeverity(severity: string): "neutral" | "info" | "success" | "warning" | "danger" {
+  if (severity === "CRITICAL") return "danger";
+  if (severity === "HIGH") return "warning";
+  if (severity === "MEDIUM") return "info";
+  return "neutral";
 }
 
 export default async function AlertDetailPage({
@@ -27,23 +23,15 @@ export default async function AlertDetailPage({
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const currentUser = await requireUser();
-  const { id } = await params;
+  const route = await params;
   const query = (await searchParams) ?? {};
   const ownerUserId =
     typeof query.ownerUserId === "string" && query.ownerUserId
       ? query.ownerUserId
       : currentUser.id!;
 
-  await requireOwnerAccess(currentUser.id!, ownerUserId, "alerts");
-
-  const alert = await getAlertDetail({
-    alertId: id,
-    ownerUserId,
-  });
-
-  if (!alert) {
-    notFound();
-  }
+  const alert = await getAlertDetail({ userId: ownerUserId, alertId: route.id });
+  if (!alert) notFound();
 
   return (
     <AppShell>
@@ -52,12 +40,22 @@ export default async function AlertDetailPage({
           title={alert.title}
           description={alert.message}
           action={
-            <Link
-              href={`/alerts?ownerUserId=${ownerUserId}`}
-              className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"
-            >
-              Back to alerts
-            </Link>
+            <div className="flex flex-wrap gap-3">
+              {alert.sourceHref ? (
+                <Link
+                  href={alert.sourceHref}
+                  className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"
+                >
+                  Open source module
+                </Link>
+              ) : null}
+              <Link
+                href={`/alerts?ownerUserId=${ownerUserId}`}
+                className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"
+              >
+                Back to alerts
+              </Link>
+            </div>
           }
         />
 
@@ -66,86 +64,74 @@ export default async function AlertDetailPage({
             <CardHeader>
               <CardTitle>Alert summary</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-5">
+            <CardContent className="space-y-4">
               <div className="flex flex-wrap gap-2">
                 <StatusPill tone="neutral">{alertStatusLabel[alert.status] ?? alert.status}</StatusPill>
-                <StatusPill tone="info">{alertSeverityLabel[alert.severity] ?? alert.severity}</StatusPill>
-                <StatusPill tone="warning">{alertCategoryLabel[alert.category] ?? alert.category}</StatusPill>
+                <StatusPill tone={toneForSeverity(alert.severity)}>{alertSeverityLabel[alert.severity] ?? alert.severity}</StatusPill>
+                <StatusPill tone="info">{alertCategoryLabel[alert.category] ?? alert.category}</StatusPill>
+                {alert.visibleToCareTeam ? <StatusPill tone="success">Care-team visible</StatusPill> : null}
               </div>
 
-              <dl className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
-                  <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Rule</dt>
-                  <dd className="mt-2 text-sm font-medium">{alert.rule?.name ?? "System generated"}</dd>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Rule</p>
+                  <p className="mt-2 text-sm font-medium">{alert.rule?.name ?? "System generated"}</p>
                 </div>
                 <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
-                  <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Source</dt>
-                  <dd className="mt-2 text-sm font-medium">{alertSourceLabel[alert.sourceType ?? ""] ?? alert.sourceType ?? "Unknown"}</dd>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Created</p>
+                  <p className="mt-2 text-sm font-medium">{new Date(alert.createdAt).toLocaleString()}</p>
                 </div>
-                <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
-                  <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Created</dt>
-                  <dd className="mt-2 text-sm font-medium">{formatDateTime(alert.createdAt)}</dd>
+                <div className="rounded-2xl border border-border/60 bg-background/70 p-4 md:col-span-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Source</p>
+                  <p className="mt-2 text-sm font-medium">{alertSourceLabel[alert.sourceType ?? ""] ?? alert.sourceType ?? "Unknown source"}</p>
+                  {alert.sourceSummary ? (
+                    <p className="mt-2 text-sm text-muted-foreground">{alert.sourceSummary}</p>
+                  ) : null}
                 </div>
-                <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
-                  <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Source record ID</dt>
-                  <dd className="mt-2 break-all text-sm font-medium">{alert.sourceId ?? "—"}</dd>
-                </div>
-                <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
-                  <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Acknowledged</dt>
-                  <dd className="mt-2 text-sm font-medium">{formatDateTime(alert.ownerAcknowledgedAt)}</dd>
-                </div>
-                <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
-                  <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Resolved</dt>
-                  <dd className="mt-2 text-sm font-medium">{formatDateTime(alert.resolvedAt)}</dd>
-                </div>
-              </dl>
-
-              <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Context JSON</div>
-                <pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words text-xs text-muted-foreground">
-                  {alert.contextJson ?? "No extra context attached."}
-                </pre>
               </div>
             </CardContent>
           </Card>
 
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Update status</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <AlertStatusForm alertId={alert.id} ownerUserId={ownerUserId} />
-              </CardContent>
-            </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Change status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AlertStatusForm alertId={alert.id} ownerUserId={ownerUserId} disabled={alert.status === "RESOLVED" || alert.status === "DISMISSED"} />
+            </CardContent>
+          </Card>
+        </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Audit trail</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {alert.auditLogs.length ? (
-                  alert.auditLogs.map((log) => (
-                    <div
-                      key={log.id}
-                      className="rounded-2xl border border-border/60 bg-background/70 p-4"
-                    >
+        <Card>
+          <CardHeader>
+            <CardTitle>Audit trail</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {alert.auditLogs.length ? (
+              alert.auditLogs.map((log) => (
+                <div
+                  key={log.id}
+                  className="rounded-2xl border border-border/60 bg-background/70 p-4"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
                       <div className="font-medium text-foreground">{log.action}</div>
-                      {log.note ? (
-                        <div className="mt-1 text-sm text-muted-foreground">{log.note}</div>
-                      ) : null}
-                      <div className="mt-2 text-xs text-muted-foreground">
+                      <div className="text-sm text-muted-foreground">
                         {new Date(log.createdAt).toLocaleString()}
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-sm text-muted-foreground">No audit entries yet.</div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+                    {log.actorUser ? (
+                      <StatusPill tone="neutral">{log.actorUser.name ?? log.actorUser.email ?? "User action"}</StatusPill>
+                    ) : null}
+                  </div>
+                  {log.note ? <div className="mt-2 text-sm text-muted-foreground">{log.note}</div> : null}
+                </div>
+              ))
+            ) : (
+              <div className="text-sm text-muted-foreground">No audit entries yet.</div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </AppShell>
   );
