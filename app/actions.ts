@@ -31,6 +31,22 @@ function safeCallbackUrl(raw: unknown) {
   return value;
 }
 
+function requiredString(formData: FormData, name: string, label: string) {
+  const value = String(formData.get(name) || "").trim();
+  if (!value) throw new Error(`${label} is required.`);
+  return value;
+}
+
+function optionalDate(raw: FormDataEntryValue | null) {
+  const value = String(raw || "").trim();
+  return value ? new Date(value) : null;
+}
+
+function numberOrNull(raw: FormDataEntryValue | null) {
+  const value = String(raw || "").trim();
+  return value ? Number(value) : null;
+}
+
 export async function signupAction(
   _: AuthActionState,
   formData: FormData
@@ -226,7 +242,7 @@ export async function addDoctor(formData: FormData) {
   await db.doctor.create({
     data: {
       userId: user.id,
-      name: String(formData.get("name") || "").trim(),
+      name: requiredString(formData, "name", "Doctor name"),
       specialty: String(formData.get("specialty") || "").trim() || null,
       clinic: String(formData.get("clinic") || "").trim() || null,
       phone: String(formData.get("phone") || "").trim() || null,
@@ -235,6 +251,39 @@ export async function addDoctor(formData: FormData) {
       notes: String(formData.get("notes") || "").trim() || null,
     },
   });
+
+  revalidatePath("/doctors");
+  revalidatePath("/medications");
+  revalidatePath("/appointments");
+}
+
+export async function updateDoctor(formData: FormData) {
+  const user = await requireUser();
+  const id = requiredString(formData, "id", "Doctor id");
+
+  await db.doctor.updateMany({
+    where: { id, userId: user.id },
+    data: {
+      name: requiredString(formData, "name", "Doctor name"),
+      specialty: String(formData.get("specialty") || "").trim() || null,
+      clinic: String(formData.get("clinic") || "").trim() || null,
+      phone: String(formData.get("phone") || "").trim() || null,
+      email: String(formData.get("email") || "").trim() || null,
+      address: String(formData.get("address") || "").trim() || null,
+      notes: String(formData.get("notes") || "").trim() || null,
+    },
+  });
+
+  revalidatePath("/doctors");
+  revalidatePath("/medications");
+  revalidatePath("/appointments");
+}
+
+export async function deleteDoctor(formData: FormData) {
+  const user = await requireUser();
+  const id = requiredString(formData, "id", "Doctor id");
+
+  await db.doctor.deleteMany({ where: { id, userId: user.id } });
 
   revalidatePath("/doctors");
   revalidatePath("/medications");
@@ -254,14 +303,12 @@ export async function saveMedication(formData: FormData) {
     data: {
       userId: user.id,
       doctorId: String(formData.get("doctorId") || "").trim() || null,
-      name: String(formData.get("name") || "").trim(),
-      dosage: String(formData.get("dosage") || "").trim(),
-      frequency: String(formData.get("frequency") || "").trim(),
+      name: requiredString(formData, "name", "Medication name"),
+      dosage: requiredString(formData, "dosage", "Dosage"),
+      frequency: requiredString(formData, "frequency", "Frequency"),
       instructions: String(formData.get("instructions") || "").trim() || null,
-      startDate: new Date(String(formData.get("startDate"))),
-      endDate: String(formData.get("endDate") || "").trim()
-        ? new Date(String(formData.get("endDate")))
-        : null,
+      startDate: new Date(requiredString(formData, "startDate", "Start date")),
+      endDate: optionalDate(formData.get("endDate")),
       status: String(formData.get("status") || "ACTIVE") as MedicationStatus,
       active: formData.get("active") === "on",
       schedules: {
@@ -269,6 +316,61 @@ export async function saveMedication(formData: FormData) {
       },
     },
   });
+
+  revalidatePath("/medications");
+  revalidatePath("/dashboard");
+}
+
+export async function updateMedication(formData: FormData) {
+  const user = await requireUser();
+  const id = requiredString(formData, "id", "Medication id");
+
+  const scheduleTimes = formData
+    .getAll("scheduleTimes")
+    .map(String)
+    .map((time) => time.trim())
+    .filter(Boolean);
+
+  await db.$transaction(async (tx) => {
+    await tx.medication.updateMany({
+      where: { id, userId: user.id },
+      data: {
+        doctorId: String(formData.get("doctorId") || "").trim() || null,
+        name: requiredString(formData, "name", "Medication name"),
+        dosage: requiredString(formData, "dosage", "Dosage"),
+        frequency: requiredString(formData, "frequency", "Frequency"),
+        instructions: String(formData.get("instructions") || "").trim() || null,
+        startDate: new Date(requiredString(formData, "startDate", "Start date")),
+        endDate: optionalDate(formData.get("endDate")),
+        status: String(formData.get("status") || "ACTIVE") as MedicationStatus,
+        active: formData.get("active") === "on",
+      },
+    });
+
+    const medication = await tx.medication.findFirst({ where: { id, userId: user.id } });
+    if (!medication) throw new Error("Medication not found.");
+
+    await tx.medicationSchedule.deleteMany({ where: { medicationId: id } });
+
+    if (scheduleTimes.length) {
+      await tx.medicationSchedule.createMany({
+        data: scheduleTimes.map((time) => ({
+          medicationId: id,
+          timeOfDay: time,
+        })),
+      });
+    }
+  });
+
+  revalidatePath("/medications");
+  revalidatePath("/dashboard");
+}
+
+export async function deleteMedication(formData: FormData) {
+  const user = await requireUser();
+  const id = requiredString(formData, "id", "Medication id");
+
+  await db.medication.deleteMany({ where: { id, userId: user.id } });
 
   revalidatePath("/medications");
   revalidatePath("/dashboard");
@@ -331,17 +433,50 @@ export async function saveAppointment(formData: FormData) {
   await db.appointment.create({
     data: {
       userId: user.id,
-      clinic: String(formData.get("clinic") || "").trim(),
+      clinic: requiredString(formData, "clinic", "Clinic"),
       specialty: String(formData.get("specialty") || "").trim() || null,
-      doctorName: String(formData.get("doctorName") || "").trim(),
+      doctorName: requiredString(formData, "doctorName", "Doctor name"),
       doctorId: String(formData.get("doctorId") || "").trim() || null,
-      scheduledAt: new Date(String(formData.get("scheduledAt"))),
-      purpose: String(formData.get("purpose") || "").trim(),
+      scheduledAt: new Date(requiredString(formData, "scheduledAt", "Scheduled at")),
+      purpose: requiredString(formData, "purpose", "Purpose"),
       notes: String(formData.get("notes") || "").trim() || null,
       followUpNotes: String(formData.get("followUpNotes") || "").trim() || null,
       status: String(formData.get("status") || "UPCOMING") as AppointmentStatus,
     },
   });
+
+  revalidatePath("/appointments");
+  revalidatePath("/dashboard");
+}
+
+export async function updateAppointment(formData: FormData) {
+  const user = await requireUser();
+  const id = requiredString(formData, "id", "Appointment id");
+
+  await db.appointment.updateMany({
+    where: { id, userId: user.id },
+    data: {
+      clinic: requiredString(formData, "clinic", "Clinic"),
+      specialty: String(formData.get("specialty") || "").trim() || null,
+      doctorName: requiredString(formData, "doctorName", "Doctor name"),
+      doctorId: String(formData.get("doctorId") || "").trim() || null,
+      scheduledAt: new Date(requiredString(formData, "scheduledAt", "Scheduled at")),
+      purpose: requiredString(formData, "purpose", "Purpose"),
+      notes: String(formData.get("notes") || "").trim() || null,
+      followUpNotes: String(formData.get("followUpNotes") || "").trim() || null,
+      status: String(formData.get("status") || "UPCOMING") as AppointmentStatus,
+    },
+  });
+
+  revalidatePath("/appointments");
+  revalidatePath("/dashboard");
+}
+
+export async function deleteAppointment(formData: FormData) {
+  const user = await requireUser();
+  const id = requiredString(formData, "id", "Appointment id");
+
+  await db.appointment.deleteMany({ where: { id, userId: user.id } });
 
   revalidatePath("/appointments");
   revalidatePath("/dashboard");
@@ -365,9 +500,9 @@ export async function saveLabResult(formData: FormData) {
   await db.labResult.create({
     data: {
       userId: user.id,
-      testName: String(formData.get("testName") || "").trim(),
-      dateTaken: new Date(String(formData.get("dateTaken"))),
-      resultSummary: String(formData.get("resultSummary") || "").trim(),
+      testName: requiredString(formData, "testName", "Test name"),
+      dateTaken: new Date(requiredString(formData, "dateTaken", "Date taken")),
+      resultSummary: requiredString(formData, "resultSummary", "Result summary"),
       referenceRange: String(formData.get("referenceRange") || "").trim() || null,
       flag: String(formData.get("flag") || "NORMAL") as LabFlag,
       ...uploadData,
@@ -378,28 +513,110 @@ export async function saveLabResult(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
+export async function updateLabResult(formData: FormData) {
+  const user = await requireUser();
+  const id = requiredString(formData, "id", "Lab result id");
+
+  const existing = await db.labResult.findFirst({ where: { id, userId: user.id } });
+  if (!existing) throw new Error("Lab result not found.");
+
+  const file = formData.get("file");
+  let uploadData: {
+    fileName?: string;
+    filePath?: string;
+    mimeType?: string;
+    fileSize?: number;
+  } = {};
+
+  if (file instanceof File && file.size > 0) {
+    uploadData = await saveUpload(file);
+    if (existing.filePath) {
+      await deleteUpload(existing.filePath);
+    }
+  }
+
+  await db.labResult.update({
+    where: { id },
+    data: {
+      testName: requiredString(formData, "testName", "Test name"),
+      dateTaken: new Date(requiredString(formData, "dateTaken", "Date taken")),
+      resultSummary: requiredString(formData, "resultSummary", "Result summary"),
+      referenceRange: String(formData.get("referenceRange") || "").trim() || null,
+      flag: String(formData.get("flag") || "NORMAL") as LabFlag,
+      ...uploadData,
+    },
+  });
+
+  revalidatePath("/labs");
+  revalidatePath("/dashboard");
+}
+
+export async function deleteLabResult(formData: FormData) {
+  const user = await requireUser();
+  const id = requiredString(formData, "id", "Lab result id");
+
+  const existing = await db.labResult.findFirst({ where: { id, userId: user.id } });
+  if (!existing) return;
+
+  await db.labResult.delete({ where: { id } });
+  if (existing.filePath) {
+    await deleteUpload(existing.filePath);
+  }
+
+  revalidatePath("/labs");
+  revalidatePath("/dashboard");
+}
+
 export async function saveVital(formData: FormData) {
   const user = await requireUser();
-
-  const num = (name: string) => {
-    const value = String(formData.get(name) || "").trim();
-    return value ? Number(value) : null;
-  };
 
   await db.vitalRecord.create({
     data: {
       userId: user.id,
-      recordedAt: new Date(String(formData.get("recordedAt"))),
-      systolic: num("systolic"),
-      diastolic: num("diastolic"),
-      heartRate: num("heartRate"),
-      bloodSugar: num("bloodSugar"),
-      oxygenSaturation: num("oxygenSaturation"),
-      temperatureC: num("temperatureC"),
-      weightKg: num("weightKg"),
+      recordedAt: new Date(requiredString(formData, "recordedAt", "Recorded at")),
+      systolic: numberOrNull(formData.get("systolic")),
+      diastolic: numberOrNull(formData.get("diastolic")),
+      heartRate: numberOrNull(formData.get("heartRate")),
+      bloodSugar: numberOrNull(formData.get("bloodSugar")),
+      oxygenSaturation: numberOrNull(formData.get("oxygenSaturation")),
+      temperatureC: numberOrNull(formData.get("temperatureC")),
+      weightKg: numberOrNull(formData.get("weightKg")),
       notes: String(formData.get("notes") || "").trim() || null,
     },
   });
+
+  revalidatePath("/vitals");
+  revalidatePath("/dashboard");
+}
+
+export async function updateVital(formData: FormData) {
+  const user = await requireUser();
+  const id = requiredString(formData, "id", "Vital record id");
+
+  await db.vitalRecord.updateMany({
+    where: { id, userId: user.id },
+    data: {
+      recordedAt: new Date(requiredString(formData, "recordedAt", "Recorded at")),
+      systolic: numberOrNull(formData.get("systolic")),
+      diastolic: numberOrNull(formData.get("diastolic")),
+      heartRate: numberOrNull(formData.get("heartRate")),
+      bloodSugar: numberOrNull(formData.get("bloodSugar")),
+      oxygenSaturation: numberOrNull(formData.get("oxygenSaturation")),
+      temperatureC: numberOrNull(formData.get("temperatureC")),
+      weightKg: numberOrNull(formData.get("weightKg")),
+      notes: String(formData.get("notes") || "").trim() || null,
+    },
+  });
+
+  revalidatePath("/vitals");
+  revalidatePath("/dashboard");
+}
+
+export async function deleteVital(formData: FormData) {
+  const user = await requireUser();
+  const id = requiredString(formData, "id", "Vital record id");
+
+  await db.vitalRecord.deleteMany({ where: { id, userId: user.id } });
 
   revalidatePath("/vitals");
   revalidatePath("/dashboard");
@@ -411,10 +628,10 @@ export async function saveSymptom(formData: FormData) {
   await db.symptomEntry.create({
     data: {
       userId: user.id,
-      title: String(formData.get("title") || "").trim(),
+      title: requiredString(formData, "title", "Symptom title"),
       severity: String(formData.get("severity") || "MILD") as SymptomSeverity,
       bodyArea: String(formData.get("bodyArea") || "").trim() || null,
-      startedAt: new Date(String(formData.get("startedAt"))),
+      startedAt: new Date(requiredString(formData, "startedAt", "Started at")),
       duration: String(formData.get("duration") || "").trim() || null,
       trigger: String(formData.get("trigger") || "").trim() || null,
       notes: String(formData.get("notes") || "").trim() || null,
@@ -426,22 +643,98 @@ export async function saveSymptom(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
+export async function updateSymptom(formData: FormData) {
+  const user = await requireUser();
+  const id = requiredString(formData, "id", "Symptom id");
+
+  await db.symptomEntry.updateMany({
+    where: { id, userId: user.id },
+    data: {
+      title: requiredString(formData, "title", "Symptom title"),
+      severity: String(formData.get("severity") || "MILD") as SymptomSeverity,
+      bodyArea: String(formData.get("bodyArea") || "").trim() || null,
+      startedAt: new Date(requiredString(formData, "startedAt", "Started at")),
+      duration: String(formData.get("duration") || "").trim() || null,
+      trigger: String(formData.get("trigger") || "").trim() || null,
+      notes: String(formData.get("notes") || "").trim() || null,
+      resolved: formData.get("resolved") === "on",
+    },
+  });
+
+  revalidatePath("/symptoms");
+  revalidatePath("/dashboard");
+}
+
+export async function toggleSymptomResolved(formData: FormData) {
+  const user = await requireUser();
+  const id = requiredString(formData, "id", "Symptom id");
+
+  const symptom = await db.symptomEntry.findFirst({ where: { id, userId: user.id } });
+  if (!symptom) throw new Error("Symptom not found.");
+
+  await db.symptomEntry.update({
+    where: { id },
+    data: { resolved: !symptom.resolved },
+  });
+
+  revalidatePath("/symptoms");
+  revalidatePath("/dashboard");
+}
+
+export async function deleteSymptom(formData: FormData) {
+  const user = await requireUser();
+  const id = requiredString(formData, "id", "Symptom id");
+
+  await db.symptomEntry.deleteMany({ where: { id, userId: user.id } });
+
+  revalidatePath("/symptoms");
+  revalidatePath("/dashboard");
+}
+
 export async function saveVaccination(formData: FormData) {
   const user = await requireUser();
 
   await db.vaccinationRecord.create({
     data: {
       userId: user.id,
-      vaccineName: String(formData.get("vaccineName") || "").trim(),
-      doseNumber: Number(formData.get("doseNumber")),
-      dateTaken: new Date(String(formData.get("dateTaken"))),
+      vaccineName: requiredString(formData, "vaccineName", "Vaccine name"),
+      doseNumber: Number(requiredString(formData, "doseNumber", "Dose number")),
+      dateTaken: new Date(requiredString(formData, "dateTaken", "Date taken")),
       location: String(formData.get("location") || "").trim() || null,
-      nextDueDate: String(formData.get("nextDueDate") || "").trim()
-        ? new Date(String(formData.get("nextDueDate")))
-        : null,
+      nextDueDate: optionalDate(formData.get("nextDueDate")),
       notes: String(formData.get("notes") || "").trim() || null,
     },
   });
+
+  revalidatePath("/vaccinations");
+  revalidatePath("/dashboard");
+}
+
+export async function updateVaccination(formData: FormData) {
+  const user = await requireUser();
+  const id = requiredString(formData, "id", "Vaccination id");
+
+  await db.vaccinationRecord.updateMany({
+    where: { id, userId: user.id },
+    data: {
+      vaccineName: requiredString(formData, "vaccineName", "Vaccine name"),
+      doseNumber: Number(requiredString(formData, "doseNumber", "Dose number")),
+      dateTaken: new Date(requiredString(formData, "dateTaken", "Date taken")),
+      location: String(formData.get("location") || "").trim() || null,
+      nextDueDate: optionalDate(formData.get("nextDueDate")),
+      notes: String(formData.get("notes") || "").trim() || null,
+    },
+  });
+
+  revalidatePath("/vaccinations");
+  revalidatePath("/dashboard");
+}
+
+export async function deleteVaccination(formData: FormData) {
+  const user = await requireUser();
+  const id = requiredString(formData, "id", "Vaccination id");
+
+  await db.vaccinationRecord.deleteMany({ where: { id, userId: user.id } });
 
   revalidatePath("/vaccinations");
   revalidatePath("/dashboard");
@@ -460,7 +753,7 @@ export async function uploadDocument(formData: FormData) {
   await db.medicalDocument.create({
     data: {
       userId: user.id,
-      title: String(formData.get("title") || "").trim(),
+      title: requiredString(formData, "title", "Document title"),
       type: String(formData.get("type") || "OTHER") as DocumentType,
       notes: String(formData.get("notes") || "").trim() || null,
       ...upload,
@@ -471,225 +764,33 @@ export async function uploadDocument(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
-export async function updateMedication(formData: FormData) {
+export async function updateDocumentMetadata(formData: FormData) {
   const user = await requireUser();
-  const medicationId = String(formData.get("medicationId") || "").trim();
-  if (!medicationId) throw new Error("Medication ID is required.");
+  const id = requiredString(formData, "id", "Document id");
 
-  const medication = await db.medication.findFirst({
-    where: { id: medicationId, userId: user.id },
-    select: { id: true },
-  });
-  if (!medication) throw new Error("Medication not found.");
-
-  const scheduleTimes = formData
-    .getAll("scheduleTimes")
-    .map(String)
-    .map((time) => time.trim())
-    .filter(Boolean);
-
-  await db.medication.update({
-    where: { id: medicationId },
+  await db.medicalDocument.updateMany({
+    where: { id, userId: user.id },
     data: {
-      doctorId: String(formData.get("doctorId") || "").trim() || null,
-      name: String(formData.get("name") || "").trim(),
-      dosage: String(formData.get("dosage") || "").trim(),
-      frequency: String(formData.get("frequency") || "").trim(),
-      instructions: String(formData.get("instructions") || "").trim() || null,
-      startDate: new Date(String(formData.get("startDate"))),
-      endDate: String(formData.get("endDate") || "").trim()
-        ? new Date(String(formData.get("endDate")))
-        : null,
-      status: String(formData.get("status") || "ACTIVE") as MedicationStatus,
-      active: formData.get("active") === "on",
-      schedules: {
-        deleteMany: {},
-        create: scheduleTimes.map((time) => ({ timeOfDay: time })),
-      },
-    },
-  });
-
-  revalidatePath("/medications");
-  revalidatePath("/dashboard");
-}
-
-export async function deleteMedication(formData: FormData) {
-  const user = await requireUser();
-  const medicationId = String(formData.get("medicationId") || "").trim();
-  if (!medicationId) throw new Error("Medication ID is required.");
-
-  const medication = await db.medication.findFirst({
-    where: { id: medicationId, userId: user.id },
-    select: { id: true },
-  });
-  if (!medication) throw new Error("Medication not found.");
-
-  await db.medication.delete({ where: { id: medicationId } });
-
-  revalidatePath("/medications");
-  revalidatePath("/dashboard");
-}
-
-export async function updateVital(formData: FormData) {
-  const user = await requireUser();
-  const vitalId = String(formData.get("vitalId") || "").trim();
-  if (!vitalId) throw new Error("Vital ID is required.");
-
-  const vital = await db.vitalRecord.findFirst({
-    where: { id: vitalId, userId: user.id },
-    select: { id: true },
-  });
-  if (!vital) throw new Error("Vital record not found.");
-
-  const num = (name: string) => {
-    const value = String(formData.get(name) || "").trim();
-    return value ? Number(value) : null;
-  };
-
-  await db.vitalRecord.update({
-    where: { id: vitalId },
-    data: {
-      recordedAt: new Date(String(formData.get("recordedAt"))),
-      systolic: num("systolic"),
-      diastolic: num("diastolic"),
-      heartRate: num("heartRate"),
-      bloodSugar: num("bloodSugar"),
-      oxygenSaturation: num("oxygenSaturation"),
-      temperatureC: num("temperatureC"),
-      weightKg: num("weightKg"),
+      title: requiredString(formData, "title", "Document title"),
+      type: String(formData.get("type") || "OTHER") as DocumentType,
       notes: String(formData.get("notes") || "").trim() || null,
     },
   });
 
-  revalidatePath("/vitals");
+  revalidatePath("/documents");
   revalidatePath("/dashboard");
 }
 
-export async function deleteVital(formData: FormData) {
+export async function deleteDocument(formData: FormData) {
   const user = await requireUser();
-  const vitalId = String(formData.get("vitalId") || "").trim();
-  if (!vitalId) throw new Error("Vital ID is required.");
+  const id = requiredString(formData, "id", "Document id");
 
-  const vital = await db.vitalRecord.findFirst({
-    where: { id: vitalId, userId: user.id },
-    select: { id: true },
-  });
-  if (!vital) throw new Error("Vital record not found.");
+  const existing = await db.medicalDocument.findFirst({ where: { id, userId: user.id } });
+  if (!existing) return;
 
-  await db.vitalRecord.delete({ where: { id: vitalId } });
+  await db.medicalDocument.delete({ where: { id } });
+  await deleteUpload(existing.filePath);
 
-  revalidatePath("/vitals");
-  revalidatePath("/dashboard");
-}
-
-export async function updateSymptom(formData: FormData) {
-  const user = await requireUser();
-  const symptomId = String(formData.get("symptomId") || "").trim();
-  if (!symptomId) throw new Error("Symptom ID is required.");
-
-  const symptom = await db.symptomEntry.findFirst({
-    where: { id: symptomId, userId: user.id },
-    select: { id: true },
-  });
-  if (!symptom) throw new Error("Symptom entry not found.");
-
-  await db.symptomEntry.update({
-    where: { id: symptomId },
-    data: {
-      title: String(formData.get("title") || "").trim(),
-      severity: String(formData.get("severity") || "MILD") as SymptomSeverity,
-      bodyArea: String(formData.get("bodyArea") || "").trim() || null,
-      startedAt: new Date(String(formData.get("startedAt"))),
-      duration: String(formData.get("duration") || "").trim() || null,
-      trigger: String(formData.get("trigger") || "").trim() || null,
-      notes: String(formData.get("notes") || "").trim() || null,
-      resolved: formData.get("resolved") === "on",
-    },
-  });
-
-  revalidatePath("/symptoms");
-  revalidatePath("/dashboard");
-}
-
-export async function toggleSymptomResolved(formData: FormData) {
-  const user = await requireUser();
-  const symptomId = String(formData.get("symptomId") || "").trim();
-  if (!symptomId) throw new Error("Symptom ID is required.");
-
-  const symptom = await db.symptomEntry.findFirst({
-    where: { id: symptomId, userId: user.id },
-    select: { id: true, resolved: true },
-  });
-  if (!symptom) throw new Error("Symptom entry not found.");
-
-  await db.symptomEntry.update({
-    where: { id: symptomId },
-    data: { resolved: !symptom.resolved },
-  });
-
-  revalidatePath("/symptoms");
-  revalidatePath("/dashboard");
-}
-
-export async function deleteSymptom(formData: FormData) {
-  const user = await requireUser();
-  const symptomId = String(formData.get("symptomId") || "").trim();
-  if (!symptomId) throw new Error("Symptom ID is required.");
-
-  const symptom = await db.symptomEntry.findFirst({
-    where: { id: symptomId, userId: user.id },
-    select: { id: true },
-  });
-  if (!symptom) throw new Error("Symptom entry not found.");
-
-  await db.symptomEntry.delete({ where: { id: symptomId } });
-
-  revalidatePath("/symptoms");
-  revalidatePath("/dashboard");
-}
-
-export async function updateVaccination(formData: FormData) {
-  const user = await requireUser();
-  const vaccinationId = String(formData.get("vaccinationId") || "").trim();
-  if (!vaccinationId) throw new Error("Vaccination ID is required.");
-
-  const vaccination = await db.vaccinationRecord.findFirst({
-    where: { id: vaccinationId, userId: user.id },
-    select: { id: true },
-  });
-  if (!vaccination) throw new Error("Vaccination record not found.");
-
-  await db.vaccinationRecord.update({
-    where: { id: vaccinationId },
-    data: {
-      vaccineName: String(formData.get("vaccineName") || "").trim(),
-      doseNumber: Number(formData.get("doseNumber")),
-      dateTaken: new Date(String(formData.get("dateTaken"))),
-      location: String(formData.get("location") || "").trim() || null,
-      nextDueDate: String(formData.get("nextDueDate") || "").trim()
-        ? new Date(String(formData.get("nextDueDate")))
-        : null,
-      notes: String(formData.get("notes") || "").trim() || null,
-    },
-  });
-
-  revalidatePath("/vaccinations");
-  revalidatePath("/dashboard");
-}
-
-export async function deleteVaccination(formData: FormData) {
-  const user = await requireUser();
-  const vaccinationId = String(formData.get("vaccinationId") || "").trim();
-  if (!vaccinationId) throw new Error("Vaccination ID is required.");
-
-  const vaccination = await db.vaccinationRecord.findFirst({
-    where: { id: vaccinationId, userId: user.id },
-    select: { id: true },
-  });
-  if (!vaccination) throw new Error("Vaccination record not found.");
-
-  await db.vaccinationRecord.delete({ where: { id: vaccinationId } });
-
-  revalidatePath("/vaccinations");
+  revalidatePath("/documents");
   revalidatePath("/dashboard");
 }
