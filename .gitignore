@@ -38,3 +38,10 @@ Thumbs.db
 *.swp
 
 tsconfig.tsbuildinfo
+
+# temporary patch / merge leftovers
+*.tmp
+*.orig
+*.rej
+phase*_patch/
+**/phase*_patch/
