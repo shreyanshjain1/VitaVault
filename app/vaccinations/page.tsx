@@ -1,16 +1,11 @@
+import { format } from "date-fns";
 import { Syringe, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader, EmptyState } from "@/components/common";
-import { saveVaccination } from "@/app/actions";
+import { deleteVaccination, saveVaccination, updateVaccination } from "@/app/actions";
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
-import {
-  Badge,
-  Button,
-  Input,
-  Label,
-  Textarea,
-} from "@/components/ui";
+import { Badge, Button, Input, Label, Textarea } from "@/components/ui";
 import { formatDate } from "@/lib/utils";
 import {
   ModuleFormCard,
@@ -23,6 +18,10 @@ import {
   StaggerGroup,
   StaggerItem,
 } from "@/components/page-transition";
+
+function dateInputValue(value: Date | null) {
+  return value ? format(value, "yyyy-MM-dd") : "";
+}
 
 export default async function VaccinationsPage() {
   const user = await requireUser();
@@ -164,6 +163,67 @@ export default async function VaccinationsPage() {
                             <p className="mt-2 text-sm text-muted-foreground">
                               {record.notes ?? "No notes added."}
                             </p>
+                          </div>
+
+                          <div className="mt-5 rounded-2xl border border-border/60 bg-background/40 p-4">
+                            <p className="mb-3 text-sm font-medium">Manage vaccination record</p>
+                            <form action={updateVaccination} className="grid gap-4">
+                              <input type="hidden" name="vaccinationId" value={record.id} />
+
+                              <div className="space-y-2">
+                                <Label>Vaccine name</Label>
+                                <Input name="vaccineName" defaultValue={record.vaccineName} required />
+                              </div>
+
+                              <div className="grid gap-4 md:grid-cols-2">
+                                <div className="space-y-2">
+                                  <Label>Dose number</Label>
+                                  <Input name="doseNumber" type="number" min="1" defaultValue={record.doseNumber} required />
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label>Date taken</Label>
+                                  <Input
+                                    name="dateTaken"
+                                    type="date"
+                                    defaultValue={dateInputValue(record.dateTaken)}
+                                    required
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label>Clinic / location</Label>
+                                <Input name="location" defaultValue={record.location ?? ""} />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label>Next due date</Label>
+                                <Input
+                                  name="nextDueDate"
+                                  type="date"
+                                  defaultValue={dateInputValue(record.nextDueDate)}
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label>Notes</Label>
+                                <Textarea name="notes" className="min-h-[120px]" defaultValue={record.notes ?? ""} />
+                              </div>
+
+                              <div className="flex flex-wrap gap-2">
+                                <Button type="submit" size="sm">
+                                  Save changes
+                                </Button>
+                              </div>
+                            </form>
+
+                            <form action={deleteVaccination} className="mt-3">
+                              <input type="hidden" name="vaccinationId" value={record.id} />
+                              <Button type="submit" size="sm" variant="destructive">
+                                Delete record
+                              </Button>
+                            </form>
                           </div>
                         </DataCard>
                       ))

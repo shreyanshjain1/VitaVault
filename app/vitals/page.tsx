@@ -1,19 +1,27 @@
+import { format } from "date-fns";
 import { HeartPulse, Activity } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader, EmptyState } from "@/components/common";
-import { saveVital } from "@/app/actions";
+import { deleteVital, saveVital, updateVital } from "@/app/actions";
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
-import {
-  Badge,
-  Button,
-  Input,
-  Label,
-  Textarea,
-} from "@/components/ui";
+import { Badge, Button, Input, Label, Textarea } from "@/components/ui";
 import { formatDateTime } from "@/lib/utils";
-import { ModuleFormCard, ModuleHero, ModuleListCard, DataCard } from "@/components/module-sections";
-import { PageTransition, StaggerGroup, StaggerItem } from "@/components/page-transition";
+import {
+  ModuleFormCard,
+  ModuleHero,
+  ModuleListCard,
+  DataCard,
+} from "@/components/module-sections";
+import {
+  PageTransition,
+  StaggerGroup,
+  StaggerItem,
+} from "@/components/page-transition";
+
+function dateTimeLocalValue(value: Date) {
+  return format(value, "yyyy-MM-dd'T'HH:mm");
+}
 
 export default async function VitalsPage() {
   const user = await requireUser();
@@ -50,9 +58,18 @@ export default async function VitalsPage() {
             description="This page is intentionally ready for future Android Health Connect and device-fed readings later."
             stats={[
               { label: "Total entries", value: vitals.length },
-              { label: "Latest BP", value: latest?.systolic && latest?.diastolic ? `${latest.systolic}/${latest.diastolic}` : "—" },
+              {
+                label: "Latest BP",
+                value:
+                  latest?.systolic && latest?.diastolic
+                    ? `${latest.systolic}/${latest.diastolic}`
+                    : "—",
+              },
               { label: "Latest heart rate", value: latest?.heartRate ?? "—" },
-              { label: "Latest oxygen", value: latest?.oxygenSaturation ? `${latest.oxygenSaturation}%` : "—" },
+              {
+                label: "Latest oxygen",
+                value: latest?.oxygenSaturation ? `${latest.oxygenSaturation}%` : "—",
+              },
             ]}
           />
         </PageTransition>
@@ -93,7 +110,7 @@ export default async function VitalsPage() {
 
                     <div className="space-y-2">
                       <Label>Oxygen saturation</Label>
-                      <Input name="oxygenSaturation" type="number" step="0.01" placeholder="98" />
+                      <Input name="oxygenSaturation" type="number" placeholder="98" />
                     </div>
 
                     <div className="space-y-2">
@@ -136,14 +153,16 @@ export default async function VitalsPage() {
                           <div>
                             <h3 className="text-lg font-semibold">{formatDateTime(vital.recordedAt)}</h3>
                             <p className="text-sm text-muted-foreground">
-                              Manual vital record entry
+                              {vital.readingSource === "MANUAL" ? "Manual vital record entry" : vital.readingSource}
                             </p>
                           </div>
                           <Badge className="bg-background/70">Vital record</Badge>
                         </div>
 
                         <div className="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-3">
-                          <p>Blood pressure: {vital.systolic && vital.diastolic ? `${vital.systolic}/${vital.diastolic}` : "—"}</p>
+                          <p>
+                            Blood pressure: {vital.systolic && vital.diastolic ? `${vital.systolic}/${vital.diastolic}` : "—"}
+                          </p>
                           <p>Heart rate: {vital.heartRate ?? "—"}</p>
                           <p>Blood sugar: {vital.bloodSugar ?? "—"}</p>
                           <p>Oxygen saturation: {vital.oxygenSaturation ?? "—"}</p>
@@ -159,6 +178,87 @@ export default async function VitalsPage() {
                           <p className="mt-2 text-sm text-muted-foreground">
                             {vital.notes ?? "No notes added."}
                           </p>
+                        </div>
+
+                        <div className="mt-5 rounded-2xl border border-border/60 bg-background/40 p-4">
+                          <p className="mb-3 text-sm font-medium">Manage vital entry</p>
+                          <form action={updateVital} className="grid gap-4">
+                            <input type="hidden" name="vitalId" value={vital.id} />
+
+                            <div className="space-y-2">
+                              <Label>Recorded at</Label>
+                              <Input
+                                name="recordedAt"
+                                type="datetime-local"
+                                defaultValue={dateTimeLocalValue(vital.recordedAt)}
+                                required
+                              />
+                            </div>
+
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <div className="space-y-2">
+                                <Label>Systolic</Label>
+                                <Input name="systolic" type="number" defaultValue={vital.systolic ?? ""} />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label>Diastolic</Label>
+                                <Input name="diastolic" type="number" defaultValue={vital.diastolic ?? ""} />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label>Heart rate</Label>
+                                <Input name="heartRate" type="number" defaultValue={vital.heartRate ?? ""} />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label>Blood sugar</Label>
+                                <Input name="bloodSugar" type="number" step="0.01" defaultValue={vital.bloodSugar ?? ""} />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label>Oxygen saturation</Label>
+                                <Input
+                                  name="oxygenSaturation"
+                                  type="number"
+                                  defaultValue={vital.oxygenSaturation ?? ""}
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label>Temperature (°C)</Label>
+                                <Input
+                                  name="temperatureC"
+                                  type="number"
+                                  step="0.01"
+                                  defaultValue={vital.temperatureC ?? ""}
+                                />
+                              </div>
+
+                              <div className="space-y-2 md:col-span-2">
+                                <Label>Weight (kg)</Label>
+                                <Input name="weightKg" type="number" step="0.01" defaultValue={vital.weightKg ?? ""} />
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label>Notes</Label>
+                              <Textarea name="notes" className="min-h-[110px]" defaultValue={vital.notes ?? ""} />
+                            </div>
+
+                            <div className="flex flex-wrap gap-2">
+                              <Button type="submit" size="sm">
+                                Save changes
+                              </Button>
+                            </div>
+                          </form>
+
+                          <form action={deleteVital} className="mt-3">
+                            <input type="hidden" name="vitalId" value={vital.id} />
+                            <Button type="submit" size="sm" variant="destructive">
+                              Delete entry
+                            </Button>
+                          </form>
                         </div>
                       </DataCard>
                     ))
