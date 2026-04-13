@@ -1,4 +1,4 @@
-import { mkdir, rm, writeFile } from "fs/promises";
+import { mkdir, unlink, writeFile } from "fs/promises";
 import path from "path";
 
 const allowed = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
@@ -9,6 +9,7 @@ export async function saveUpload(file: File) {
 
   const bytes = await file.arrayBuffer();
   const dir = path.join(process.cwd(), "public", "uploads");
+
   await mkdir(dir, { recursive: true });
 
   const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
@@ -23,12 +24,22 @@ export async function saveUpload(file: File) {
 }
 
 export async function deleteUpload(filePath?: string | null) {
-  if (!filePath) return;
-  if (!filePath.startsWith("/uploads/")) return;
+  if (!filePath || !filePath.startsWith("/uploads/")) return;
 
-  const fileName = filePath.replace(/^\/uploads\//, "");
-  if (!fileName) return;
+  const absolutePath = path.join(process.cwd(), "public", filePath.replace(/^\//, ""));
 
-  const targetPath = path.join(process.cwd(), "public", "uploads", fileName);
-  await rm(targetPath, { force: true }).catch(() => undefined);
+  try {
+    await unlink(absolutePath);
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: string }).code === "ENOENT"
+    ) {
+      return;
+    }
+
+    throw error;
+  }
 }
