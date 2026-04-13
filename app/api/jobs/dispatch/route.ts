@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/session";
+import { hasRedisConfig } from "@/lib/jobs/connection";
 import {
   enqueueAlertEvaluationJob,
   enqueueDailyHealthSummaryJob,
@@ -49,6 +50,15 @@ type DispatchBody =
 
 export async function POST(request: Request) {
   try {
+    if (!hasRedisConfig()) {
+      return NextResponse.json(
+        {
+          error: "Background jobs are unavailable because REDIS_URL is not configured.",
+        },
+        { status: 503 }
+      );
+    }
+
     const currentUser = await requireUser();
     const body = (await request.json()) as DispatchBody;
 

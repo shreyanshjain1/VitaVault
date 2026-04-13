@@ -1,6 +1,7 @@
 import { JobType, Queue } from "bullmq";
 import { db } from "@/lib/db";
 import { DEFAULT_JOB_DASHBOARD_LIMIT } from "@/lib/jobs/constants";
+import { hasRedisConfig } from "@/lib/jobs/connection";
 import {
   getAlertQueue,
   getDailySummaryQueue,
@@ -44,13 +45,70 @@ async function getSafeQueueCounts(label: string, queueFactory: () => SafeQueue) 
 }
 
 export async function getJobsDashboardData() {
+  const jobsAvailable = hasRedisConfig();
+
   const [queueCounts, recentRuns] = await Promise.all([
-    Promise.all([
-      getSafeQueueCounts("Alert Evaluation", getAlertQueue),
-      getSafeQueueCounts("Reminder Generation", getRemindersQueue),
-      getSafeQueueCounts("Daily Summary", getDailySummaryQueue),
-      getSafeQueueCounts("Device Sync", getDeviceSyncQueue),
-    ]),
+    jobsAvailable
+      ? Promise.all([
+          getSafeQueueCounts("Alert Evaluation", getAlertQueue),
+          getSafeQueueCounts("Reminder Generation", getRemindersQueue),
+          getSafeQueueCounts("Daily Summary", getDailySummaryQueue),
+          getSafeQueueCounts("Device Sync", getDeviceSyncQueue),
+        ])
+      : Promise.resolve([
+          {
+            label: "Alert Evaluation",
+            counts: {
+              active: 0,
+              completed: 0,
+              delayed: 0,
+              failed: 0,
+              paused: 0,
+              prioritized: 0,
+              waiting: 0,
+              "waiting-children": 0,
+            },
+          },
+          {
+            label: "Reminder Generation",
+            counts: {
+              active: 0,
+              completed: 0,
+              delayed: 0,
+              failed: 0,
+              paused: 0,
+              prioritized: 0,
+              waiting: 0,
+              "waiting-children": 0,
+            },
+          },
+          {
+            label: "Daily Summary",
+            counts: {
+              active: 0,
+              completed: 0,
+              delayed: 0,
+              failed: 0,
+              paused: 0,
+              prioritized: 0,
+              waiting: 0,
+              "waiting-children": 0,
+            },
+          },
+          {
+            label: "Device Sync",
+            counts: {
+              active: 0,
+              completed: 0,
+              delayed: 0,
+              failed: 0,
+              paused: 0,
+              prioritized: 0,
+              waiting: 0,
+              "waiting-children": 0,
+            },
+          },
+        ]),
     db.jobRun.findMany({
       orderBy: { createdAt: "desc" },
       take: DEFAULT_JOB_DASHBOARD_LIMIT,
@@ -71,6 +129,8 @@ export async function getJobsDashboardData() {
   ]);
 
   return {
+    jobsAvailable,
+    unavailableReason: jobsAvailable ? null : "REDIS_URL is not configured.",
     queueCounts,
     recentRuns,
   };

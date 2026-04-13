@@ -58,6 +58,14 @@ export default async function JobsDashboardPage() {
           description="Redis + BullMQ operational layer for alert checks, reminder generation, daily summaries, and device sync processing."
         />
 
+        {!dashboard.jobsAvailable ? (
+          <Card className="border border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30">
+            <CardContent className="pt-6 text-sm text-amber-800 dark:text-amber-200">
+              Background jobs are currently running in degraded mode. {dashboard.unavailableReason}
+            </CardContent>
+          </Card>
+        ) : null}
+
         {user.role !== APP_ROLES.ADMIN ? (
           <Card className="border border-border/60">
             <CardContent className="pt-6">
@@ -111,6 +119,8 @@ export default async function JobsDashboardPage() {
               source: connection.source,
               status: connection.status,
             }))}
+            jobsAvailable={dashboard.jobsAvailable}
+            unavailableReason={dashboard.unavailableReason}
           />
 
           <Card>

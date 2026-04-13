@@ -1,4 +1,5 @@
 import IORedis from "ioredis";
+import { hasRedisConfig } from "@/lib/jobs/connection";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -18,9 +19,14 @@ function createRedisConnection() {
   });
 }
 
-export const bullmqConnection =
-  globalThis.vitavaultBullRedis ?? createRedisConnection();
+export function getBullmqRedisConnection() {
+  if (!hasRedisConfig()) {
+    throw new Error("REDIS_URL is not configured.");
+  }
 
-if (process.env.NODE_ENV !== "production") {
-  globalThis.vitavaultBullRedis = bullmqConnection;
+  if (!globalThis.vitavaultBullRedis) {
+    globalThis.vitavaultBullRedis = createRedisConnection();
+  }
+
+  return globalThis.vitavaultBullRedis;
 }

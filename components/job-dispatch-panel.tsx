@@ -14,6 +14,8 @@ type DeviceConnectionOption = {
 
 type Props = {
   deviceConnections: DeviceConnectionOption[];
+  jobsAvailable?: boolean;
+  unavailableReason?: string | null;
 };
 
 type DispatchState = {
@@ -26,7 +28,11 @@ type DispatchState = {
   error: string | null;
 };
 
-export function JobDispatchPanel({ deviceConnections }: Props) {
+export function JobDispatchPanel({
+  deviceConnections,
+  jobsAvailable = true,
+  unavailableReason = null,
+}: Props) {
   const router = useRouter();
   const [selectedConnectionId, setSelectedConnectionId] = useState(
     deviceConnections[0]?.id ?? ""
@@ -43,6 +49,15 @@ export function JobDispatchPanel({ deviceConnections }: Props) {
   );
 
   async function dispatch(payload: Record<string, unknown>) {
+    if (!jobsAvailable) {
+      setState({
+        loading: false,
+        message: null,
+        error: unavailableReason ?? "Background jobs are not available right now.",
+      });
+      return;
+    }
+
     setState({
       loading: true,
       message: null,
@@ -99,11 +114,17 @@ export function JobDispatchPanel({ deviceConnections }: Props) {
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {!jobsAvailable ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+            {unavailableReason ?? "Background job dispatch is disabled until Redis is configured."}
+          </div>
+        ) : null}
+
         <div className="grid gap-3 sm:grid-cols-2">
           <Button
             type="button"
             onClick={() => dispatch({ kind: "ALERT_EVALUATION" })}
-            disabled={state.loading}
+            disabled={state.loading || !jobsAvailable}
           >
             {state.loading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -117,7 +138,7 @@ export function JobDispatchPanel({ deviceConnections }: Props) {
             type="button"
             variant="outline"
             onClick={() => dispatch({ kind: "REMINDER_GENERATION", horizonDays: 7 })}
-            disabled={state.loading}
+            disabled={state.loading || !jobsAvailable}
           >
             {state.loading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -131,7 +152,7 @@ export function JobDispatchPanel({ deviceConnections }: Props) {
             type="button"
             variant="outline"
             onClick={() => dispatch({ kind: "DAILY_HEALTH_SUMMARY" })}
-            disabled={state.loading}
+            disabled={state.loading || !jobsAvailable}
           >
             {state.loading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -155,7 +176,7 @@ export function JobDispatchPanel({ deviceConnections }: Props) {
               <Select
                 value={selectedConnectionId}
                 onChange={(e) => setSelectedConnectionId(e.target.value)}
-                disabled={state.loading}
+                disabled={state.loading || !jobsAvailable}
               >
                 {deviceConnections.map((connection) => (
                   <option key={connection.id} value={connection.id}>
@@ -172,7 +193,7 @@ export function JobDispatchPanel({ deviceConnections }: Props) {
                     connectionId: selectedConnectionId,
                   })
                 }
-                disabled={state.loading || !selectedConnectionId}
+                disabled={state.loading || !selectedConnectionId || !jobsAvailable}
               >
                 {state.loading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
