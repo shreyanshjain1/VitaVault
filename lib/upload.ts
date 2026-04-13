@@ -1,4 +1,4 @@
-import { mkdir, unlink, writeFile } from "fs/promises";
+import { mkdir, rm, writeFile } from "fs/promises";
 import path from "path";
 
 const allowed = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
@@ -23,16 +23,12 @@ export async function saveUpload(file: File) {
 }
 
 export async function deleteUpload(filePath?: string | null) {
-  if (!filePath || !filePath.startsWith("/uploads/")) return;
+  if (!filePath) return;
+  if (!filePath.startsWith("/uploads/")) return;
 
-  const normalized = filePath.replace(/^\/+/, "");
-  const absolutePath = path.join(process.cwd(), "public", normalized.replace(/^public\//, ""));
+  const fileName = filePath.replace(/^\/uploads\//, "");
+  if (!fileName) return;
 
-  try {
-    await unlink(absolutePath);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-      throw error;
-    }
-  }
+  const targetPath = path.join(process.cwd(), "public", "uploads", fileName);
+  await rm(targetPath, { force: true }).catch(() => undefined);
 }

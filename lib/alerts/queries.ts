@@ -62,17 +62,31 @@ export async function getAlertRules(ownerUserId: string) {
   return db.alertRule.findMany({
     where: {
       userId: ownerUserId,
-      enabled: true,
     },
-    orderBy: [{ severity: "desc" }, { name: "asc" }],
+    orderBy: [{ enabled: "desc" }, { severity: "desc" }, { name: "asc" }],
     select: {
       id: true,
       name: true,
+      description: true,
       category: true,
+      metricKey: true,
+      enabled: true,
       severity: true,
+      visibleToCareTeam: true,
       cooldownMinutes: true,
       lookbackHours: true,
-      visibleToCareTeam: true,
+      thresholdOperator: true,
+      thresholdValue: true,
+      thresholdValueSecondary: true,
+      symptomSeverity: true,
+      medicationMissedCount: true,
+      syncStaleHours: true,
+      createdAt: true,
+      _count: {
+        select: {
+          events: true,
+        },
+      },
     },
   });
 }

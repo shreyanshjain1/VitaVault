@@ -4,7 +4,6 @@ import { AppShell } from "@/components/app-shell";
 import { PageHeader, StatusPill } from "@/components/common";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
 import { requireUser } from "@/lib/session";
-import { requireOwnerAccess } from "@/lib/access";
 import { getAlertList, getAlertRules } from "@/lib/alerts/queries";
 import { AlertFilterBar } from "@/components/alerts/alert-filter-bar";
 import { AlertList } from "@/components/alerts/alert-list";
@@ -25,15 +24,8 @@ export default async function AlertsPage({
   const severity = typeof params.severity === "string" ? params.severity : "ALL";
   const category = typeof params.category === "string" ? params.category : "ALL";
 
-  await requireOwnerAccess(currentUser.id!, ownerUserId, "alerts");
-
   const [alerts, rules] = await Promise.all([
-    getAlertList({
-      ownerUserId,
-      status,
-      severity,
-      category,
-    }),
+    getAlertList({ ownerUserId, status, severity, category }),
     getAlertRules(ownerUserId),
   ]);
 
@@ -48,6 +40,12 @@ export default async function AlertsPage({
           description="Threshold-based monitoring, worker-evaluated events, and patient/care-team visibility."
           action={
             <div className="flex flex-wrap gap-3">
+              <Link
+                href="/alerts/rules"
+                className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"
+              >
+                Manage rules
+              </Link>
               <Link
                 href="/dashboard"
                 className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"
@@ -109,11 +107,8 @@ export default async function AlertsPage({
                   <div>
                     <p className="text-sm font-semibold">Care-team visibility</p>
                     <div className="mt-3">
-                      <StatusPill tone="info">Owner and authorized care team</StatusPill>
+                      <StatusPill tone="info">Owner view</StatusPill>
                     </div>
-                    <p className="mt-3 text-sm text-muted-foreground">
-                      Access is enforced from the current patient context, not just the URL.
-                    </p>
                   </div>
                 </div>
               </div>
