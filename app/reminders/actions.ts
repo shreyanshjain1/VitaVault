@@ -4,15 +4,14 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/session";
 import {
   generateReminderInstances,
-  snoozeReminder,
+  markDueRemindersAsOverdue,
   updateReminderState,
+  snoozeReminder,
 } from "@/lib/reminders/service";
 
-function revalidateReminderSurfaces() {
-  revalidatePath("/reminders");
-  revalidatePath("/dashboard");
-  revalidatePath("/review-queue");
-  revalidatePath("/timeline");
+function parsePositiveInt(value: FormDataEntryValue | null, fallback: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.trunc(parsed) : fallback;
 }
 
 export async function completeReminderAction(formData: FormData) {
@@ -26,7 +25,9 @@ export async function completeReminderAction(formData: FormData) {
     actorUserId: user.id!,
   });
 
-  revalidateReminderSurfaces();
+  revalidatePath("/reminders");
+  revalidatePath("/dashboard");
+  revalidatePath("/review-queue");
 }
 
 export async function skipReminderAction(formData: FormData) {
@@ -40,37 +41,43 @@ export async function skipReminderAction(formData: FormData) {
     actorUserId: user.id!,
   });
 
-  revalidateReminderSurfaces();
+  revalidatePath("/reminders");
+  revalidatePath("/dashboard");
+  revalidatePath("/review-queue");
 }
 
 export async function snoozeReminderAction(formData: FormData) {
   const user = await requireUser();
   const reminderId = String(formData.get("reminderId") || "");
-  const snoozeMinutesRaw = Number(formData.get("snoozeMinutes") || 15);
-  const snoozeMinutes = Number.isFinite(snoozeMinutesRaw)
-    ? Math.max(5, Math.min(240, snoozeMinutesRaw))
-    : 15;
+  const minutes = parsePositiveInt(formData.get("snoozeMinutes"), 15);
 
   await snoozeReminder({
     userId: user.id!,
     reminderId,
-    snoozeMinutes,
+    minutes,
     actorUserId: user.id!,
+    note: `Snoozed for ${minutes} minute${minutes === 1 ? "" : "s"}.`,
   });
 
-  revalidateReminderSurfaces();
+  revalidatePath("/reminders");
+  revalidatePath("/dashboard");
+  revalidatePath("/review-queue");
 }
 
-export async function regenerateReminderAction(formData: FormData) {
+export async function regenerateRemindersAction() {
   const user = await requireUser();
-  const targetDateRaw = String(formData.get("targetDate") || "");
-  const targetDate = targetDateRaw ? new Date(targetDateRaw) : new Date();
 
   await generateReminderInstances({
     userId: user.id!,
-    targetDate: Number.isNaN(targetDate.getTime()) ? new Date() : targetDate,
     requestedByUserId: user.id!,
   });
 
-  revalidateReminderSurfaces();
+  await markDueRemindersAsOverdue({
+    userId: user.id!,
+    requestedByUserId: user.id!,
+  });
+
+  revalidatePath("/reminders");
+  revalidatePath("/dashboard");
+  revalidatePath("/review-queue");
 }

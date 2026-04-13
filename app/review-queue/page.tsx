@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { AlertTriangle, BellRing, FlaskConical, ShieldAlert } from "lucide-react";
+import { AlertTriangle, BellRing, FlaskConical, Stethoscope } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader, StatusPill } from "@/components/common";
 import {
@@ -12,90 +11,95 @@ import {
 import { requireUser } from "@/lib/session";
 import { getReviewQueueData } from "@/lib/review-queue";
 
-function categoryLabel(category: string) {
-  switch (category) {
-    case "OVERDUE_REMINDER":
-      return "Overdue reminder";
-    case "MISSED_REMINDER":
-      return "Missed reminder";
-    case "SEVERE_SYMPTOM":
-      return "Severe symptom";
-    case "ABNORMAL_LAB":
-      return "Abnormal lab";
-    default:
-      return category;
-  }
-}
+const toneClasses = {
+  danger: "danger",
+  warning: "warning",
+  success: "success",
+  info: "info",
+  neutral: "neutral",
+} as const;
+
+const categoryLabel: Record<string, string> = {
+  OVERDUE_REMINDER: "Overdue reminder",
+  MISSED_REMINDER: "Missed reminder",
+  SEVERE_SYMPTOM: "Severe symptom",
+  ABNORMAL_LAB: "Abnormal lab",
+};
 
 export default async function ReviewQueuePage() {
   const user = await requireUser();
-  const data = await getReviewQueueData(user.id!);
+  const data = await getReviewQueueData({ userId: user.id! });
+  const stats = data.stats;
 
   return (
     <AppShell>
       <div className="mx-auto max-w-7xl space-y-6 p-6">
         <PageHeader
           title="Review Queue"
-          description="Central queue for overdue reminders, severe symptoms, and flagged lab results that may need action."
-          action={
-            <Link
-              href="/timeline"
-              className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-95"
-            >
-              Open Timeline
-            </Link>
-          }
+          description="Operational queue for overdue reminders, missed care tasks, severe symptoms, and abnormal labs."
         />
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
           <Card>
-            <CardContent className="p-5">
+            <CardHeader>
+              <CardTitle>Total items</CardTitle>
+              <CardDescription>All items needing follow-up.</CardDescription>
+            </CardHeader>
+            <CardContent>
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-muted-foreground">Total queue</p>
-                <AlertTriangle className="h-5 w-5 text-primary" />
+                <p className="text-4xl font-semibold">{stats.total}</p>
+                <AlertTriangle className="h-6 w-6 text-primary" />
               </div>
-              <p className="mt-4 text-4xl font-semibold">{data.summary.total}</p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-5">
+            <CardHeader>
+              <CardTitle>Reminder issues</CardTitle>
+              <CardDescription>Overdue plus missed reminders.</CardDescription>
+            </CardHeader>
+            <CardContent>
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-muted-foreground">Reminder risk</p>
-                <BellRing className="h-5 w-5 text-amber-500" />
+                <p className="text-4xl font-semibold">
+                  {stats.overdueReminders + stats.missedReminders}
+                </p>
+                <BellRing className="h-6 w-6 text-primary" />
               </div>
-              <p className="mt-4 text-4xl font-semibold">
-                {data.summary.overdueReminders + data.summary.missedReminders}
-              </p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-5">
+            <CardHeader>
+              <CardTitle>Severe symptoms</CardTitle>
+              <CardDescription>Symptoms marked at the highest urgency.</CardDescription>
+            </CardHeader>
+            <CardContent>
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-muted-foreground">Severe symptoms</p>
-                <ShieldAlert className="h-5 w-5 text-rose-500" />
+                <p className="text-4xl font-semibold">{stats.severeSymptoms}</p>
+                <Stethoscope className="h-6 w-6 text-primary" />
               </div>
-              <p className="mt-4 text-4xl font-semibold">{data.summary.severeSymptoms}</p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-5">
+            <CardHeader>
+              <CardTitle>Abnormal labs</CardTitle>
+              <CardDescription>Flagged lab results requiring attention.</CardDescription>
+            </CardHeader>
+            <CardContent>
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-muted-foreground">Abnormal labs</p>
-                <FlaskConical className="h-5 w-5 text-sky-500" />
+                <p className="text-4xl font-semibold">{stats.abnormalLabs}</p>
+                <FlaskConical className="h-6 w-6 text-primary" />
               </div>
-              <p className="mt-4 text-4xl font-semibold">{data.summary.abnormalLabs}</p>
             </CardContent>
           </Card>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Action queue</CardTitle>
-            <CardDescription className="mt-1">
-              Work through the most recent items that could require follow-up.
+            <CardTitle>Items needing follow-up</CardTitle>
+            <CardDescription>
+              Prioritized operational view across reminders, symptoms, and labs.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -106,27 +110,31 @@ export default async function ReviewQueuePage() {
                   className="rounded-3xl border border-border/60 bg-background/40 p-5"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
+                    <div>
                       <p className="text-sm font-semibold">{item.title}</p>
                       <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
                     </div>
-                    <StatusPill tone={item.tone}>{categoryLabel(item.category)}</StatusPill>
+                    <div className="flex flex-wrap gap-2">
+                      <StatusPill tone={toneClasses[item.tone] ?? "neutral"}>
+                        {categoryLabel[item.category] ?? item.category}
+                      </StatusPill>
+                    </div>
                   </div>
 
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
-                    <span>{new Date(item.occurredAt).toLocaleString()}</span>
-                    <Link
+                    <p>{new Date(item.occurredAt).toLocaleString()}</p>
+                    <a
                       href={item.href}
                       className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"
                     >
-                      Open source module
-                    </Link>
+                      Open record
+                    </a>
                   </div>
                 </div>
               ))
             ) : (
               <div className="rounded-3xl border border-dashed border-border/60 bg-background/40 p-5 text-sm text-muted-foreground">
-                The review queue is clear right now.
+                No review items right now.
               </div>
             )}
           </CardContent>
