@@ -1,89 +1,111 @@
-import { ReminderState, SymptomSeverity } from "@prisma/client";
+import { LabFlag, ReminderState, SymptomSeverity } from "@prisma/client";
 import { db } from "@/lib/db";
 
-export type ReviewQueueItem = {
+export type ReviewQueueCategory =
+  | "OVERDUE_REMINDER"
+  | "MISSED_REMINDER"
+  | "SEVERE_SYMPTOM"
+  | "ABNORMAL_LAB";
+
+export type ReviewQueueTone = "warning" | "danger" | "neutral";
+
+export interface ReviewQueueItem {
   id: string;
-  category: "OVERDUE_REMINDER" | "MISSED_REMINDER" | "SEVERE_SYMPTOM" | "ABNORMAL_LAB";
+  category: ReviewQueueCategory;
   title: string;
   description: string;
   occurredAt: Date;
   href: string;
-  tone: "warning" | "danger" | "info";
-};
+  tone: ReviewQueueTone;
+}
 
 export async function getReviewQueueData(userId: string) {
-  const [overdueReminders, severeSymptoms, abnormalLabs] = await Promise.all([
+  const [overdueReminders, missedReminders, severeSymptoms, abnormalLabs] = await Promise.all([
     db.reminder.findMany({
-      where: {
-        userId,
-        state: {
-          in: [ReminderState.OVERDUE, ReminderState.MISSED],
-        },
-      },
-      orderBy: [{ dueAt: "asc" }, { createdAt: "desc" }],
-      take: 20,
+      where: { userId, state: ReminderState.OVERDUE },
+      orderBy: { dueAt: "asc" },
+      take: 25,
+    }),
+    db.reminder.findMany({
+      where: { userId, state: ReminderState.MISSED },
+      orderBy: { missedAt: "desc" },
+      take: 25,
     }),
     db.symptomEntry.findMany({
       where: {
         userId,
         severity: SymptomSeverity.SEVERE,
+        resolved: false,
       },
-      orderBy: { recordedAt: "desc" },
-      take: 20,
+      orderBy: { createdAt: "desc" },
+      take: 25,
     }),
     db.labResult.findMany({
       where: {
         userId,
         flag: {
-          in: ["HIGH", "LOW"],
+          in: [LabFlag.HIGH, LabFlag.LOW],
         },
       },
       orderBy: { dateTaken: "desc" },
-      take: 20,
+      take: 25,
     }),
   ]);
 
-  const items: ReviewQueueItem[] = [
-    ...overdueReminders.map((item) => ({
-      id: item.id,
-      category:
-        item.state === ReminderState.MISSED ? "MISSED_REMINDER" : "OVERDUE_REMINDER",
-      title: item.title,
-      description: item.description ?? "Reminder needs follow-up.",
-      occurredAt: item.dueAt,
-      href: "/reminders",
-      tone: item.state === ReminderState.MISSED ? "danger" : "warning",
-    })),
-    ...severeSymptoms.map((item) => ({
-      id: item.id,
-      category: "SEVERE_SYMPTOM",
-      title: item.title,
-      description: item.notes ?? "Severe symptom logged.",
-      occurredAt: item.recordedAt,
-      href: "/symptoms",
-      tone: "danger" as const,
-    })),
-    ...abnormalLabs.map((item) => ({
-      id: item.id,
-      category: "ABNORMAL_LAB",
-      title: `${item.testName}${item.resultValue ? ` • ${item.resultValue}` : ""}`,
-      description: item.notes ?? `Flagged result (${item.flag}).`,
-      occurredAt: item.dateTaken,
-      href: "/labs",
-      tone: "warning" as const,
-    })),
-  ].sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime());
+  const reminderItems: ReviewQueueItem[] = overdueReminders.map((item) => ({
+    id: item.id,
+    category: "OVERDUE_REMINDER",
+    title: item.title,
+    description: item.description ?? "Reminder is overdue and needs attention.",
+    occurredAt: item.dueAt,
+    href: "/reminders",
+    tone: "warning",
+  }));
+
+  const missedItems: ReviewQueueItem[] = missedReminders.map((item) => ({
+    id: item.id,
+    category: "MISSED_REMINDER",
+    title: item.title,
+    description: item.description ?? "Reminder was missed and may require follow-up.",
+    occurredAt: item.missedAt ?? item.dueAt,
+    href: "/reminders",
+    tone: "danger",
+  }));
+
+  const symptomItems: ReviewQueueItem[] = severeSymptoms.map((item) => ({
+    id: item.id,
+    category: "SEVERE_SYMPTOM",
+    title: item.title,
+    description: item.notes ?? `Severe symptom${item.bodyArea ? ` • ${item.bodyArea}` : ""}`,
+    occurredAt: item.startedAt ?? item.createdAt,
+    href: "/symptoms",
+    tone: "danger",
+  }));
+
+  const labItems: ReviewQueueItem[] = abnormalLabs.map((item) => ({
+    id: item.id,
+    category: "ABNORMAL_LAB",
+    title: `${item.testName} • ${item.flag}`,
+    description: item.resultSummary || `Flagged lab result (${item.flag}).`,
+    occurredAt: item.dateTaken,
+    href: "/labs",
+    tone: "danger",
+  }));
+
+  const items = [...reminderItems, ...missedItems, ...symptomItems, ...labItems].sort(
+    (a, b) => b.occurredAt.getTime() - a.occurredAt.getTime(),
+  );
+
+  const stats = {
+    overdueReminders: overdueReminders.length,
+    missedReminders: missedReminders.length,
+    severeSymptoms: severeSymptoms.length,
+    abnormalLabs: abnormalLabs.length,
+    total: items.length,
+  };
 
   return {
     items,
-    summary: {
-      overdueReminders: overdueReminders.filter((item) => item.state === ReminderState.OVERDUE)
-        .length,
-      missedReminders: overdueReminders.filter((item) => item.state === ReminderState.MISSED)
-        .length,
-      severeSymptoms: severeSymptoms.length,
-      abnormalLabs: abnormalLabs.length,
-      total: items.length,
-    },
+    stats,
   };
 }

@@ -1,4 +1,4 @@
-import { addDays, addMinutes, endOfDay, set, startOfDay } from "date-fns";
+import { addDays, endOfDay, set, startOfDay } from "date-fns";
 import { AppointmentStatus, ReminderState, ReminderType } from "@prisma/client";
 import { db } from "@/lib/db";
 
@@ -194,7 +194,7 @@ export async function markDueRemindersAsOverdue(args: {
 
   for (const reminder of reminders) {
     const overdueAt = new Date(
-      reminder.dueAt.getTime() + (reminder.gracePeriodMinutes ?? 0) * 60 * 1000
+      reminder.dueAt.getTime() + (reminder.gracePeriodMinutes ?? 0) * 60 * 1000,
     );
     const missedAt = new Date(overdueAt.getTime() + 12 * 60 * 60 * 1000);
 
@@ -247,7 +247,7 @@ export async function markDueRemindersAsOverdue(args: {
 export async function updateReminderState(args: {
   userId: string;
   reminderId: string;
-  nextState: string;
+  nextState: ReminderState | `${ReminderState}`;
   actorUserId?: string | null;
   note?: string | null;
 }) {
@@ -262,8 +262,8 @@ export async function updateReminderState(args: {
     throw new Error("Reminder not found.");
   }
 
-  const now = new Date();
   const nextState = args.nextState as ReminderState;
+  const now = new Date();
 
   const updated = await db.reminder.update({
     where: { id: reminder.id },
@@ -293,8 +293,9 @@ export async function updateReminderState(args: {
 export async function snoozeReminder(args: {
   userId: string;
   reminderId: string;
-  snoozeMinutes: number;
+  minutes?: number;
   actorUserId?: string | null;
+  note?: string | null;
 }) {
   const reminder = await db.reminder.findFirst({
     where: {
@@ -307,11 +308,19 @@ export async function snoozeReminder(args: {
     throw new Error("Reminder not found.");
   }
 
-  if ([ReminderState.COMPLETED, ReminderState.SKIPPED, ReminderState.MISSED].includes(reminder.state)) {
-    throw new Error("This reminder can no longer be snoozed.");
+  const terminalStates: ReminderState[] = [
+    ReminderState.COMPLETED,
+    ReminderState.SKIPPED,
+    ReminderState.MISSED,
+  ];
+
+  if (terminalStates.includes(reminder.state)) {
+    throw new Error("Completed, skipped, or missed reminders cannot be snoozed.");
   }
 
-  const dueAt = addMinutes(reminder.dueAt, args.snoozeMinutes);
+  const minutes = Number.isFinite(args.minutes) ? Math.max(5, Number(args.minutes)) : 15;
+  const dueAt = new Date(reminder.dueAt.getTime() + minutes * 60 * 1000);
+
   const updated = await db.reminder.update({
     where: { id: reminder.id },
     data: {
@@ -319,7 +328,6 @@ export async function snoozeReminder(args: {
       state: ReminderState.DUE,
       overdueAt: null,
       sentAt: null,
-      skippedAt: null,
       missedAt: null,
     },
   });
@@ -329,11 +337,34 @@ export async function snoozeReminder(args: {
     actorUserId: args.actorUserId ?? null,
     reminderId: updated.id,
     action: "reminder.snoozed",
-    metadata: {
-      snoozeMinutes: args.snoozeMinutes,
-      newDueAt: dueAt.toISOString(),
-    },
+    note: args.note ?? null,
+    metadata: { minutes, dueAt: dueAt.toISOString() },
   });
 
   return updated;
+}
+
+export async function regenerateRemindersForDate(args: {
+  userId: string;
+  targetDate?: Date;
+  actorUserId?: string | null;
+}) {
+  const result = await generateReminderInstances({
+    userId: args.userId,
+    targetDate: args.targetDate,
+    requestedByUserId: args.actorUserId ?? null,
+  });
+
+  await createReminderAuditLog({
+    userId: args.userId,
+    actorUserId: args.actorUserId ?? null,
+    action: "reminder.regenerated",
+    metadata: {
+      targetDate: (args.targetDate ?? new Date()).toISOString(),
+      created: result.created,
+      deduped: result.deduped,
+    },
+  });
+
+  return result;
 }
