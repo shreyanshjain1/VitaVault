@@ -1,7 +1,7 @@
-import { FlaskConical, Search } from "lucide-react";
+import { FlaskConical, PencilLine, Search, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader, EmptyState } from "@/components/common";
-import { saveLabResult } from "@/app/actions";
+import { deleteLabResult, saveLabResult, updateLabResult } from "@/app/actions";
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
 import {
@@ -221,6 +221,63 @@ export default async function LabsPage({
                             ) : null}
                           </div>
                         </div>
+
+                        <details className="mt-4 rounded-2xl border border-border/60 bg-background/40 p-4">
+                          <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-foreground">
+                            <PencilLine className="h-4 w-4 text-primary" />
+                            Manage lab result
+                          </summary>
+
+                          <div className="mt-4 grid gap-4">
+                            <form action={updateLabResult} className="grid gap-4">
+                              <input type="hidden" name="labResultId" value={result.id} />
+
+                              <div className="grid gap-4 md:grid-cols-2">
+                                <div className="space-y-2 md:col-span-2">
+                                  <Label>Lab test name</Label>
+                                  <Input name="testName" required defaultValue={result.testName} />
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label>Date taken</Label>
+                                  <Input name="dateTaken" type="date" required defaultValue={formatDate(result.dateTaken, "yyyy-MM-dd")} />
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label>Flag</Label>
+                                  <Select name="flag" defaultValue={result.flag}>
+                                    <option value="NORMAL">Normal</option>
+                                    <option value="HIGH">High</option>
+                                    <option value="LOW">Low</option>
+                                    <option value="CRITICAL">Critical</option>
+                                  </Select>
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label>Result summary</Label>
+                                <Textarea name="resultSummary" className="min-h-[110px]" required defaultValue={result.resultSummary} />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label>Reference range</Label>
+                                <Input name="referenceRange" defaultValue={result.referenceRange ?? ""} />
+                              </div>
+
+                              <Button type="submit" variant="outline">
+                                Save changes
+                              </Button>
+                            </form>
+
+                            <form action={deleteLabResult}>
+                              <input type="hidden" name="labResultId" value={result.id} />
+                              <Button type="submit" variant="destructive">
+                                <Trash2 className="h-4 w-4" />
+                                Delete lab result
+                              </Button>
+                            </form>
+                          </div>
+                        </details>
                       </DataCard>
                     ))
                   ) : (

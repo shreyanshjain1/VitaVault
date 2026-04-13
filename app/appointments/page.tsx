@@ -1,7 +1,8 @@
-import { CalendarClock, ClipboardCheck } from "lucide-react";
+import { format } from "date-fns";
+import { CalendarClock, ClipboardCheck, PencilLine, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader, EmptyState } from "@/components/common";
-import { saveAppointment } from "@/app/actions";
+import { deleteAppointment, saveAppointment, updateAppointment } from "@/app/actions";
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
 import {
@@ -15,6 +16,10 @@ import {
 import { formatDateTime } from "@/lib/utils";
 import { ModuleFormCard, ModuleHero, ModuleListCard, DataCard } from "@/components/module-sections";
 import { PageTransition, StaggerGroup, StaggerItem } from "@/components/page-transition";
+
+function toInputDateTime(value: Date) {
+  return format(value, "yyyy-MM-dd'T'HH:mm");
+}
 
 export default async function AppointmentsPage() {
   const user = await requireUser();
@@ -195,6 +200,89 @@ export default async function AppointmentsPage() {
                               </p>
                             </div>
                           </div>
+
+                          <details className="mt-4 rounded-2xl border border-border/60 bg-background/40 p-4">
+                            <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-foreground">
+                              <PencilLine className="h-4 w-4 text-primary" />
+                              Manage appointment
+                            </summary>
+
+                            <div className="mt-4 grid gap-4">
+                              <form action={updateAppointment} className="grid gap-4">
+                                <input type="hidden" name="appointmentId" value={appointment.id} />
+
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="space-y-2 md:col-span-2">
+                                    <Label>Clinic / hospital</Label>
+                                    <Input name="clinic" required defaultValue={appointment.clinic} />
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <Label>Specialty</Label>
+                                    <Input name="specialty" defaultValue={appointment.specialty ?? ""} />
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <Label>Doctor name</Label>
+                                    <Input name="doctorName" required defaultValue={appointment.doctorName} />
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <Label>Linked doctor</Label>
+                                    <Select name="doctorId" defaultValue={appointment.doctorId ?? ""}>
+                                      <option value="">Select doctor</option>
+                                      {doctors.map((doctor) => (
+                                        <option key={doctor.id} value={doctor.id}>
+                                          {doctor.name}
+                                        </option>
+                                      ))}
+                                    </Select>
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <Label>Date & time</Label>
+                                    <Input name="scheduledAt" type="datetime-local" required defaultValue={toInputDateTime(appointment.scheduledAt)} />
+                                  </div>
+
+                                  <div className="space-y-2 md:col-span-2">
+                                    <Label>Purpose</Label>
+                                    <Input name="purpose" required defaultValue={appointment.purpose} />
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <Label>Status</Label>
+                                    <Select name="status" defaultValue={appointment.status}>
+                                      <option value="UPCOMING">Upcoming</option>
+                                      <option value="COMPLETED">Completed</option>
+                                      <option value="CANCELLED">Cancelled</option>
+                                    </Select>
+                                  </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label>Notes</Label>
+                                  <Textarea name="notes" className="min-h-[110px]" defaultValue={appointment.notes ?? ""} />
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label>Follow-up notes</Label>
+                                  <Textarea name="followUpNotes" className="min-h-[110px]" defaultValue={appointment.followUpNotes ?? ""} />
+                                </div>
+
+                                <Button type="submit" variant="outline">
+                                  Save changes
+                                </Button>
+                              </form>
+
+                              <form action={deleteAppointment}>
+                                <input type="hidden" name="appointmentId" value={appointment.id} />
+                                <Button type="submit" variant="destructive">
+                                  <Trash2 className="h-4 w-4" />
+                                  Delete appointment
+                                </Button>
+                              </form>
+                            </div>
+                          </details>
                         </DataCard>
                       ))
                     ) : (

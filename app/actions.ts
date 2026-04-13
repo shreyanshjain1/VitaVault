@@ -15,7 +15,7 @@ import { redirect } from "next/navigation";
 import { auth, signIn } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
-import { saveUpload } from "@/lib/upload";
+import { deleteUpload, saveUpload } from "@/lib/upload";
 import { healthProfileSchema, signupSchema } from "@/lib/validations";
 
 export type AuthActionState = {
@@ -23,7 +23,7 @@ export type AuthActionState = {
   success: string | null;
 };
 
-function safeCallbackUrl(raw: unknown): string {
+function safeCallbackUrl(raw: unknown) {
   const value = typeof raw === "string" ? raw.trim() : "";
   if (!value) return "/dashboard";
   if (!value.startsWith("/")) return "/dashboard";
@@ -86,8 +86,6 @@ export async function signupAction(
   }
 
   redirect(callbackUrl);
-
-  return { error: null, success: null };
 }
 
 export async function loginAction(
@@ -130,8 +128,6 @@ export async function loginAction(
   }
 
   redirect(callbackUrl);
-
-  return { error: null, success: null };
 }
 
 export async function saveHealthProfile(formData: FormData): Promise<void> {
@@ -295,7 +291,7 @@ export async function logMedicationStatus(formData: FormData) {
 
   if (
     scheduleTime &&
-    !medication.schedules.some((schedule: { timeOfDay: string }) => schedule.timeOfDay === scheduleTime)
+    !medication.schedules.some((schedule) => schedule.timeOfDay === scheduleTime)
   ) {
     throw new Error("Invalid schedule time for this medication.");
   }
@@ -470,6 +466,191 @@ export async function uploadDocument(formData: FormData) {
       ...upload,
     },
   });
+
+  revalidatePath("/documents");
+  revalidatePath("/dashboard");
+}
+
+export async function updateDoctor(formData: FormData) {
+  const user = await requireUser();
+  const doctorId = String(formData.get("doctorId") || "").trim();
+
+  if (!doctorId) {
+    throw new Error("Doctor ID is required.");
+  }
+
+  await db.doctor.updateMany({
+    where: { id: doctorId, userId: user.id },
+    data: {
+      name: String(formData.get("name") || "").trim(),
+      specialty: String(formData.get("specialty") || "").trim() || null,
+      clinic: String(formData.get("clinic") || "").trim() || null,
+      phone: String(formData.get("phone") || "").trim() || null,
+      email: String(formData.get("email") || "").trim() || null,
+      address: String(formData.get("address") || "").trim() || null,
+      notes: String(formData.get("notes") || "").trim() || null,
+    },
+  });
+
+  revalidatePath("/doctors");
+  revalidatePath("/medications");
+  revalidatePath("/appointments");
+}
+
+export async function deleteDoctor(formData: FormData) {
+  const user = await requireUser();
+  const doctorId = String(formData.get("doctorId") || "").trim();
+
+  if (!doctorId) {
+    throw new Error("Doctor ID is required.");
+  }
+
+  const [medicationCount, appointmentCount] = await Promise.all([
+    db.medication.count({ where: { userId: user.id, doctorId } }),
+    db.appointment.count({ where: { userId: user.id, doctorId } }),
+  ]);
+
+  if (medicationCount > 0 || appointmentCount > 0) {
+    throw new Error(
+      "This doctor is linked to existing medications or appointments. Reassign or remove those links before deleting this doctor."
+    );
+  }
+
+  await db.doctor.deleteMany({ where: { id: doctorId, userId: user.id } });
+
+  revalidatePath("/doctors");
+  revalidatePath("/medications");
+  revalidatePath("/appointments");
+}
+
+export async function updateAppointment(formData: FormData) {
+  const user = await requireUser();
+  const appointmentId = String(formData.get("appointmentId") || "").trim();
+
+  if (!appointmentId) {
+    throw new Error("Appointment ID is required.");
+  }
+
+  await db.appointment.updateMany({
+    where: { id: appointmentId, userId: user.id },
+    data: {
+      clinic: String(formData.get("clinic") || "").trim(),
+      specialty: String(formData.get("specialty") || "").trim() || null,
+      doctorName: String(formData.get("doctorName") || "").trim(),
+      doctorId: String(formData.get("doctorId") || "").trim() || null,
+      scheduledAt: new Date(String(formData.get("scheduledAt"))),
+      purpose: String(formData.get("purpose") || "").trim(),
+      notes: String(formData.get("notes") || "").trim() || null,
+      followUpNotes: String(formData.get("followUpNotes") || "").trim() || null,
+      status: String(formData.get("status") || "UPCOMING") as AppointmentStatus,
+    },
+  });
+
+  revalidatePath("/appointments");
+  revalidatePath("/dashboard");
+}
+
+export async function deleteAppointment(formData: FormData) {
+  const user = await requireUser();
+  const appointmentId = String(formData.get("appointmentId") || "").trim();
+
+  if (!appointmentId) {
+    throw new Error("Appointment ID is required.");
+  }
+
+  await db.appointment.deleteMany({ where: { id: appointmentId, userId: user.id } });
+
+  revalidatePath("/appointments");
+  revalidatePath("/dashboard");
+}
+
+export async function updateLabResult(formData: FormData) {
+  const user = await requireUser();
+  const labResultId = String(formData.get("labResultId") || "").trim();
+
+  if (!labResultId) {
+    throw new Error("Lab result ID is required.");
+  }
+
+  await db.labResult.updateMany({
+    where: { id: labResultId, userId: user.id },
+    data: {
+      testName: String(formData.get("testName") || "").trim(),
+      dateTaken: new Date(String(formData.get("dateTaken"))),
+      resultSummary: String(formData.get("resultSummary") || "").trim(),
+      referenceRange: String(formData.get("referenceRange") || "").trim() || null,
+      flag: String(formData.get("flag") || "NORMAL") as LabFlag,
+    },
+  });
+
+  revalidatePath("/labs");
+  revalidatePath("/dashboard");
+}
+
+export async function deleteLabResult(formData: FormData) {
+  const user = await requireUser();
+  const labResultId = String(formData.get("labResultId") || "").trim();
+
+  if (!labResultId) {
+    throw new Error("Lab result ID is required.");
+  }
+
+  const record = await db.labResult.findFirst({
+    where: { id: labResultId, userId: user.id },
+    select: { filePath: true },
+  });
+
+  if (!record) {
+    throw new Error("Lab result not found.");
+  }
+
+  await db.labResult.delete({ where: { id: labResultId } });
+  await deleteUpload(record.filePath);
+
+  revalidatePath("/labs");
+  revalidatePath("/dashboard");
+}
+
+export async function updateDocumentMetadata(formData: FormData) {
+  const user = await requireUser();
+  const documentId = String(formData.get("documentId") || "").trim();
+
+  if (!documentId) {
+    throw new Error("Document ID is required.");
+  }
+
+  await db.medicalDocument.updateMany({
+    where: { id: documentId, userId: user.id },
+    data: {
+      title: String(formData.get("title") || "").trim(),
+      type: String(formData.get("type") || "OTHER") as DocumentType,
+      notes: String(formData.get("notes") || "").trim() || null,
+    },
+  });
+
+  revalidatePath("/documents");
+  revalidatePath("/dashboard");
+}
+
+export async function deleteDocument(formData: FormData) {
+  const user = await requireUser();
+  const documentId = String(formData.get("documentId") || "").trim();
+
+  if (!documentId) {
+    throw new Error("Document ID is required.");
+  }
+
+  const document = await db.medicalDocument.findFirst({
+    where: { id: documentId, userId: user.id },
+    select: { filePath: true },
+  });
+
+  if (!document) {
+    throw new Error("Document not found.");
+  }
+
+  await db.medicalDocument.delete({ where: { id: documentId } });
+  await deleteUpload(document.filePath);
 
   revalidatePath("/documents");
   revalidatePath("/dashboard");

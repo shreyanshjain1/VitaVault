@@ -1,7 +1,7 @@
-import { FileText, UploadCloud } from "lucide-react";
+import { FileText, PencilLine, Trash2, UploadCloud } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader, EmptyState } from "@/components/common";
-import { uploadDocument } from "@/app/actions";
+import { deleteDocument, updateDocumentMetadata, uploadDocument } from "@/app/actions";
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
 import {
@@ -150,6 +150,53 @@ export default async function DocumentsPage() {
                             </a>
                           ) : null}
                         </div>
+
+                        <details className="mt-4 rounded-2xl border border-border/60 bg-background/40 p-4">
+                          <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-foreground">
+                            <PencilLine className="h-4 w-4 text-primary" />
+                            Manage document
+                          </summary>
+
+                          <div className="mt-4 grid gap-4">
+                            <form action={updateDocumentMetadata} className="grid gap-4">
+                              <input type="hidden" name="documentId" value={document.id} />
+
+                              <div className="space-y-2">
+                                <Label>Title</Label>
+                                <Input name="title" required defaultValue={document.title} />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label>Type</Label>
+                                <Select name="type" defaultValue={document.type}>
+                                  <option value="LAB_RESULT">Lab Result</option>
+                                  <option value="PRESCRIPTION">Prescription</option>
+                                  <option value="IMAGING">Imaging</option>
+                                  <option value="DISCHARGE_SUMMARY">Discharge Summary</option>
+                                  <option value="CONSULT_NOTE">Consult Note</option>
+                                  <option value="OTHER">Other</option>
+                                </Select>
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label>Notes</Label>
+                                <Textarea name="notes" className="min-h-[110px]" defaultValue={document.notes ?? ""} />
+                              </div>
+
+                              <Button type="submit" variant="outline">
+                                Save changes
+                              </Button>
+                            </form>
+
+                            <form action={deleteDocument}>
+                              <input type="hidden" name="documentId" value={document.id} />
+                              <Button type="submit" variant="destructive">
+                                <Trash2 className="h-4 w-4" />
+                                Delete document
+                              </Button>
+                            </form>
+                          </div>
+                        </details>
                       </DataCard>
                     ))
                   ) : (
