@@ -220,20 +220,6 @@ export async function saveHealthProfile(formData: FormData): Promise<void> {
   revalidatePath("/dashboard");
 }
 
-
-
-function getTrimmedString(formData: FormData, key: string) {
-  return String(formData.get(key) || "").trim();
-}
-
-function getRequiredRecordId(formData: FormData, ...keys: string[]) {
-  for (const key of keys) {
-    const value = getTrimmedString(formData, key);
-    if (value) return value;
-  }
-
-  throw new Error("Record id is required.");
-}
 export async function addDoctor(formData: FormData) {
   const user = await requireUser();
 
@@ -255,66 +241,6 @@ export async function addDoctor(formData: FormData) {
   revalidatePath("/appointments");
 }
 
-
-
-export async function updateDoctor(formData: FormData) {
-  const user = await requireUser();
-  const id = getRequiredRecordId(formData, "id", "doctorId");
-
-  const existing = await db.doctor.findFirst({
-    where: { id, userId: user.id },
-    select: { id: true },
-  });
-
-  if (!existing) throw new Error("Doctor not found.");
-
-  await db.doctor.update({
-    where: { id },
-    data: {
-      name: getTrimmedString(formData, "name"),
-      specialty: getTrimmedString(formData, "specialty") || null,
-      clinic: getTrimmedString(formData, "clinic") || null,
-      phone: getTrimmedString(formData, "phone") || null,
-      email: getTrimmedString(formData, "email") || null,
-      address: getTrimmedString(formData, "address") || null,
-      notes: getTrimmedString(formData, "notes") || null,
-    },
-  });
-
-  revalidatePath("/doctors");
-  revalidatePath("/medications");
-  revalidatePath("/appointments");
-}
-
-export async function deleteDoctor(formData: FormData) {
-  const user = await requireUser();
-  const id = getRequiredRecordId(formData, "id", "doctorId");
-
-  const doctor = await db.doctor.findFirst({
-    where: { id, userId: user.id },
-    select: {
-      id: true,
-      _count: {
-        select: {
-          medications: true,
-          appointments: true,
-        },
-      },
-    },
-  });
-
-  if (!doctor) throw new Error("Doctor not found.");
-
-  if (doctor._count.medications > 0 || doctor._count.appointments > 0) {
-    throw new Error("Doctor is still linked to medications or appointments.");
-  }
-
-  await db.doctor.delete({ where: { id } });
-
-  revalidatePath("/doctors");
-  revalidatePath("/medications");
-  revalidatePath("/appointments");
-}
 export async function saveMedication(formData: FormData) {
   const user = await requireUser();
 
@@ -421,54 +347,6 @@ export async function saveAppointment(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
-
-
-export async function updateAppointment(formData: FormData) {
-  const user = await requireUser();
-  const id = getRequiredRecordId(formData, "id", "appointmentId");
-
-  const existing = await db.appointment.findFirst({
-    where: { id, userId: user.id },
-    select: { id: true },
-  });
-
-  if (!existing) throw new Error("Appointment not found.");
-
-  await db.appointment.update({
-    where: { id },
-    data: {
-      clinic: getTrimmedString(formData, "clinic"),
-      specialty: getTrimmedString(formData, "specialty") || null,
-      doctorName: getTrimmedString(formData, "doctorName"),
-      doctorId: getTrimmedString(formData, "doctorId") || null,
-      scheduledAt: new Date(String(formData.get("scheduledAt"))),
-      purpose: getTrimmedString(formData, "purpose"),
-      notes: getTrimmedString(formData, "notes") || null,
-      followUpNotes: getTrimmedString(formData, "followUpNotes") || null,
-      status: String(formData.get("status") || "UPCOMING") as AppointmentStatus,
-    },
-  });
-
-  revalidatePath("/appointments");
-  revalidatePath("/dashboard");
-}
-
-export async function deleteAppointment(formData: FormData) {
-  const user = await requireUser();
-  const id = getRequiredRecordId(formData, "id", "appointmentId");
-
-  const existing = await db.appointment.findFirst({
-    where: { id, userId: user.id },
-    select: { id: true },
-  });
-
-  if (!existing) throw new Error("Appointment not found.");
-
-  await db.appointment.delete({ where: { id } });
-
-  revalidatePath("/appointments");
-  revalidatePath("/dashboard");
-}
 export async function saveLabResult(formData: FormData) {
   const user = await requireUser();
 
@@ -500,65 +378,6 @@ export async function saveLabResult(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
-
-
-export async function updateLabResult(formData: FormData) {
-  const user = await requireUser();
-  const id = getRequiredRecordId(formData, "id", "labResultId");
-
-  const existing = await db.labResult.findFirst({
-    where: { id, userId: user.id },
-    select: { id: true, filePath: true },
-  });
-
-  if (!existing) throw new Error("Lab result not found.");
-
-  const file = formData.get("file");
-  let uploadData: Partial<{
-    fileName: string;
-    filePath: string;
-    mimeType: string;
-    sizeBytes: number;
-  }> = {};
-
-  if (file instanceof File && file.size > 0) {
-    uploadData = await saveUpload(file);
-    await deleteUpload(existing.filePath);
-  }
-
-  await db.labResult.update({
-    where: { id },
-    data: {
-      testName: getTrimmedString(formData, "testName"),
-      dateTaken: new Date(String(formData.get("dateTaken"))),
-      resultSummary: getTrimmedString(formData, "resultSummary"),
-      referenceRange: getTrimmedString(formData, "referenceRange") || null,
-      flag: String(formData.get("flag") || "NORMAL") as LabFlag,
-      ...uploadData,
-    },
-  });
-
-  revalidatePath("/labs");
-  revalidatePath("/dashboard");
-}
-
-export async function deleteLabResult(formData: FormData) {
-  const user = await requireUser();
-  const id = getRequiredRecordId(formData, "id", "labResultId");
-
-  const existing = await db.labResult.findFirst({
-    where: { id, userId: user.id },
-    select: { id: true, filePath: true },
-  });
-
-  if (!existing) throw new Error("Lab result not found.");
-
-  await db.labResult.delete({ where: { id } });
-  await deleteUpload(existing.filePath);
-
-  revalidatePath("/labs");
-  revalidatePath("/dashboard");
-}
 export async function saveVital(formData: FormData) {
   const user = await requireUser();
 
@@ -652,44 +471,225 @@ export async function uploadDocument(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
-export async function updateDocumentMetadata(formData: FormData) {
+export async function updateMedication(formData: FormData) {
   const user = await requireUser();
-  const id = getRequiredRecordId(formData, "id", "documentId");
+  const medicationId = String(formData.get("medicationId") || "").trim();
+  if (!medicationId) throw new Error("Medication ID is required.");
 
-  const existing = await db.medicalDocument.findFirst({
-    where: { id, userId: user.id },
+  const medication = await db.medication.findFirst({
+    where: { id: medicationId, userId: user.id },
     select: { id: true },
   });
+  if (!medication) throw new Error("Medication not found.");
 
-  if (!existing) throw new Error("Document not found.");
+  const scheduleTimes = formData
+    .getAll("scheduleTimes")
+    .map(String)
+    .map((time) => time.trim())
+    .filter(Boolean);
 
-  await db.medicalDocument.update({
-    where: { id },
+  await db.medication.update({
+    where: { id: medicationId },
     data: {
-      title: getTrimmedString(formData, "title"),
-      type: String(formData.get("type") || "OTHER") as DocumentType,
-      notes: getTrimmedString(formData, "notes") || null,
+      doctorId: String(formData.get("doctorId") || "").trim() || null,
+      name: String(formData.get("name") || "").trim(),
+      dosage: String(formData.get("dosage") || "").trim(),
+      frequency: String(formData.get("frequency") || "").trim(),
+      instructions: String(formData.get("instructions") || "").trim() || null,
+      startDate: new Date(String(formData.get("startDate"))),
+      endDate: String(formData.get("endDate") || "").trim()
+        ? new Date(String(formData.get("endDate")))
+        : null,
+      status: String(formData.get("status") || "ACTIVE") as MedicationStatus,
+      active: formData.get("active") === "on",
+      schedules: {
+        deleteMany: {},
+        create: scheduleTimes.map((time) => ({ timeOfDay: time })),
+      },
     },
   });
 
-  revalidatePath("/documents");
+  revalidatePath("/medications");
   revalidatePath("/dashboard");
 }
 
-export async function deleteDocument(formData: FormData) {
+export async function deleteMedication(formData: FormData) {
   const user = await requireUser();
-  const id = getRequiredRecordId(formData, "id", "documentId");
+  const medicationId = String(formData.get("medicationId") || "").trim();
+  if (!medicationId) throw new Error("Medication ID is required.");
 
-  const existing = await db.medicalDocument.findFirst({
-    where: { id, userId: user.id },
-    select: { id: true, filePath: true },
+  const medication = await db.medication.findFirst({
+    where: { id: medicationId, userId: user.id },
+    select: { id: true },
+  });
+  if (!medication) throw new Error("Medication not found.");
+
+  await db.medication.delete({ where: { id: medicationId } });
+
+  revalidatePath("/medications");
+  revalidatePath("/dashboard");
+}
+
+export async function updateVital(formData: FormData) {
+  const user = await requireUser();
+  const vitalId = String(formData.get("vitalId") || "").trim();
+  if (!vitalId) throw new Error("Vital ID is required.");
+
+  const vital = await db.vitalRecord.findFirst({
+    where: { id: vitalId, userId: user.id },
+    select: { id: true },
+  });
+  if (!vital) throw new Error("Vital record not found.");
+
+  const num = (name: string) => {
+    const value = String(formData.get(name) || "").trim();
+    return value ? Number(value) : null;
+  };
+
+  await db.vitalRecord.update({
+    where: { id: vitalId },
+    data: {
+      recordedAt: new Date(String(formData.get("recordedAt"))),
+      systolic: num("systolic"),
+      diastolic: num("diastolic"),
+      heartRate: num("heartRate"),
+      bloodSugar: num("bloodSugar"),
+      oxygenSaturation: num("oxygenSaturation"),
+      temperatureC: num("temperatureC"),
+      weightKg: num("weightKg"),
+      notes: String(formData.get("notes") || "").trim() || null,
+    },
   });
 
-  if (!existing) throw new Error("Document not found.");
+  revalidatePath("/vitals");
+  revalidatePath("/dashboard");
+}
 
-  await db.medicalDocument.delete({ where: { id } });
-  await deleteUpload(existing.filePath);
+export async function deleteVital(formData: FormData) {
+  const user = await requireUser();
+  const vitalId = String(formData.get("vitalId") || "").trim();
+  if (!vitalId) throw new Error("Vital ID is required.");
 
-  revalidatePath("/documents");
+  const vital = await db.vitalRecord.findFirst({
+    where: { id: vitalId, userId: user.id },
+    select: { id: true },
+  });
+  if (!vital) throw new Error("Vital record not found.");
+
+  await db.vitalRecord.delete({ where: { id: vitalId } });
+
+  revalidatePath("/vitals");
+  revalidatePath("/dashboard");
+}
+
+export async function updateSymptom(formData: FormData) {
+  const user = await requireUser();
+  const symptomId = String(formData.get("symptomId") || "").trim();
+  if (!symptomId) throw new Error("Symptom ID is required.");
+
+  const symptom = await db.symptomEntry.findFirst({
+    where: { id: symptomId, userId: user.id },
+    select: { id: true },
+  });
+  if (!symptom) throw new Error("Symptom entry not found.");
+
+  await db.symptomEntry.update({
+    where: { id: symptomId },
+    data: {
+      title: String(formData.get("title") || "").trim(),
+      severity: String(formData.get("severity") || "MILD") as SymptomSeverity,
+      bodyArea: String(formData.get("bodyArea") || "").trim() || null,
+      startedAt: new Date(String(formData.get("startedAt"))),
+      duration: String(formData.get("duration") || "").trim() || null,
+      trigger: String(formData.get("trigger") || "").trim() || null,
+      notes: String(formData.get("notes") || "").trim() || null,
+      resolved: formData.get("resolved") === "on",
+    },
+  });
+
+  revalidatePath("/symptoms");
+  revalidatePath("/dashboard");
+}
+
+export async function toggleSymptomResolved(formData: FormData) {
+  const user = await requireUser();
+  const symptomId = String(formData.get("symptomId") || "").trim();
+  if (!symptomId) throw new Error("Symptom ID is required.");
+
+  const symptom = await db.symptomEntry.findFirst({
+    where: { id: symptomId, userId: user.id },
+    select: { id: true, resolved: true },
+  });
+  if (!symptom) throw new Error("Symptom entry not found.");
+
+  await db.symptomEntry.update({
+    where: { id: symptomId },
+    data: { resolved: !symptom.resolved },
+  });
+
+  revalidatePath("/symptoms");
+  revalidatePath("/dashboard");
+}
+
+export async function deleteSymptom(formData: FormData) {
+  const user = await requireUser();
+  const symptomId = String(formData.get("symptomId") || "").trim();
+  if (!symptomId) throw new Error("Symptom ID is required.");
+
+  const symptom = await db.symptomEntry.findFirst({
+    where: { id: symptomId, userId: user.id },
+    select: { id: true },
+  });
+  if (!symptom) throw new Error("Symptom entry not found.");
+
+  await db.symptomEntry.delete({ where: { id: symptomId } });
+
+  revalidatePath("/symptoms");
+  revalidatePath("/dashboard");
+}
+
+export async function updateVaccination(formData: FormData) {
+  const user = await requireUser();
+  const vaccinationId = String(formData.get("vaccinationId") || "").trim();
+  if (!vaccinationId) throw new Error("Vaccination ID is required.");
+
+  const vaccination = await db.vaccinationRecord.findFirst({
+    where: { id: vaccinationId, userId: user.id },
+    select: { id: true },
+  });
+  if (!vaccination) throw new Error("Vaccination record not found.");
+
+  await db.vaccinationRecord.update({
+    where: { id: vaccinationId },
+    data: {
+      vaccineName: String(formData.get("vaccineName") || "").trim(),
+      doseNumber: Number(formData.get("doseNumber")),
+      dateTaken: new Date(String(formData.get("dateTaken"))),
+      location: String(formData.get("location") || "").trim() || null,
+      nextDueDate: String(formData.get("nextDueDate") || "").trim()
+        ? new Date(String(formData.get("nextDueDate")))
+        : null,
+      notes: String(formData.get("notes") || "").trim() || null,
+    },
+  });
+
+  revalidatePath("/vaccinations");
+  revalidatePath("/dashboard");
+}
+
+export async function deleteVaccination(formData: FormData) {
+  const user = await requireUser();
+  const vaccinationId = String(formData.get("vaccinationId") || "").trim();
+  if (!vaccinationId) throw new Error("Vaccination ID is required.");
+
+  const vaccination = await db.vaccinationRecord.findFirst({
+    where: { id: vaccinationId, userId: user.id },
+    select: { id: true },
+  });
+  if (!vaccination) throw new Error("Vaccination record not found.");
+
+  await db.vaccinationRecord.delete({ where: { id: vaccinationId } });
+
+  revalidatePath("/vaccinations");
   revalidatePath("/dashboard");
 }

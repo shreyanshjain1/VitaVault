@@ -1,0 +1,1 @@
+Adds the remaining exported core CRUD actions for medications, vitals, symptoms, and vaccinations so local and Vercel builds stay aligned.
