@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, ReminderState } from "@prisma/client";
 import { db } from "@/lib/db";
 
 export async function getReminderCenterData(args: {
@@ -15,10 +15,16 @@ export async function getReminderCenterData(args: {
   const reminders = await db.reminder.findMany({
     where,
     orderBy: [{ dueAt: "asc" }, { createdAt: "desc" }],
+    include: {
+      auditLogs: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+    },
   });
 
-  const countsMap = reminders.reduce<Record<string, number>>((acc, reminder: any) => {
-    const state = reminder.state ?? (reminder.completed ? "COMPLETED" : "DUE");
+  const countsMap = reminders.reduce<Record<string, number>>((acc, reminder) => {
+    const state = reminder.state ?? (reminder.completed ? ReminderState.COMPLETED : ReminderState.DUE);
     acc[state] = (acc[state] ?? 0) + 1;
     return acc;
   }, {});

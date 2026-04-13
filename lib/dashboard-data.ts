@@ -1,4 +1,5 @@
 import { format, subDays } from "date-fns";
+import { ReminderState } from "@prisma/client";
 import { db } from "@/lib/db";
 
 export async function getDashboardData(userId: string) {
@@ -11,7 +12,9 @@ export async function getDashboardData(userId: string) {
     symptoms,
     reminders,
     medicationLogs,
-    openAlerts,
+    reviewQueueReminders,
+    severeSymptoms,
+    abnormalLabs,
   ] = await Promise.all([
     db.healthProfile.findUnique({ where: { userId } }),
     db.medication.findMany({
@@ -44,9 +47,9 @@ export async function getDashboardData(userId: string) {
       where: {
         userId,
         state: {
-          in: ["DUE", "SENT", "OVERDUE"] as any,
+          in: [ReminderState.DUE, ReminderState.SENT, ReminderState.OVERDUE],
         },
-      } as any,
+      },
       orderBy: { dueAt: "asc" },
       take: 6,
     }),
@@ -59,20 +62,27 @@ export async function getDashboardData(userId: string) {
       },
       orderBy: { loggedAt: "desc" },
     }),
-    db.alertEvent.findMany({
+    db.reminder.findMany({
       where: {
         userId,
-        status: {
-          in: ["OPEN", "ACKNOWLEDGED"] as any,
-        },
-      } as any,
-      include: {
-        rule: {
-          select: { name: true },
+        state: {
+          in: [ReminderState.OVERDUE, ReminderState.MISSED],
         },
       },
-      orderBy: { createdAt: "desc" },
-      take: 6,
+    }),
+    db.symptomEntry.findMany({
+      where: {
+        userId,
+        severity: "SEVERE",
+      },
+    }),
+    db.labResult.findMany({
+      where: {
+        userId,
+        flag: {
+          in: ["HIGH", "LOW"],
+        },
+      },
     }),
   ]);
 
@@ -158,11 +168,28 @@ export async function getDashboardData(userId: string) {
     medicationLogs,
     adherenceByDay,
     adherenceTrend: adherenceByDay,
-    openAlerts,
+    openAlerts: [] as Array<{
+      id: string;
+      title: string;
+      message: string;
+      severity: string;
+      createdAt: Date;
+      rule?: { name?: string | null } | null;
+    }>,
     nextMedication,
     profileCompletion,
     bloodPressureTrend,
     weightTrend,
     sugarTrend,
+    reviewQueueSummary: {
+      overdueReminders: reviewQueueReminders.filter((item) => item.state === ReminderState.OVERDUE)
+        .length,
+      missedReminders: reviewQueueReminders.filter((item) => item.state === ReminderState.MISSED)
+        .length,
+      severeSymptoms: severeSymptoms.length,
+      abnormalLabs: abnormalLabs.length,
+      total:
+        reviewQueueReminders.length + severeSymptoms.length + abnormalLabs.length,
+    },
   };
 }

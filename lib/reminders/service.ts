@@ -1,5 +1,5 @@
-import { addDays, endOfDay, set, startOfDay } from "date-fns";
-import { AppointmentStatus, ReminderType } from "@prisma/client";
+import { addDays, addMinutes, endOfDay, set, startOfDay } from "date-fns";
+import { AppointmentStatus, ReminderState, ReminderType } from "@prisma/client";
 import { db } from "@/lib/db";
 
 function parseTimeOfDay(timeOfDay: string) {
@@ -87,7 +87,7 @@ export async function generateReminderInstances(args: {
         where: {
           userId: args.userId,
           dedupeKey,
-        } as any,
+        },
       });
 
       if (existing) {
@@ -103,17 +103,17 @@ export async function generateReminderInstances(args: {
           description: `${medication.dosage} • ${medication.frequency}`,
           dueAt,
           completed: false,
-          state: "DUE" as any,
-          channel: "IN_APP" as any,
+          state: ReminderState.DUE,
+          channel: "IN_APP",
           gracePeriodMinutes: 60,
           quietHoursStart: "22:00",
           quietHoursEnd: "07:00",
           timezone: "Asia/Manila",
-          sourceType: "MEDICATION_SCHEDULE" as any,
+          sourceType: "MEDICATION_SCHEDULE",
           sourceId: medication.id,
           scheduleId: schedule.id,
           dedupeKey,
-        } as any,
+        },
       });
 
       await createReminderAuditLog({
@@ -134,7 +134,7 @@ export async function generateReminderInstances(args: {
       where: {
         userId: args.userId,
         dedupeKey,
-      } as any,
+      },
     });
 
     if (existing) {
@@ -150,16 +150,16 @@ export async function generateReminderInstances(args: {
         description: `${appointment.clinic} • ${appointment.purpose}`,
         dueAt: appointment.scheduledAt,
         completed: false,
-        state: "DUE" as any,
-        channel: "IN_APP" as any,
+        state: ReminderState.DUE,
+        channel: "IN_APP",
         gracePeriodMinutes: 30,
         quietHoursStart: "22:00",
         quietHoursEnd: "07:00",
         timezone: "Asia/Manila",
-        sourceType: "APPOINTMENT" as any,
+        sourceType: "APPOINTMENT",
         sourceId: appointment.id,
         dedupeKey,
-      } as any,
+      },
     });
 
     await createReminderAuditLog({
@@ -183,28 +183,28 @@ export async function markDueRemindersAsOverdue(args: {
     where: {
       userId: args.userId,
       state: {
-        in: ["DUE", "SENT"],
+        in: [ReminderState.DUE, ReminderState.SENT],
       },
-    } as any,
+    },
   });
 
   let overdueMarked = 0;
   let missedMarked = 0;
   const now = new Date();
 
-  for (const reminder of reminders as any[]) {
+  for (const reminder of reminders) {
     const overdueAt = new Date(
       reminder.dueAt.getTime() + (reminder.gracePeriodMinutes ?? 0) * 60 * 1000
     );
     const missedAt = new Date(overdueAt.getTime() + 12 * 60 * 60 * 1000);
 
-    if (now >= missedAt && reminder.state !== "MISSED") {
+    if (now >= missedAt && reminder.state !== ReminderState.MISSED) {
       await db.reminder.update({
         where: { id: reminder.id },
         data: {
-          state: "MISSED" as any,
+          state: ReminderState.MISSED,
           missedAt: now,
-        } as any,
+        },
       });
 
       await createReminderAuditLog({
@@ -218,13 +218,13 @@ export async function markDueRemindersAsOverdue(args: {
       continue;
     }
 
-    if (now >= overdueAt && reminder.state === "DUE") {
+    if (now >= overdueAt && reminder.state === ReminderState.DUE) {
       await db.reminder.update({
         where: { id: reminder.id },
         data: {
-          state: "OVERDUE" as any,
+          state: ReminderState.OVERDUE,
           overdueAt: now,
-        } as any,
+        },
       });
 
       await createReminderAuditLog({
@@ -263,25 +263,27 @@ export async function updateReminderState(args: {
   }
 
   const now = new Date();
+  const nextState = args.nextState as ReminderState;
 
   const updated = await db.reminder.update({
     where: { id: reminder.id },
     data: {
-      state: args.nextState as any,
-      completed: args.nextState === "COMPLETED" ? true : reminder.completed,
-      completedAt: args.nextState === "COMPLETED" ? now : (reminder as any).completedAt,
-      skippedAt: args.nextState === "SKIPPED" ? now : (reminder as any).skippedAt,
-      sentAt: args.nextState === "SENT" ? now : (reminder as any).sentAt,
-      overdueAt: args.nextState === "OVERDUE" ? now : (reminder as any).overdueAt,
-      missedAt: args.nextState === "MISSED" ? now : (reminder as any).missedAt,
-    } as any,
+      state: nextState,
+      completed: nextState === ReminderState.COMPLETED ? true : reminder.completed,
+      completedAt:
+        nextState === ReminderState.COMPLETED ? now : reminder.completedAt,
+      skippedAt: nextState === ReminderState.SKIPPED ? now : reminder.skippedAt,
+      sentAt: nextState === ReminderState.SENT ? now : reminder.sentAt,
+      overdueAt: nextState === ReminderState.OVERDUE ? now : reminder.overdueAt,
+      missedAt: nextState === ReminderState.MISSED ? now : reminder.missedAt,
+    },
   });
 
   await createReminderAuditLog({
     userId: args.userId,
     actorUserId: args.actorUserId ?? null,
     reminderId: updated.id,
-    action: `reminder.${args.nextState.toLowerCase()}`,
+    action: `reminder.${String(nextState).toLowerCase()}`,
     note: args.note ?? null,
   });
 
@@ -291,7 +293,7 @@ export async function updateReminderState(args: {
 export async function snoozeReminder(args: {
   userId: string;
   reminderId: string;
-  minutes: number;
+  snoozeMinutes: number;
   actorUserId?: string | null;
 }) {
   const reminder = await db.reminder.findFirst({
@@ -305,27 +307,31 @@ export async function snoozeReminder(args: {
     throw new Error("Reminder not found.");
   }
 
-  const nextDueAt = new Date(reminder.dueAt.getTime() + args.minutes * 60 * 1000);
+  if ([ReminderState.COMPLETED, ReminderState.SKIPPED, ReminderState.MISSED].includes(reminder.state)) {
+    throw new Error("This reminder can no longer be snoozed.");
+  }
 
+  const dueAt = addMinutes(reminder.dueAt, args.snoozeMinutes);
   const updated = await db.reminder.update({
     where: { id: reminder.id },
     data: {
-      dueAt: nextDueAt,
-      state: "DUE" as any,
+      dueAt,
+      state: ReminderState.DUE,
       overdueAt: null,
-      missedAt: null,
+      sentAt: null,
       skippedAt: null,
-    } as any,
+      missedAt: null,
+    },
   });
 
   await createReminderAuditLog({
     userId: args.userId,
-    reminderId: reminder.id,
     actorUserId: args.actorUserId ?? null,
+    reminderId: updated.id,
     action: "reminder.snoozed",
     metadata: {
-      minutes: args.minutes,
-      dueAt: nextDueAt.toISOString(),
+      snoozeMinutes: args.snoozeMinutes,
+      newDueAt: dueAt.toISOString(),
     },
   });
 

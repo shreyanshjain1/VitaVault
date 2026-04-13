@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   CalendarClock,
   ChevronRight,
+  ClipboardList,
   HeartPulse,
   Pill,
   Sparkles,
@@ -94,16 +95,16 @@ export default async function DashboardPage() {
           action={
             <div className="flex flex-wrap gap-3">
               <Link
-                href="/alerts"
+                href="/review-queue"
                 className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition hover:opacity-95"
               >
-                Open Alerts
+                Review Queue
               </Link>
               <Link
-                href="/device-connection"
+                href="/timeline"
                 className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/70 px-4 py-2.5 text-sm font-medium transition hover:bg-muted/50"
               >
-                Device Connection
+                Timeline
               </Link>
             </div>
           }
@@ -147,15 +148,10 @@ export default async function DashboardPage() {
                 />
 
                 <StatTile
-                  label="Next medication"
-                  value={nextMedication ? nextMedication.name : "No active medication"}
-                  description={
-                    nextMedication
-                      ? `Scheduled: ${nextMedicationTime}`
-                      : "No schedules found"
-                  }
-                  icon={<Pill className="h-5 w-5 text-emerald-500" />}
-                  compact
+                  label="Review queue"
+                  value={data.reviewQueueSummary.total}
+                  description="Overdue reminders, severe symptoms, and abnormal labs."
+                  icon={<ClipboardList className="h-5 w-5 text-amber-500" />}
                 />
               </div>
             </CardContent>
@@ -171,6 +167,11 @@ export default async function DashboardPage() {
             <CardContent className="space-y-3">
               {[
                 {
+                  href: "/review-queue",
+                  label: "Review Queue",
+                  description: "Work overdue reminders, severe symptoms, and abnormal labs.",
+                },
+                {
                   href: "/alerts",
                   label: "Alerts",
                   description: "Review open alert events and rule-driven triage.",
@@ -181,19 +182,9 @@ export default async function DashboardPage() {
                   description: "Track plans, schedules, and adherence activity.",
                 },
                 {
-                  href: "/appointments",
-                  label: "Appointments",
-                  description: "Manage consultations and visit follow-ups.",
-                },
-                {
-                  href: "/health-profile",
-                  label: "Health Profile",
-                  description: "Update baseline patient and emergency details.",
-                },
-                {
                   href: "/timeline",
                   label: "Timeline",
-                  description: "See the full patient history in one chronological view.",
+                  description: "See the patient journey across modules in one feed.",
                 },
               ].map((item) => (
                 <Link
@@ -265,77 +256,103 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-[32px] border-border/60 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-xl tracking-tight">Reminders</CardTitle>
-              <CardDescription className="mt-1 text-sm leading-6">
-                Upcoming items from your care schedule.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {recentReminders.length ? (
-                recentReminders.map((reminder: (typeof recentReminders)[number]) => (
-                  <div
-                    key={reminder.id}
-                    className="rounded-[26px] border border-border/60 bg-background/40 p-4"
-                  >
-                    <p className="text-sm font-semibold">{reminder.title}</p>
-                    {reminder.description ? (
-                      <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                        {reminder.description}
-                      </p>
-                    ) : null}
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {formatDateTime(reminder.dueAt)}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-[26px] border border-dashed border-border/60 bg-background/40 p-5 text-sm text-muted-foreground">
-                  No reminders scheduled.
+          <div className="space-y-6">
+            <Card className="rounded-[32px] border-border/60 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-xl tracking-tight">Ops visibility</CardTitle>
+                <CardDescription className="mt-1 text-sm leading-6">
+                  Quick counts for what likely needs follow-up.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-3">
+                <div className="rounded-[24px] border border-border/60 bg-background/40 p-4">
+                  <p className="text-sm text-muted-foreground">Overdue reminders</p>
+                  <p className="mt-2 text-2xl font-semibold">
+                    {data.reviewQueueSummary.overdueReminders}
+                  </p>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                <div className="rounded-[24px] border border-border/60 bg-background/40 p-4">
+                  <p className="text-sm text-muted-foreground">Missed reminders</p>
+                  <p className="mt-2 text-2xl font-semibold">
+                    {data.reviewQueueSummary.missedReminders}
+                  </p>
+                </div>
+                <div className="rounded-[24px] border border-border/60 bg-background/40 p-4">
+                  <p className="text-sm text-muted-foreground">Severe symptoms</p>
+                  <p className="mt-2 text-2xl font-semibold">
+                    {data.reviewQueueSummary.severeSymptoms}
+                  </p>
+                </div>
+                <div className="rounded-[24px] border border-border/60 bg-background/40 p-4">
+                  <p className="text-sm text-muted-foreground">Abnormal labs</p>
+                  <p className="mt-2 text-2xl font-semibold">
+                    {data.reviewQueueSummary.abnormalLabs}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-[32px] border-border/60 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-xl tracking-tight">Upcoming reminders</CardTitle>
+                <CardDescription className="mt-1 text-sm leading-6">
+                  Closest scheduled reminder items.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {recentReminders.length ? (
+                  recentReminders.map((reminder) => (
+                    <div
+                      key={reminder.id}
+                      className="rounded-[24px] border border-border/60 bg-background/40 p-4"
+                    >
+                      <p className="text-sm font-semibold">{reminder.title}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {new Date(reminder.dueAt).toLocaleString()}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-[24px] border border-dashed border-border/60 bg-background/40 p-4 text-sm text-muted-foreground">
+                    No reminder items found.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-2">
+        <div className="grid gap-6 xl:grid-cols-3">
           <Card className="rounded-[32px] border-border/60 shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl tracking-tight">
-                <HeartPulse className="h-5 w-5" />
-                Latest vitals
-              </CardTitle>
+              <CardTitle className="text-xl tracking-tight">Recent vitals</CardTitle>
               <CardDescription className="mt-1 text-sm leading-6">
-                Most recent recorded readings across your workspace.
+                Latest health measurements from your record.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               {recentVitals.length ? (
-                recentVitals.map((vital: (typeof recentVitals)[number]) => (
+                recentVitals.map((vital) => (
                   <div
                     key={vital.id}
-                    className="rounded-[26px] border border-border/60 bg-background/40 p-5"
+                    className="rounded-[24px] border border-border/60 bg-background/40 p-4"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <p className="text-sm font-semibold">
-                        {formatDateTime(vital.recordedAt)}
-                      </p>
-                      <StatusPill tone="info">{vital.readingSource}</StatusPill>
-                    </div>
-
-                    <div className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
-                      <p>BP: {vital.systolic ?? "-"} / {vital.diastolic ?? "-"}</p>
-                      <p>Heart rate: {vital.heartRate ?? "-"}</p>
-                      <p>Blood sugar: {vital.bloodSugar ?? "-"}</p>
-                      <p>Weight: {vital.weightKg ?? "-"}</p>
-                      <p>Oxygen: {vital.oxygenSaturation ?? "-"}</p>
-                      <p>Temp: {vital.temperatureC ?? "-"}</p>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold">
+                          {new Date(vital.recordedAt).toLocaleDateString()}
+                        </p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          BP {vital.systolic ?? "-"} / {vital.diastolic ?? "-"} • Sugar{" "}
+                          {vital.bloodSugar ?? "-"}
+                        </p>
+                      </div>
+                      <HeartPulse className="h-4 w-4 text-rose-500" />
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="rounded-[26px] border border-dashed border-border/60 bg-background/40 p-5 text-sm text-muted-foreground">
+                <div className="rounded-[24px] border border-dashed border-border/60 bg-background/40 p-4 text-sm text-muted-foreground">
                   No vitals recorded yet.
                 </div>
               )}
@@ -344,39 +361,65 @@ export default async function DashboardPage() {
 
           <Card className="rounded-[32px] border-border/60 shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl tracking-tight">
-                <Stethoscope className="h-5 w-5" />
-                Upcoming appointments
-              </CardTitle>
+              <CardTitle className="text-xl tracking-tight">Upcoming visits</CardTitle>
               <CardDescription className="mt-1 text-sm leading-6">
-                Scheduled consultations and follow-ups.
+                Your next scheduled appointments.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               {recentAppointments.length ? (
-                recentAppointments.map((appointment: (typeof recentAppointments)[number]) => (
+                recentAppointments.map((appointment) => (
                   <div
                     key={appointment.id}
-                    className="rounded-[26px] border border-border/60 bg-background/40 p-5"
+                    className="rounded-[24px] border border-border/60 bg-background/40 p-4"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <p className="text-sm font-semibold">{appointment.doctorName}</p>
-                      <StatusPill tone="info">{appointment.status}</StatusPill>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold">{appointment.doctorName}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {new Date(appointment.scheduledAt).toLocaleString()}
+                        </p>
+                      </div>
+                      <Stethoscope className="h-4 w-4 text-sky-500" />
                     </div>
-                    <p className="mt-2 text-sm text-muted-foreground">{appointment.clinic}</p>
-                    {appointment.specialty ? (
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Specialty: {appointment.specialty}
-                      </p>
-                    ) : null}
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {formatDateTime(appointment.scheduledAt)}
-                    </p>
                   </div>
                 ))
               ) : (
-                <div className="rounded-[26px] border border-dashed border-border/60 bg-background/40 p-5 text-sm text-muted-foreground">
+                <div className="rounded-[24px] border border-dashed border-border/60 bg-background/40 p-4 text-sm text-muted-foreground">
                   No upcoming appointments.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-[32px] border-border/60 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-xl tracking-tight">Medication focus</CardTitle>
+              <CardDescription className="mt-1 text-sm leading-6">
+                Your currently highlighted medication plan.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {nextMedication ? (
+                <div className="rounded-[24px] border border-border/60 bg-background/40 p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-lg font-semibold">{nextMedication.name}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {nextMedication.dosage} • {nextMedication.frequency}
+                      </p>
+                    </div>
+                    <Pill className="h-5 w-5 text-emerald-500" />
+                  </div>
+
+                  <div className="mt-4 rounded-[20px] border border-border/60 bg-background/60 p-4">
+                    <p className="text-sm text-muted-foreground">Next scheduled time</p>
+                    <p className="mt-2 text-xl font-semibold">{nextMedicationTime}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-[24px] border border-dashed border-border/60 bg-background/40 p-4 text-sm text-muted-foreground">
+                  No active medication plans.
                 </div>
               )}
             </CardContent>
