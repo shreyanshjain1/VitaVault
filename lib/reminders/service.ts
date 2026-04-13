@@ -287,3 +287,47 @@ export async function updateReminderState(args: {
 
   return updated;
 }
+
+export async function snoozeReminder(args: {
+  userId: string;
+  reminderId: string;
+  minutes: number;
+  actorUserId?: string | null;
+}) {
+  const reminder = await db.reminder.findFirst({
+    where: {
+      id: args.reminderId,
+      userId: args.userId,
+    },
+  });
+
+  if (!reminder) {
+    throw new Error("Reminder not found.");
+  }
+
+  const nextDueAt = new Date(reminder.dueAt.getTime() + args.minutes * 60 * 1000);
+
+  const updated = await db.reminder.update({
+    where: { id: reminder.id },
+    data: {
+      dueAt: nextDueAt,
+      state: "DUE" as any,
+      overdueAt: null,
+      missedAt: null,
+      skippedAt: null,
+    } as any,
+  });
+
+  await createReminderAuditLog({
+    userId: args.userId,
+    reminderId: reminder.id,
+    actorUserId: args.actorUserId ?? null,
+    action: "reminder.snoozed",
+    metadata: {
+      minutes: args.minutes,
+      dueAt: nextDueAt.toISOString(),
+    },
+  });
+
+  return updated;
+}

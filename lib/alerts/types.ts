@@ -10,6 +10,21 @@ export type AlertListItem = {
   rule?: { name?: string | null } | null;
   sourceType?: string | null;
   sourceId?: string | null;
+  sourceHref?: string | null;
+  sourceSummary?: string | null;
+};
+
+export type AlertAuditLogItem = {
+  id: string;
+  action: string;
+  createdAt: Date;
+  note?: string | null;
+  metadataJson?: string | null;
+  actor?: {
+    id: string;
+    name: string | null;
+    email: string;
+  } | null;
 };
 
 export type AlertDetail = AlertListItem & {
@@ -17,11 +32,6 @@ export type AlertDetail = AlertListItem & {
   ownerAcknowledgedAt?: Date | null;
   resolvedAt?: Date | null;
   dismissedAt?: Date | null;
-  auditLogs: Array<{
-    id: string;
-    action: string;
-    createdAt: Date;
-    note?: string | null;
-    metadataJson?: string | null;
-  }>;
+  sourceRecordedAt?: Date | null;
+  auditLogs: AlertAuditLogItem[];
 };

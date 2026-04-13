@@ -1,79 +1,164 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireUser } from "@/lib/session";
-import { alertStatusActionSchema } from "@/lib/validations";
+import { AlertRuleCategory, AlertSeverity, AlertSourceType, AlertStatus, ThresholdOperator } from "@prisma/client";
 import { db } from "@/lib/db";
+import { requireUser } from "@/lib/session";
 import { createAlertAuditLog } from "@/lib/alerts/audit";
 
+function toOptionalString(value: FormDataEntryValue | null) {
+  const text = String(value ?? "").trim();
+  return text ? text : null;
+}
+
+function toOptionalNumber(value: FormDataEntryValue | null) {
+  const text = String(value ?? "").trim();
+  if (!text) return null;
+  const parsed = Number(text);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 export async function changeAlertStatus(formData: FormData) {
-  const currentUser = await requireUser();
+  const user = await requireUser();
+  const alertId = String(formData.get("alertId") ?? "");
+  const nextStatus = String(formData.get("status") ?? "") as AlertStatus;
+  const note = toOptionalString(formData.get("note"));
 
-  const parsed = alertStatusActionSchema.safeParse({
-    alertId: formData.get("alertId"),
-    status: formData.get("status"),
-    note: formData.get("note"),
-    ownerUserId: formData.get("ownerUserId"),
-  });
-
-  if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? "Invalid alert status change.");
-  }
-
-  const { alertId, status, note, ownerUserId } = parsed.data;
-
-  const alert = await db.alertEvent.findFirst({
-    where: {
-      id: alertId,
-      userId: ownerUserId,
-    },
-    select: {
-      id: true,
-      userId: true,
-      ruleId: true,
-      status: true,
-    },
-  });
-
-  if (!alert) {
-    throw new Error("Alert not found.");
+  if (!alertId || !["ACKNOWLEDGED", "RESOLVED", "DISMISSED"].includes(nextStatus)) {
+    throw new Error("Invalid alert status request.");
   }
 
   const now = new Date();
-  const updateData: Record<string, unknown> = {
-    status,
-    updatedAt: now,
-  };
 
-  if (status === "ACKNOWLEDGED") {
-    updateData.ownerAcknowledgedAt = now;
-  }
-  if (status === "RESOLVED") {
-    updateData.resolvedAt = now;
-  }
-  if (status === "DISMISSED") {
-    updateData.dismissedAt = now;
-  }
-
-  await db.alertEvent.update({
-    where: { id: alert.id },
-    data: updateData,
+  await db.alertEvent.updateMany({
+    where: {
+      id: alertId,
+      userId: user.id!,
+    },
+    data: {
+      status: nextStatus,
+      ownerAcknowledgedAt: nextStatus === "ACKNOWLEDGED" ? now : undefined,
+      resolvedAt: nextStatus === "RESOLVED" ? now : undefined,
+      dismissedAt: nextStatus === "DISMISSED" ? now : undefined,
+    },
   });
 
   await createAlertAuditLog({
-    userId: alert.userId,
-    alertId: alert.id,
-    ruleId: alert.ruleId,
-    actorUserId: currentUser.id,
-    action: `STATUS_CHANGED_TO_${status}`,
-    note: note || null,
-    metadataJson: JSON.stringify({
-      previousStatus: alert.status,
-      nextStatus: status,
-    }),
+    userId: user.id!,
+    alertId,
+    actorUserId: user.id!,
+    action: `alert.status.${nextStatus.toLowerCase()}`,
+    note,
   });
 
-  revalidatePath("/dashboard");
   revalidatePath("/alerts");
-  revalidatePath(`/alerts/${alert.id}`);
+  revalidatePath(`/alerts/${alertId}`);
+  revalidatePath("/dashboard");
+}
+
+export async function createAlertRule(formData: FormData) {
+  const user = await requireUser();
+  const name = String(formData.get("name") ?? "").trim();
+  const category = String(formData.get("category") ?? "VITAL_THRESHOLD") as AlertRuleCategory;
+  const severity = String(formData.get("severity") ?? "MEDIUM") as AlertSeverity;
+  const sourceTypeValue = toOptionalString(formData.get("sourceType"));
+  const thresholdOperatorValue = toOptionalString(formData.get("thresholdOperator"));
+
+  if (!name) throw new Error("Rule name is required.");
+
+  const rule = await db.alertRule.create({
+    data: {
+      userId: user.id!,
+      name,
+      description: toOptionalString(formData.get("description")),
+      category,
+      severity,
+      enabled: String(formData.get("enabled") ?? "on") === "on",
+      visibleToCareTeam: String(formData.get("visibleToCareTeam") ?? "on") === "on",
+      metricKey: toOptionalString(formData.get("metricKey")),
+      sourceType: sourceTypeValue ? (sourceTypeValue as AlertSourceType) : null,
+      sourceId: toOptionalString(formData.get("sourceId")),
+      cooldownMinutes: Number(formData.get("cooldownMinutes") ?? 180),
+      lookbackHours: Number(formData.get("lookbackHours") ?? 24),
+      thresholdOperator: thresholdOperatorValue ? (thresholdOperatorValue as ThresholdOperator) : null,
+      thresholdValue: toOptionalNumber(formData.get("thresholdValue")),
+      thresholdValueSecondary: toOptionalNumber(formData.get("thresholdValueSecondary")),
+      symptomSeverity: toOptionalString(formData.get("symptomSeverity")) as any,
+      medicationMissedCount: toOptionalNumber(formData.get("medicationMissedCount")),
+      syncStaleHours: toOptionalNumber(formData.get("syncStaleHours")),
+      metadataJson: null,
+    },
+  });
+
+  await createAlertAuditLog({
+    userId: user.id!,
+    ruleId: rule.id,
+    actorUserId: user.id!,
+    action: "alert_rule.created",
+  });
+
+  revalidatePath("/alerts");
+  revalidatePath("/alerts/rules");
+}
+
+export async function updateAlertRule(formData: FormData) {
+  const user = await requireUser();
+  const ruleId = String(formData.get("ruleId") ?? "");
+  if (!ruleId) throw new Error("Rule id is required.");
+
+  const sourceTypeValue = toOptionalString(formData.get("sourceType"));
+  const thresholdOperatorValue = toOptionalString(formData.get("thresholdOperator"));
+
+  await db.alertRule.updateMany({
+    where: { id: ruleId, userId: user.id! },
+    data: {
+      name: String(formData.get("name") ?? "").trim(),
+      description: toOptionalString(formData.get("description")),
+      category: String(formData.get("category") ?? "VITAL_THRESHOLD") as AlertRuleCategory,
+      severity: String(formData.get("severity") ?? "MEDIUM") as AlertSeverity,
+      enabled: String(formData.get("enabled") ?? "") === "on",
+      visibleToCareTeam: String(formData.get("visibleToCareTeam") ?? "") === "on",
+      metricKey: toOptionalString(formData.get("metricKey")),
+      sourceType: sourceTypeValue ? (sourceTypeValue as AlertSourceType) : null,
+      sourceId: toOptionalString(formData.get("sourceId")),
+      cooldownMinutes: Number(formData.get("cooldownMinutes") ?? 180),
+      lookbackHours: Number(formData.get("lookbackHours") ?? 24),
+      thresholdOperator: thresholdOperatorValue ? (thresholdOperatorValue as ThresholdOperator) : null,
+      thresholdValue: toOptionalNumber(formData.get("thresholdValue")),
+      thresholdValueSecondary: toOptionalNumber(formData.get("thresholdValueSecondary")),
+      symptomSeverity: toOptionalString(formData.get("symptomSeverity")) as any,
+      medicationMissedCount: toOptionalNumber(formData.get("medicationMissedCount")),
+      syncStaleHours: toOptionalNumber(formData.get("syncStaleHours")),
+    },
+  });
+
+  await createAlertAuditLog({
+    userId: user.id!,
+    ruleId,
+    actorUserId: user.id!,
+    action: "alert_rule.updated",
+  });
+
+  revalidatePath("/alerts/rules");
+  revalidatePath("/alerts");
+}
+
+export async function deleteAlertRule(formData: FormData) {
+  const user = await requireUser();
+  const ruleId = String(formData.get("ruleId") ?? "");
+  if (!ruleId) throw new Error("Rule id is required.");
+
+  await createAlertAuditLog({
+    userId: user.id!,
+    ruleId,
+    actorUserId: user.id!,
+    action: "alert_rule.deleted",
+  });
+
+  await db.alertRule.deleteMany({
+    where: { id: ruleId, userId: user.id! },
+  });
+
+  revalidatePath("/alerts/rules");
+  revalidatePath("/alerts");
 }

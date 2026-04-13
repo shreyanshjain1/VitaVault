@@ -1,4 +1,7 @@
+import { LabFlag } from "@prisma/client";
 import { db } from "@/lib/db";
+
+export type TimelineTone = "info" | "neutral" | "success" | "warning" | "danger";
 
 export type TimelineItem = {
   id: string;
@@ -8,67 +11,66 @@ export type TimelineItem = {
     | "VITAL"
     | "SYMPTOM"
     | "MEDICATION_LOG"
-    | "DOCUMENT"
-    | "VACCINATION"
     | "REMINDER"
-    | "ALERT";
+    | "DOCUMENT"
+    | "VACCINATION";
   title: string;
   description: string;
   occurredAt: Date;
   href: string;
-  tone: "neutral" | "info" | "success" | "warning" | "danger";
+  tone: TimelineTone;
 };
 
-export async function getPatientTimeline(userId: string, limit = 60): Promise<TimelineItem[]> {
-  const [appointments, labs, vitals, symptoms, medicationLogs, documents, vaccinations, reminders, alerts] =
+export async function getTimelineItems(userId: string): Promise<TimelineItem[]> {
+  const [appointments, labs, vitals, symptoms, medicationLogs, reminders, documents, vaccinations] =
     await Promise.all([
-      db.appointment.findMany({ where: { userId }, orderBy: { scheduledAt: "desc" }, take: 10 }),
-      db.labResult.findMany({ where: { userId }, orderBy: { dateTaken: "desc" }, take: 10 }),
+      db.appointment.findMany({ where: { userId }, orderBy: { scheduledAt: "desc" }, take: 12 }),
+      db.labResult.findMany({ where: { userId }, orderBy: { dateTaken: "desc" }, take: 12 }),
       db.vitalRecord.findMany({ where: { userId }, orderBy: { recordedAt: "desc" }, take: 12 }),
-      db.symptomEntry.findMany({ where: { userId }, orderBy: { startedAt: "desc" }, take: 10 }),
-      db.medicationLog.findMany({
-        where: { userId },
-        include: { medication: { select: { name: true, dosage: true } } },
-        orderBy: { loggedAt: "desc" },
-        take: 12,
-      }),
-      db.medicalDocument.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 10 }),
-      db.vaccinationRecord.findMany({ where: { userId }, orderBy: { dateTaken: "desc" }, take: 10 }),
-      db.reminder.findMany({ where: { userId }, orderBy: { dueAt: "desc" }, take: 10 }),
-      db.alertEvent.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 12 }),
+      db.symptomEntry.findMany({ where: { userId }, orderBy: { startedAt: "desc" }, take: 12 }),
+      db.medicationLog.findMany({ where: { userId }, include: { medication: true }, orderBy: { loggedAt: "desc" }, take: 12 }),
+      db.reminder.findMany({ where: { userId }, orderBy: { dueAt: "desc" }, take: 12 }),
+      db.medicalDocument.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 12 }),
+      db.vaccinationRecord.findMany({ where: { userId }, orderBy: { dateTaken: "desc" }, take: 12 }),
     ]);
 
   const items: TimelineItem[] = [
     ...appointments.map((item) => ({
       id: item.id,
       type: "APPOINTMENT" as const,
-      title: item.doctorName || item.clinic,
-      description: `${item.purpose} • ${item.status}`,
+      title: `Appointment: ${item.doctorName}`,
+      description: `${item.clinic} • ${item.purpose}`,
       occurredAt: item.scheduledAt,
       href: "/appointments",
-      tone: item.status === "MISSED" ? "warning" : "info",
+      tone: item.status === "CANCELLED" ? "warning" : item.status === "COMPLETED" ? "success" : "info",
     })),
     ...labs.map((item) => ({
       id: item.id,
       type: "LAB_RESULT" as const,
       title: item.testName,
-      description: `${item.flag}${item.resultSummary ? ` • ${item.resultSummary}` : ""}`,
+      description: item.resultSummary,
       occurredAt: item.dateTaken,
       href: "/labs",
-      tone: item.flag === "CRITICAL" ? "danger" : item.flag === "ABNORMAL" ? "warning" : "neutral",
+      tone:
+        item.flag === LabFlag.HIGH || item.flag === LabFlag.LOW
+          ? "warning"
+          : item.flag === LabFlag.BORDERLINE
+          ? "info"
+          : "neutral",
     })),
     ...vitals.map((item) => ({
       id: item.id,
       type: "VITAL" as const,
       title: "Vital record",
-      description: [
-        item.systolic != null && item.diastolic != null ? `BP ${item.systolic}/${item.diastolic}` : null,
-        item.heartRate != null ? `HR ${item.heartRate}` : null,
-        item.bloodSugar != null ? `Sugar ${item.bloodSugar}` : null,
-        item.temperatureC != null ? `Temp ${item.temperatureC}°C` : null,
-      ]
-        .filter(Boolean)
-        .join(" • ") || "Vital entry recorded",
+      description:
+        [
+          item.systolic != null && item.diastolic != null ? `BP ${item.systolic}/${item.diastolic}` : null,
+          item.heartRate != null ? `HR ${item.heartRate}` : null,
+          item.bloodSugar != null ? `Sugar ${item.bloodSugar}` : null,
+          item.oxygenSaturation != null ? `SpO₂ ${item.oxygenSaturation}%` : null,
+        ]
+          .filter(Boolean)
+          .join(" • ") || "Recorded vitals",
       occurredAt: item.recordedAt,
       href: "/vitals",
       tone: "info",
@@ -77,25 +79,41 @@ export async function getPatientTimeline(userId: string, limit = 60): Promise<Ti
       id: item.id,
       type: "SYMPTOM" as const,
       title: item.title,
-      description: `${item.severity}${item.resolved ? " • Resolved" : " • Active"}`,
+      description: `${item.severity}${item.resolved ? " • resolved" : ""}`,
       occurredAt: item.startedAt,
       href: "/symptoms",
-      tone: item.severity === "SEVERE" ? "danger" : item.severity === "MODERATE" ? "warning" : "neutral",
+      tone: item.severity === "SEVERE" ? "danger" : item.severity === "MODERATE" ? "warning" : "info",
     })),
     ...medicationLogs.map((item) => ({
       id: item.id,
       type: "MEDICATION_LOG" as const,
-      title: item.medication.name,
+      title: `${item.medication.name} log`,
       description: `${item.status}${item.scheduleTime ? ` • ${item.scheduleTime}` : ""}`,
       occurredAt: item.loggedAt,
       href: "/medications",
-      tone: item.status === "MISSED" ? "warning" : item.status === "TAKEN" ? "success" : "neutral",
+      tone: item.status === "TAKEN" ? "success" : item.status === "MISSED" ? "danger" : "warning",
+    })),
+    ...reminders.map((item) => ({
+      id: item.id,
+      type: "REMINDER" as const,
+      title: item.title,
+      description: item.description ?? item.type,
+      occurredAt: item.dueAt,
+      href: "/reminders",
+      tone:
+        item.state === "COMPLETED"
+          ? "success"
+          : item.state === "MISSED"
+          ? "danger"
+          : item.state === "OVERDUE"
+          ? "warning"
+          : "neutral",
     })),
     ...documents.map((item) => ({
       id: item.id,
       type: "DOCUMENT" as const,
       title: item.title,
-      description: `${item.type} • ${item.fileName}`,
+      description: item.type,
       occurredAt: item.createdAt,
       href: "/documents",
       tone: "neutral",
@@ -104,32 +122,12 @@ export async function getPatientTimeline(userId: string, limit = 60): Promise<Ti
       id: item.id,
       type: "VACCINATION" as const,
       title: item.vaccineName,
-      description: `Dose ${item.doseNumber}${item.location ? ` • ${item.location}` : ""}`,
+      description: `Dose ${item.doseNumber}`,
       occurredAt: item.dateTaken,
       href: "/vaccinations",
       tone: "success",
     })),
-    ...reminders.map((item) => ({
-      id: item.id,
-      type: "REMINDER" as const,
-      title: item.title,
-      description: `${item.type} • ${item.state}`,
-      occurredAt: item.dueAt,
-      href: "/reminders",
-      tone: item.state === "OVERDUE" ? "warning" : item.completed ? "success" : "info",
-    })),
-    ...alerts.map((item) => ({
-      id: item.id,
-      type: "ALERT" as const,
-      title: item.title,
-      description: `${item.severity} • ${item.status}`,
-      occurredAt: item.createdAt,
-      href: `/alerts/${item.id}`,
-      tone: item.severity === "CRITICAL" ? "danger" : item.severity === "HIGH" ? "warning" : item.severity === "MEDIUM" ? "info" : "neutral",
-    })),
   ];
 
-  return items
-    .sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime())
-    .slice(0, limit);
+  return items.sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime());
 }

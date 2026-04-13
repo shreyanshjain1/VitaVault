@@ -11,6 +11,7 @@ export async function getDashboardData(userId: string) {
     symptoms,
     reminders,
     medicationLogs,
+    openAlerts,
   ] = await Promise.all([
     db.healthProfile.findUnique({ where: { userId } }),
     db.medication.findMany({
@@ -57,6 +58,21 @@ export async function getDashboardData(userId: string) {
         },
       },
       orderBy: { loggedAt: "desc" },
+    }),
+    db.alertEvent.findMany({
+      where: {
+        userId,
+        status: {
+          in: ["OPEN", "ACKNOWLEDGED"] as any,
+        },
+      } as any,
+      include: {
+        rule: {
+          select: { name: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 6,
     }),
   ]);
 
@@ -142,28 +158,7 @@ export async function getDashboardData(userId: string) {
     medicationLogs,
     adherenceByDay,
     adherenceTrend: adherenceByDay,
-    openAlerts: await db.alertEvent.findMany({
-      where: {
-        userId,
-        status: "OPEN",
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      take: 8,
-      select: {
-        id: true,
-        title: true,
-        message: true,
-        severity: true,
-        createdAt: true,
-        rule: {
-          select: {
-            name: true,
-          },
-        },
-      },
-    }),
+    openAlerts,
     nextMedication,
     profileCompletion,
     bloodPressureTrend,

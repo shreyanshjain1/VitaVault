@@ -22,10 +22,6 @@ model User {
   accounts                 Account[]
   generatedAiInsights      AiInsight[]          @relation("AiInsightGeneratedBy")
   ownedAiInsights          AiInsight[]          @relation("AiInsightOwner")
-  alertRules               AlertRule[]
-  alertEvents              AlertEvent[]
-  alertAuditEntries        AlertAuditLog[]
-  alertAuditActorEntries   AlertAuditLog[]      @relation("AlertAuditActor")
   appointments             Appointment[]
   grantedCareAccessGrants  CareAccess[]         @relation("CareAccessGrantedBy")
   receivedCareAccessGrants CareAccess[]         @relation("CareAccessMember")
@@ -50,6 +46,10 @@ model User {
   jobRuns                  JobRun[]
   reminderAuditEntries   ReminderAuditLog[]
   reminderAuditActorLogs ReminderAuditLog[] @relation("ReminderAuditActor")
+  alertRules             AlertRule[]
+  alertEvents            AlertEvent[]
+  alertAuditEntries      AlertAuditLog[]
+  alertAuditActorLogs    AlertAuditLog[] @relation("AlertAuditActor")
 }
 
 model HealthProfile {
@@ -276,31 +276,31 @@ model ReminderAuditLog {
 
 
 model AlertRule {
-  id                      String             @id @default(cuid())
-  userId                  String
-  name                    String
-  description             String?
-  category                AlertRuleCategory
-  metricKey               String?
-  sourceType              AlertSourceType?
-  sourceId                String?
-  enabled                 Boolean            @default(true)
-  severity                AlertSeverity      @default(MEDIUM)
-  visibleToCareTeam       Boolean            @default(true)
-  cooldownMinutes         Int                @default(180)
-  lookbackHours           Int                @default(24)
-  thresholdOperator       ThresholdOperator?
-  thresholdValue          Float?
+  id                    String             @id @default(cuid())
+  userId                String
+  name                  String
+  description           String?
+  category              AlertRuleCategory
+  metricKey             String?
+  sourceType            AlertSourceType?
+  sourceId              String?
+  enabled               Boolean            @default(true)
+  severity              AlertSeverity      @default(MEDIUM)
+  visibleToCareTeam     Boolean            @default(true)
+  cooldownMinutes       Int                @default(180)
+  lookbackHours         Int                @default(24)
+  thresholdOperator     ThresholdOperator?
+  thresholdValue        Float?
   thresholdValueSecondary Float?
-  symptomSeverity         SymptomSeverity?
-  medicationMissedCount   Int?
-  syncStaleHours          Int?
-  metadataJson            String?
-  createdAt               DateTime           @default(now())
-  updatedAt               DateTime           @updatedAt
-  user                    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  events                  AlertEvent[]
-  auditLogs               AlertAuditLog[]
+  symptomSeverity       SymptomSeverity?
+  medicationMissedCount Int?
+  syncStaleHours        Int?
+  metadataJson          String?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  user                  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events                AlertEvent[]
+  auditLogs             AlertAuditLog[]
 
   @@index([userId, enabled, category])
   @@index([userId, visibleToCareTeam])
@@ -600,6 +600,29 @@ model VerificationToken {
   @@id([identifier, token])
 }
 
+enum ReminderState {
+  DUE
+  SENT
+  OVERDUE
+  SKIPPED
+  COMPLETED
+  MISSED
+}
+
+enum ReminderChannel {
+  IN_APP
+  EMAIL
+  PUSH
+}
+
+enum ReminderSourceType {
+  MEDICATION_SCHEDULE
+  APPOINTMENT
+  VACCINATION
+  LAB_FOLLOW_UP
+  GENERAL
+}
+
 
 enum AlertRuleCategory {
   VITAL_THRESHOLD
@@ -637,29 +660,6 @@ enum AlertSourceType {
   SYNC_JOB
   DEVICE_READING
   SCHEDULED_SCAN
-}
-
-enum ReminderState {
-  DUE
-  SENT
-  OVERDUE
-  SKIPPED
-  COMPLETED
-  MISSED
-}
-
-enum ReminderChannel {
-  IN_APP
-  EMAIL
-  PUSH
-}
-
-enum ReminderSourceType {
-  MEDICATION_SCHEDULE
-  APPOINTMENT
-  VACCINATION
-  LAB_FOLLOW_UP
-  GENERAL
 }
 
 enum AppRole {

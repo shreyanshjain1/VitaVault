@@ -2,21 +2,16 @@ import Link from "next/link";
 import { Button, Select } from "@/components/ui";
 
 export function AlertFilterBar({
-  ownerUserId,
   status,
   severity,
   category,
 }: {
-  ownerUserId: string;
   status: string;
   severity: string;
   category: string;
 }) {
-  const base = `/alerts?ownerUserId=${ownerUserId}`;
-
   return (
     <form className="grid gap-3 rounded-3xl border border-border/60 bg-background/80 p-4 md:grid-cols-4">
-      <input type="hidden" name="ownerUserId" value={ownerUserId} />
       <Select name="status" defaultValue={status}>
         <option value="ALL">All statuses</option>
         <option value="OPEN">Open</option>
@@ -43,8 +38,8 @@ export function AlertFilterBar({
           Apply filters
         </Button>
         <Link
-          href={base}
-          className="flex-1 inline-flex items-center justify-center rounded-xl border border-border px-4 py-2 text-sm font-medium transition hover:bg-muted"
+          href="/alerts"
+          className="inline-flex flex-1 items-center justify-center rounded-xl border border-border px-4 py-2 text-sm font-medium transition hover:bg-muted"
         >
           Reset
         </Link>
