@@ -514,3 +514,17 @@ npm run worker
 ## License
 
 MIT
+
+## Current Upgrade Path
+
+The recommended implementation order for this repository is:
+
+1. Stabilize the foundation (`npm run db:validate`, `npm run typecheck`)
+2. Finish full CRUD lifecycle across core modules
+3. Complete alerts, reminders, and patient timeline workflows
+4. Add business-facing exports, queues, and admin operations tooling
+5. Finish one real device integration end to end
+
+Detailed phase docs:
+- `docs/phase-01-stabilization-plan.md`
+- `docs/master-implementation-roadmap.md`

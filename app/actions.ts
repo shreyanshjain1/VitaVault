@@ -23,7 +23,7 @@ export type AuthActionState = {
   success: string | null;
 };
 
-function safeCallbackUrl(raw: unknown) {
+function safeCallbackUrl(raw: unknown): string {
   const value = typeof raw === "string" ? raw.trim() : "";
   if (!value) return "/dashboard";
   if (!value.startsWith("/")) return "/dashboard";
@@ -86,6 +86,8 @@ export async function signupAction(
   }
 
   redirect(callbackUrl);
+
+  return { error: null, success: null };
 }
 
 export async function loginAction(
@@ -128,6 +130,8 @@ export async function loginAction(
   }
 
   redirect(callbackUrl);
+
+  return { error: null, success: null };
 }
 
 export async function saveHealthProfile(formData: FormData): Promise<void> {
@@ -291,7 +295,7 @@ export async function logMedicationStatus(formData: FormData) {
 
   if (
     scheduleTime &&
-    !medication.schedules.some((schedule) => schedule.timeOfDay === scheduleTime)
+    !medication.schedules.some((schedule: { timeOfDay: string }) => schedule.timeOfDay === scheduleTime)
   ) {
     throw new Error("Invalid schedule time for this medication.");
   }

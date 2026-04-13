@@ -1,41 +1,67 @@
 import { z } from "zod";
 
+const emptyStringToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess(
+    (value) => {
+      if (typeof value === "string") {
+        const trimmed = value.trim();
+        return trimmed === "" ? undefined : trimmed;
+      }
+
+      return value;
+    },
+    schema.optional()
+  );
+
+const optionalNumberFromInput = (min: number, max: number) =>
+  z.preprocess(
+    (value) => {
+      if (typeof value === "string") {
+        const trimmed = value.trim();
+        return trimmed === "" ? undefined : Number(trimmed);
+      }
+
+      return value;
+    },
+    z.number().min(min).max(max).optional()
+  );
+
 export const signupSchema = z.object({
-  name: z.string().min(2).max(80),
-  email: z.string().email(),
+  name: z.string().trim().min(2).max(80),
+  email: z.string().trim().email(),
   password: z.string().min(8).max(64),
 });
 
 export const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().email(),
   password: z.string().min(8).max(64),
 });
 
 export const healthProfileSchema = z.object({
-  fullName: z.string().min(2).max(120),
-  dateOfBirth: z.string().optional().or(z.literal("")),
+  fullName: z.string().trim().min(2).max(120),
+  dateOfBirth: emptyStringToUndefined(z.string()),
   sex: z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]).optional(),
-  bloodType: z.string().max(10).optional(),
-  heightCm: z.coerce.number().min(0).max(300).optional(),
-  weightKg: z.coerce.number().min(0).max(500).optional(),
-  emergencyContactName: z.string().max(120).optional(),
-  emergencyContactPhone: z.string().max(40).optional(),
-  chronicConditions: z.string().max(1000).optional(),
-  allergiesSummary: z.string().max(1000).optional(),
-  notes: z.string().max(2000).optional(),
+  bloodType: emptyStringToUndefined(z.string().max(10)),
+  heightCm: optionalNumberFromInput(0, 300),
+  weightKg: optionalNumberFromInput(0, 500),
+  emergencyContactName: emptyStringToUndefined(z.string().max(120)),
+  emergencyContactPhone: emptyStringToUndefined(z.string().max(40)),
+  chronicConditions: emptyStringToUndefined(z.string().max(1000)),
+  allergiesSummary: emptyStringToUndefined(z.string().max(1000)),
+  notes: emptyStringToUndefined(z.string().max(2000)),
 });
 
 export const alertRuleSchema = z
   .object({
-    name: z.string().min(3).max(120),
-    description: z.string().max(500).optional().or(z.literal("")),
+    name: z.string().trim().min(3).max(120),
+    description: emptyStringToUndefined(z.string().max(500)),
     category: z.enum([
       "VITAL_THRESHOLD",
       "MEDICATION_ADHERENCE",
       "SYMPTOM_SEVERITY",
       "SYNC_HEALTH",
     ]),
-    metricKey: z.string().max(80).optional().or(z.literal("")),
+    metricKey: emptyStringToUndefined(z.string().max(80)),
     enabled: z.coerce.boolean().default(true),
     severity: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
     visibleToCareTeam: z.coerce.boolean().default(true),
@@ -119,6 +145,6 @@ export const alertRuleSchema = z
 export const alertStatusActionSchema = z.object({
   alertId: z.string().min(1),
   status: z.enum(["ACKNOWLEDGED", "RESOLVED", "DISMISSED"]),
-  note: z.string().max(500).optional().or(z.literal("")),
+  note: emptyStringToUndefined(z.string().max(500)),
   ownerUserId: z.string().min(1),
 });
