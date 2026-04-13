@@ -17,8 +17,8 @@
     "db:validate": "node scripts/prisma-validate.cjs",
     "db:validate:ci": "prisma validate",
     "check": "npm run db:validate && npm run typecheck",
-    "repo:check": "node scripts/repo-hygiene-check.cjs",
-    "verify": "npm run repo:check && npm run typecheck && npm run build"
+    "actions:check": "node scripts/check-action-exports.cjs",
+    "verify": "npm run repo:check && npm run env:check && npm run actions:check && npm run typecheck && npm run build"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",

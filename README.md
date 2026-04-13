@@ -14,6 +14,27 @@ A full-stack personal health record platform for structured health tracking, sha
 
 ---
 
+
+## Stability Workflow
+
+Before pushing feature work, run this safer local sequence:
+
+```bash
+npm run actions:check
+npm run typecheck
+npm run build
+```
+
+For a broader pre-push pass, use:
+
+```bash
+npm run verify
+```
+
+This protects the shared `app/actions.ts` file from accidental export regressions that can break both local typecheck and Vercel deployment.
+
+---
+
 ## Overview
 
 VitaVault is a Next.js healthcare workspace that brings personal record management, collaboration controls, and operational backend infrastructure into one authenticated app.
@@ -530,21 +551,3 @@ npm run typecheck
 ```
 
 If `npm run db:validate` fails with `Environment variable not found: DATABASE_URL`, your `.env` file is missing or `DATABASE_URL` is not set yet.
-
-## Repository hygiene checks
-
-Before you push or deploy, run:
-
-```bash
-npm run repo:check
-npm run typecheck
-npm run build
-```
-
-This project intentionally blocks temporary patch folders and leftover temp files such as:
-- `phase*_patch/`
-- `*.tmp`
-- `*.orig`
-- `*.rej`
-
-If the hygiene check fails, delete the reported files before pushing or deploying.

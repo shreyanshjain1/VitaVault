@@ -40,13 +40,9 @@
     "**/phase03_patch/**",
     "*_patch",
     "**/*_patch/**",
-    "*.tmp",
     "**/*.tmp",
-    "*.orig",
-    "**/*.orig",
-    "*.rej",
-    "**/*.rej",
-    "phase*_patch",
-    "**/phase*_patch/**"
+    "**/*.tmp.*",
+    "**/*.bak",
+    "**/*.backup"
   ]
 }
