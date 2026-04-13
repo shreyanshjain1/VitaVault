@@ -59,9 +59,17 @@ export default async function JobsDashboardPage() {
         />
 
         {!dashboard.jobsAvailable ? (
-          <Card className="border border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30">
-            <CardContent className="pt-6 text-sm text-amber-800 dark:text-amber-200">
-              Background jobs are currently running in degraded mode. {dashboard.unavailableReason}
+          <Card className="border border-amber-200/80 bg-amber-50/80 dark:border-amber-900/40 dark:bg-amber-950/30">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <Cpu className="mt-0.5 h-5 w-5 text-amber-600 dark:text-amber-300" />
+                <div>
+                  <p className="font-medium">Jobs dashboard is in degraded mode</p>
+                  <p className="text-sm text-muted-foreground">
+                    {dashboard.unavailableReason ?? "Queue-backed metrics are temporarily unavailable."}
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         ) : null}
@@ -155,24 +163,17 @@ export default async function JobsDashboardPage() {
           <CardContent className="space-y-4">
             {dashboard.recentRuns.length ? (
               dashboard.recentRuns.map((run) => (
-                <div
-                  key={run.id}
-                  className="rounded-3xl border border-border/60 p-4"
-                >
+                <div key={run.id} className="rounded-3xl border border-border/60 p-4">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge>{run.jobKind.replaceAll("_", " ")}</Badge>
-                        <StatusPill tone={runTone(run.status)}>
-                          {run.status}
-                        </StatusPill>
+                        <StatusPill tone={runTone(run.status)}>{run.status}</StatusPill>
                       </div>
 
                       <div>
                         <div className="font-medium">{run.jobName}</div>
-                        <div className="text-sm text-muted-foreground">
-                          Queue: {run.queueName}
-                        </div>
+                        <div className="text-sm text-muted-foreground">Queue: {run.queueName}</div>
                       </div>
 
                       <div className="grid gap-1 text-sm text-muted-foreground">
@@ -180,11 +181,7 @@ export default async function JobsDashboardPage() {
                         <div>Created: {formatDateTime(run.createdAt)}</div>
                         <div>Started: {formatDateTime(run.startedAt)}</div>
                         <div>Finished: {formatDateTime(run.finishedAt)}</div>
-                        {run.user ? (
-                          <div>
-                            User: {run.user.name || run.user.email || run.user.id}
-                          </div>
-                        ) : null}
+                        {run.user ? <div>User: {run.user.name || run.user.email || run.user.id}</div> : null}
                         <div>Connection ID: {run.connectionId ?? "—"}</div>
                         <div>Sync Job ID: {run.syncJobId ?? "—"}</div>
                       </div>
@@ -200,19 +197,12 @@ export default async function JobsDashboardPage() {
                       <div className="text-sm font-medium">Recent logs</div>
                       {run.logs.length ? (
                         run.logs.map((log) => (
-                          <div
-                            key={log.id}
-                            className="rounded-2xl border border-border/60 px-3 py-2 text-sm"
-                          >
+                          <div key={log.id} className="rounded-2xl border border-border/60 px-3 py-2 text-sm">
                             <div className="flex items-center justify-between gap-3">
                               <span className="font-medium">{log.level}</span>
-                              <span className="text-xs text-muted-foreground">
-                                {formatDateTime(log.createdAt)}
-                              </span>
+                              <span className="text-xs text-muted-foreground">{formatDateTime(log.createdAt)}</span>
                             </div>
-                            <div className="mt-1 text-muted-foreground">
-                              {log.message}
-                            </div>
+                            <div className="mt-1 text-muted-foreground">{log.message}</div>
                             {log.contextJson ? (
                               <pre className="mt-2 overflow-x-auto rounded-xl bg-muted/50 p-2 text-xs text-muted-foreground">
                                 {log.contextJson}
@@ -230,8 +220,8 @@ export default async function JobsDashboardPage() {
                 </div>
               ))
             ) : (
-              <div className="rounded-2xl border border-border/60 px-4 py-6 text-sm text-muted-foreground">
-                No job runs yet. Queue one from the dispatch panel above.
+              <div className="rounded-2xl border border-border/60 px-4 py-3 text-sm text-muted-foreground">
+                No job runs found yet.
               </div>
             )}
           </CardContent>

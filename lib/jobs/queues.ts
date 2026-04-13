@@ -77,8 +77,3 @@ export function getDeviceSyncQueue() {
   }
   return store.deviceSyncQueue;
 }
-
-export const alertsQueue = getAlertQueue();
-export const remindersQueue = getRemindersQueue();
-export const dailySummaryQueue = getDailySummaryQueue();
-export const deviceSyncQueue = getDeviceSyncQueue();

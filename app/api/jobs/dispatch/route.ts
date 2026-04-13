@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/session";
-import { hasRedisConfig } from "@/lib/jobs/connection";
+import { hasRedisConfig, shouldSkipRedisDuringBuild } from "@/lib/jobs/connection";
 import {
   enqueueAlertEvaluationJob,
   enqueueDailyHealthSummaryJob,
@@ -52,9 +52,14 @@ export async function POST(request: Request) {
   try {
     if (!hasRedisConfig()) {
       return NextResponse.json(
-        {
-          error: "Background jobs are unavailable because REDIS_URL is not configured.",
-        },
+        { error: "Background jobs are unavailable because REDIS_URL is not configured." },
+        { status: 503 }
+      );
+    }
+
+    if (shouldSkipRedisDuringBuild()) {
+      return NextResponse.json(
+        { error: "Background jobs are unavailable during build-time execution." },
         { status: 503 }
       );
     }

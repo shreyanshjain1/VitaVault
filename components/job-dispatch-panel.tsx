@@ -18,15 +18,17 @@ type Props = {
   unavailableReason?: string | null;
 };
 
-type DispatchState = {
-  loading: false;
-  message: string | null;
-  error: string | null;
-} | {
-  loading: true;
-  message: string | null;
-  error: string | null;
-};
+type DispatchState =
+  | {
+      loading: false;
+      message: string | null;
+      error: string | null;
+    }
+  | {
+      loading: true;
+      message: string | null;
+      error: string | null;
+    };
 
 export function JobDispatchPanel({
   deviceConnections,
@@ -34,26 +36,22 @@ export function JobDispatchPanel({
   unavailableReason = null,
 }: Props) {
   const router = useRouter();
-  const [selectedConnectionId, setSelectedConnectionId] = useState(
-    deviceConnections[0]?.id ?? ""
-  );
+  const [selectedConnectionId, setSelectedConnectionId] = useState(deviceConnections[0]?.id ?? "");
   const [state, setState] = useState<DispatchState>({
     loading: false,
     message: null,
     error: null,
   });
 
-  const hasConnections = useMemo(
-    () => deviceConnections.length > 0,
-    [deviceConnections]
-  );
+  const hasConnections = useMemo(() => deviceConnections.length > 0, [deviceConnections]);
+  const disabled = state.loading || !jobsAvailable;
 
   async function dispatch(payload: Record<string, unknown>) {
     if (!jobsAvailable) {
       setState({
         loading: false,
         message: null,
-        error: unavailableReason ?? "Background jobs are not available right now.",
+        error: unavailableReason ?? "Jobs are unavailable right now.",
       });
       return;
     }
@@ -86,10 +84,9 @@ export function JobDispatchPanel({
 
       setState({
         loading: false,
-        message:
-          data.syncJobId
-            ? `Job queued successfully. SyncJob: ${data.syncJobId}`
-            : `Job queued successfully. JobRun: ${data.jobRunId ?? "created"}`,
+        message: data.syncJobId
+          ? `Job queued successfully. SyncJob: ${data.syncJobId}`
+          : `Job queued successfully. JobRun: ${data.jobRunId ?? "created"}`,
         error: null,
       });
 
@@ -98,8 +95,7 @@ export function JobDispatchPanel({
       setState({
         loading: false,
         message: null,
-        error:
-          error instanceof Error ? error.message : "Unable to dispatch job.",
+        error: error instanceof Error ? error.message : "Unable to dispatch job.",
       });
     }
   }
@@ -116,49 +112,37 @@ export function JobDispatchPanel({
       <CardContent className="space-y-4">
         {!jobsAvailable ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
-            {unavailableReason ?? "Background job dispatch is disabled until Redis is configured."}
+            {unavailableReason ?? "Background jobs are unavailable right now."}
           </div>
         ) : null}
 
         <div className="grid gap-3 sm:grid-cols-2">
           <Button
             type="button"
-            onClick={() => dispatch({ kind: "ALERT_EVALUATION" })}
-            disabled={state.loading || !jobsAvailable}
+            onClick={() => dispatch({ jobType: "alert-evaluation" })}
+            disabled={disabled}
           >
-            {state.loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <PlayCircle className="h-4 w-4" />
-            )}
+            {state.loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />}
             Queue alert evaluation
           </Button>
 
           <Button
             type="button"
             variant="outline"
-            onClick={() => dispatch({ kind: "REMINDER_GENERATION", horizonDays: 7 })}
-            disabled={state.loading || !jobsAvailable}
+            onClick={() => dispatch({ jobType: "reminder-generation" })}
+            disabled={disabled}
           >
-            {state.loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <PlayCircle className="h-4 w-4" />
-            )}
+            {state.loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />}
             Queue reminder generation
           </Button>
 
           <Button
             type="button"
             variant="outline"
-            onClick={() => dispatch({ kind: "DAILY_HEALTH_SUMMARY" })}
-            disabled={state.loading || !jobsAvailable}
+            onClick={() => dispatch({ jobType: "daily-health-summary" })}
+            disabled={disabled}
           >
-            {state.loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <PlayCircle className="h-4 w-4" />
-            )}
+            {state.loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />}
             Queue daily summary
           </Button>
         </div>
@@ -176,7 +160,7 @@ export function JobDispatchPanel({
               <Select
                 value={selectedConnectionId}
                 onChange={(e) => setSelectedConnectionId(e.target.value)}
-                disabled={state.loading || !jobsAvailable}
+                disabled={disabled}
               >
                 {deviceConnections.map((connection) => (
                   <option key={connection.id} value={connection.id}>
@@ -187,26 +171,15 @@ export function JobDispatchPanel({
 
               <Button
                 type="button"
-                onClick={() =>
-                  dispatch({
-                    kind: "DEVICE_SYNC_PROCESSING",
-                    connectionId: selectedConnectionId,
-                  })
-                }
-                disabled={state.loading || !selectedConnectionId || !jobsAvailable}
+                onClick={() => dispatch({ jobType: "device-sync-processing", connectionId: selectedConnectionId })}
+                disabled={disabled || !selectedConnectionId}
               >
-                {state.loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <PlayCircle className="h-4 w-4" />
-                )}
+                {state.loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />}
                 Queue device sync
               </Button>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              No device connections available yet for this account.
-            </p>
+            <p className="text-sm text-muted-foreground">No device connections available yet for this account.</p>
           )}
         </div>
 
