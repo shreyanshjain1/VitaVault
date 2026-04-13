@@ -186,6 +186,11 @@ export default async function DashboardPage() {
                   label: "Timeline",
                   description: "See the patient journey across modules in one feed.",
                 },
+                {
+                  href: "/ops",
+                  label: "Operations",
+                  description: "Monitor deployment readiness and unresolved operational risk.",
+                },
               ].map((item) => (
                 <Link
                   key={item.href}
