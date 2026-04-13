@@ -1,4 +1,4 @@
-import { BellRing, CalendarSync, Clock3, Pill, Stethoscope } from "lucide-react";
+import { BellRing, CalendarClock, CalendarSync, Clock3, Pill } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader, StatusPill } from "@/components/common";
 import {
@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui";
+import { ReminderChannel } from "@prisma/client";
 import { requireUser } from "@/lib/session";
 import { getReminderCenterData } from "@/lib/reminders/queries";
 import {
@@ -20,10 +21,15 @@ import {
   regenerateRemindersAction,
   skipReminderAction,
   snoozeReminderAction,
+  updateReminderScheduleAction,
 } from "./actions";
 
 function toDateInputValue(date: Date) {
   return new Date(date).toISOString().slice(0, 10);
+}
+
+function toTimeInputValue(date: Date) {
+  return new Date(date).toTimeString().slice(0, 5);
 }
 
 export default async function RemindersPage({
@@ -49,12 +55,16 @@ export default async function RemindersPage({
     return dueMs >= Date.now() && dueMs - Date.now() <= 4 * 60 * 60 * 1000;
   }).length;
 
+  const scheduledCount = data.reminders.filter(
+    (item) => item.scheduleId || item.sourceType === "APPOINTMENT",
+  ).length;
+
   return (
     <AppShell>
       <div className="mx-auto max-w-7xl space-y-6 p-6">
         <PageHeader
           title="Reminder Center"
-          description="Medication and appointment reminders with due-state tracking, snooze controls, and regeneration tools."
+          description="Medication and appointment reminders with due-state tracking, snooze controls, regeneration tools, and editable schedule settings."
           action={
             <form action={regenerateRemindersAction} className="flex items-center gap-3">
               <input
@@ -108,10 +118,10 @@ export default async function RemindersPage({
 
               <div className="rounded-3xl border border-border/60 bg-background/40 p-5">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-muted-foreground">Coverage</p>
-                  <Pill className="h-5 w-5 text-emerald-500" />
+                  <p className="text-sm font-medium text-muted-foreground">Editable schedules</p>
+                  <CalendarClock className="h-5 w-5 text-emerald-500" />
                 </div>
-                <p className="mt-4 text-lg font-semibold">Medication + appointment</p>
+                <p className="mt-4 text-4xl font-semibold">{scheduledCount}</p>
               </div>
             </CardContent>
           </Card>
@@ -149,7 +159,7 @@ export default async function RemindersPage({
           <CardHeader>
             <CardTitle>In-app reminder center</CardTitle>
             <CardDescription className="mt-1">
-              Review upcoming items, snooze them, or update reminder lifecycle state.
+              Review upcoming items, snooze them, or adjust due time, grace period, and delivery settings without regenerating the whole queue.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -231,19 +241,121 @@ export default async function RemindersPage({
                         Snooze
                       </button>
                     </form>
-
-                    {reminder.type === "APPOINTMENT" ? (
-                      <div className="inline-flex items-center gap-2 rounded-2xl border border-border/60 bg-background/40 px-3 py-2 text-xs text-muted-foreground">
-                        <Stethoscope className="h-3.5 w-3.5" />
-                        Visit-aware reminder
-                      </div>
-                    ) : null}
                   </div>
+
+                  <details className="mt-4 rounded-3xl border border-border/60 bg-background/30 p-4">
+                    <summary className="cursor-pointer list-none text-sm font-semibold text-foreground">
+                      Edit schedule and delivery settings
+                    </summary>
+                    <form action={updateReminderScheduleAction} className="mt-4 grid gap-4 lg:grid-cols-6">
+                      <input type="hidden" name="reminderId" value={reminder.id} />
+
+                      <label className="space-y-2 lg:col-span-2">
+                        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          Due date
+                        </span>
+                        <input
+                          type="date"
+                          name="dueDate"
+                          defaultValue={toDateInputValue(new Date(reminder.dueAt))}
+                          className="w-full rounded-2xl border border-border/70 bg-background/60 px-3 py-2 text-sm"
+                        />
+                      </label>
+
+                      <label className="space-y-2 lg:col-span-1">
+                        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          Due time
+                        </span>
+                        <input
+                          type="time"
+                          name="dueTime"
+                          defaultValue={toTimeInputValue(new Date(reminder.dueAt))}
+                          className="w-full rounded-2xl border border-border/70 bg-background/60 px-3 py-2 text-sm"
+                        />
+                      </label>
+
+                      <label className="space-y-2 lg:col-span-1">
+                        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          Grace mins
+                        </span>
+                        <input
+                          type="number"
+                          min="5"
+                          step="5"
+                          name="gracePeriodMinutes"
+                          defaultValue={reminder.gracePeriodMinutes ?? 60}
+                          className="w-full rounded-2xl border border-border/70 bg-background/60 px-3 py-2 text-sm"
+                        />
+                      </label>
+
+                      <label className="space-y-2 lg:col-span-2">
+                        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          Channel
+                        </span>
+                        <select
+                          name="channel"
+                          defaultValue={reminder.channel ?? ReminderChannel.IN_APP}
+                          className="w-full rounded-2xl border border-border/70 bg-background/60 px-3 py-2 text-sm"
+                        >
+                          {Object.values(ReminderChannel).map((channel) => (
+                            <option key={channel} value={channel}>
+                              {channel.replaceAll("_", " ")}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="space-y-2 lg:col-span-2">
+                        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          Timezone
+                        </span>
+                        <input
+                          type="text"
+                          name="timezone"
+                          defaultValue={reminder.timezone ?? "Asia/Manila"}
+                          className="w-full rounded-2xl border border-border/70 bg-background/60 px-3 py-2 text-sm"
+                        />
+                      </label>
+
+                      <label className="space-y-2 lg:col-span-2">
+                        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          Quiet hours start
+                        </span>
+                        <input
+                          type="time"
+                          name="quietHoursStart"
+                          defaultValue={reminder.quietHoursStart ?? "22:00"}
+                          className="w-full rounded-2xl border border-border/70 bg-background/60 px-3 py-2 text-sm"
+                        />
+                      </label>
+
+                      <label className="space-y-2 lg:col-span-2">
+                        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          Quiet hours end
+                        </span>
+                        <input
+                          type="time"
+                          name="quietHoursEnd"
+                          defaultValue={reminder.quietHoursEnd ?? "07:00"}
+                          className="w-full rounded-2xl border border-border/70 bg-background/60 px-3 py-2 text-sm"
+                        />
+                      </label>
+
+                      <div className="flex items-end lg:col-span-2">
+                        <button
+                          type="submit"
+                          className="inline-flex w-full items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2.5 text-sm font-medium hover:bg-muted/50"
+                        >
+                          Save schedule changes
+                        </button>
+                      </div>
+                    </form>
+                  </details>
                 </div>
               ))
             ) : (
-              <div className="rounded-3xl border border-dashed border-border/60 bg-background/40 p-5 text-sm text-muted-foreground">
-                No reminders generated yet.
+              <div className="rounded-3xl border border-dashed border-border/60 bg-background/40 p-8 text-center text-sm text-muted-foreground">
+                No reminders yet. Add medications or appointments to generate your reminder queue.
               </div>
             )}
           </CardContent>

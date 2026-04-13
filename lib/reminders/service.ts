@@ -1,5 +1,5 @@
 import { addDays, endOfDay, set, startOfDay } from "date-fns";
-import { AppointmentStatus, ReminderState, ReminderType } from "@prisma/client";
+import { AppointmentStatus, ReminderChannel, ReminderState, ReminderType } from "@prisma/client";
 import { db } from "@/lib/db";
 
 function parseTimeOfDay(timeOfDay: string) {
@@ -104,7 +104,7 @@ export async function generateReminderInstances(args: {
           dueAt,
           completed: false,
           state: ReminderState.DUE,
-          channel: "IN_APP",
+          channel: ReminderChannel.IN_APP,
           gracePeriodMinutes: 60,
           quietHoursStart: "22:00",
           quietHoursEnd: "07:00",
@@ -121,6 +121,7 @@ export async function generateReminderInstances(args: {
         actorUserId: args.requestedByUserId ?? null,
         reminderId: reminder.id,
         action: "reminder.created",
+        metadata: { generatedFor: dayStart.toISOString() },
       });
 
       created += 1;
@@ -151,7 +152,7 @@ export async function generateReminderInstances(args: {
         dueAt: appointment.scheduledAt,
         completed: false,
         state: ReminderState.DUE,
-        channel: "IN_APP",
+        channel: ReminderChannel.IN_APP,
         gracePeriodMinutes: 30,
         quietHoursStart: "22:00",
         quietHoursEnd: "07:00",
@@ -167,6 +168,7 @@ export async function generateReminderInstances(args: {
       actorUserId: args.requestedByUserId ?? null,
       reminderId: reminder.id,
       action: "reminder.created",
+      metadata: { generatedFor: dayStart.toISOString() },
     });
 
     created += 1;
@@ -344,27 +346,77 @@ export async function snoozeReminder(args: {
   return updated;
 }
 
-export async function regenerateRemindersForDate(args: {
+export async function updateReminderSchedule(args: {
   userId: string;
-  targetDate?: Date;
+  reminderId: string;
+  dueAt: Date;
+  gracePeriodMinutes?: number;
+  channel?: string | null;
+  timezone?: string | null;
+  quietHoursStart?: string | null;
+  quietHoursEnd?: string | null;
   actorUserId?: string | null;
 }) {
-  const result = await generateReminderInstances({
-    userId: args.userId,
-    targetDate: args.targetDate,
-    requestedByUserId: args.actorUserId ?? null,
+  const reminder = await db.reminder.findFirst({
+    where: {
+      id: args.reminderId,
+      userId: args.userId,
+    },
+  });
+
+  if (!reminder) {
+    throw new Error("Reminder not found.");
+  }
+
+  const nextChannel =
+    args.channel && Object.values(ReminderChannel).includes(args.channel as ReminderChannel)
+      ? (args.channel as ReminderChannel)
+      : reminder.channel;
+
+  const gracePeriodMinutes = Number.isFinite(args.gracePeriodMinutes)
+    ? Math.max(5, Number(args.gracePeriodMinutes))
+    : reminder.gracePeriodMinutes;
+
+  const updated = await db.reminder.update({
+    where: { id: reminder.id },
+    data: {
+      dueAt: args.dueAt,
+      gracePeriodMinutes,
+      channel: nextChannel,
+      timezone: args.timezone ?? reminder.timezone,
+      quietHoursStart: args.quietHoursStart ?? reminder.quietHoursStart,
+      quietHoursEnd: args.quietHoursEnd ?? reminder.quietHoursEnd,
+      state: ReminderState.DUE,
+      overdueAt: null,
+      sentAt: null,
+      missedAt: null,
+      skippedAt: null,
+      completed: false,
+      completedAt: null,
+    },
   });
 
   await createReminderAuditLog({
     userId: args.userId,
     actorUserId: args.actorUserId ?? null,
-    action: "reminder.regenerated",
+    reminderId: updated.id,
+    action: "reminder.schedule_updated",
     metadata: {
-      targetDate: (args.targetDate ?? new Date()).toISOString(),
-      created: result.created,
-      deduped: result.deduped,
+      previousDueAt: reminder.dueAt.toISOString(),
+      nextDueAt: updated.dueAt.toISOString(),
+      previousGracePeriodMinutes: reminder.gracePeriodMinutes,
+      nextGracePeriodMinutes: updated.gracePeriodMinutes,
+      previousChannel: reminder.channel,
+      nextChannel: updated.channel,
+      previousTimezone: reminder.timezone,
+      nextTimezone: updated.timezone,
+      previousQuietHoursStart: reminder.quietHoursStart,
+      nextQuietHoursStart: updated.quietHoursStart,
+      previousQuietHoursEnd: reminder.quietHoursEnd,
+      nextQuietHoursEnd: updated.quietHoursEnd,
     },
+    note: "Reminder schedule updated from reminder center.",
   });
 
-  return result;
+  return updated;
 }
