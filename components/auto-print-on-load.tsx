@@ -4,11 +4,8 @@ import { useEffect } from "react";
 
 export function AutoPrintOnLoad() {
   useEffect(() => {
-    const id = window.setTimeout(() => {
-      window.print();
-    }, 250);
-
-    return () => window.clearTimeout(id);
+    const timer = window.setTimeout(() => window.print(), 250);
+    return () => window.clearTimeout(timer);
   }, []);
 
   return null;

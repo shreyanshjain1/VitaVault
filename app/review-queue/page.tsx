@@ -2,27 +2,15 @@ import { AlertTriangle, BellRing, FlaskConical, Stethoscope } from "lucide-react
 import { AppShell } from "@/components/app-shell";
 import { PageHeader, StatusPill } from "@/components/common";
 import {
-  Button,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-  Textarea,
 } from "@/components/ui";
-import { toggleSymptomResolved } from "@/app/actions";
-import {
-  completeReminderAction,
-  skipReminderAction,
-  snoozeReminderAction,
-} from "@/app/reminders/actions";
-import {
-  addAppointmentFollowUpDraftAction,
-  addReminderReviewNoteAction,
-  addSymptomReviewNoteAction,
-} from "@/app/review-queue/actions";
 import { requireUser } from "@/lib/session";
 import { getReviewQueueData } from "@/lib/review-queue";
+import { PrintReviewQueueButton } from "@/components/print-review-queue-button";
 
 const toneClasses = {
   danger: "danger",
@@ -108,6 +96,27 @@ export default async function ReviewQueuePage() {
           </Card>
         </div>
 
+
+<Card className="print:hidden">
+  <CardContent className="flex flex-wrap items-center justify-between gap-3 p-5">
+    <div>
+      <p className="text-sm font-semibold">Need a handoff-friendly copy?</p>
+      <p className="text-sm text-muted-foreground">
+        Open the print view for a cleaner export, then use your browser Print / Save as PDF.
+      </p>
+    </div>
+    <div className="flex flex-wrap gap-3">
+      <a
+        href="/review-queue/print"
+        className="inline-flex items-center justify-center rounded-xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium transition hover:bg-muted/50"
+      >
+        Open print view
+      </a>
+      <PrintReviewQueueButton />
+    </div>
+  </CardContent>
+</Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Items needing follow-up</CardTitle>
@@ -143,74 +152,6 @@ export default async function ReviewQueuePage() {
                       Open record
                     </a>
                   </div>
-
-                  {(item.category === "OVERDUE_REMINDER" || item.category === "MISSED_REMINDER") && (
-                    <div className="mt-4 rounded-3xl border border-border/60 bg-card/60 p-4 space-y-4">
-                      <div className="flex flex-wrap gap-2">
-                        <form action={completeReminderAction}>
-                          <input type="hidden" name="reminderId" value={item.id} />
-                          <Button size="sm">Mark complete</Button>
-                        </form>
-                        <form action={skipReminderAction}>
-                          <input type="hidden" name="reminderId" value={item.id} />
-                          <Button size="sm" variant="outline">Skip</Button>
-                        </form>
-                        <form action={snoozeReminderAction}>
-                          <input type="hidden" name="reminderId" value={item.id} />
-                          <input type="hidden" name="snoozeMinutes" value="30" />
-                          <Button size="sm" variant="secondary">Snooze 30m</Button>
-                        </form>
-                      </div>
-
-                      <form action={addReminderReviewNoteAction} className="grid gap-3">
-                        <input type="hidden" name="reminderId" value={item.id} />
-                        <Textarea
-                          name="note"
-                          placeholder="Add follow-up context, handoff note, or why this was deferred."
-                          className="min-h-[92px]"
-                          required
-                        />
-                        <div className="flex justify-end">
-                          <Button size="sm" variant="outline">Save follow-up note</Button>
-                        </div>
-                      </form>
-                    </div>
-                  )}
-
-                  {item.category === "SEVERE_SYMPTOM" && (
-                    <div className="mt-4 rounded-3xl border border-border/60 bg-card/60 p-4 space-y-4">
-                      <div className="flex flex-wrap gap-2">
-                        <form action={toggleSymptomResolved}>
-                          <input type="hidden" name="id" value={item.id} />
-                          <Button size="sm" variant="secondary">Mark resolved</Button>
-                        </form>
-                        <form action={addAppointmentFollowUpDraftAction}>
-                          <input type="hidden" name="title" value={`Follow-up review: ${item.title}`} />
-                          <input type="hidden" name="note" value={item.description} />
-                          <Button size="sm" variant="outline">Create follow-up draft</Button>
-                        </form>
-                      </div>
-
-                      <form action={addSymptomReviewNoteAction} className="grid gap-3">
-                        <input type="hidden" name="symptomId" value={item.id} />
-                        <Textarea
-                          name="note"
-                          placeholder="Add triage note, escalation context, or handoff details."
-                          className="min-h-[92px]"
-                          required
-                        />
-                        <div className="flex justify-end">
-                          <Button size="sm" variant="outline">Save symptom note</Button>
-                        </div>
-                      </form>
-                    </div>
-                  )}
-
-                  {item.category === "ABNORMAL_LAB" && (
-                    <div className="mt-4 rounded-3xl border border-dashed border-border/60 bg-background/30 p-4 text-sm text-muted-foreground">
-                      Use the lab record to review the flagged result in full. This queue keeps the item visible so it is not missed during follow-up.
-                    </div>
-                  )}
                 </div>
               ))
             ) : (
