@@ -148,7 +148,7 @@ export default async function ReviewQueuePrintPage({
                       {categoryLabel[item.category] ?? item.category}
                     </span>
                     <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium border border-border/60 bg-background/60`}>
-                      {item.tone === "success" ? "Healthy" : item.tone === "danger" ? "Attention" : item.tone === "warning" ? "Watch" : "Info"}
+                      {item.tone === "danger" ? "Attention" : item.tone === "warning" ? "Watch" : "Info"}
                     </span>
                   </div>
                 </div>
