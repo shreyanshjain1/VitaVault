@@ -1,4 +1,4 @@
-import { AlertTriangle, BellRing, FlaskConical, Stethoscope } from "lucide-react";
+import { AlertTriangle, BellRing, CheckCircle2, Clock3, FlaskConical, Stethoscope } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader, StatusPill } from "@/components/common";
 import {
@@ -9,7 +9,13 @@ import {
   CardTitle,
 } from "@/components/ui";
 import { requireUser } from "@/lib/session";
-import { getReviewQueueData } from "@/lib/review-queue";
+import { getReviewQueueData, type ReviewQueueItem } from "@/lib/review-queue";
+import {
+  completeReminderAction,
+  skipReminderAction,
+  snoozeReminderAction,
+} from "@/app/reminders/actions";
+import { toggleSymptomResolved } from "@/app/actions";
 
 const toneClasses = {
   danger: "danger",
@@ -25,6 +31,67 @@ const categoryLabel: Record<string, string> = {
   SEVERE_SYMPTOM: "Severe symptom",
   ABNORMAL_LAB: "Abnormal lab",
 };
+
+function ReviewQueueActions({ item }: { item: ReviewQueueItem }) {
+  if (item.category === "OVERDUE_REMINDER" || item.category === "MISSED_REMINDER") {
+    return (
+      <div className="mt-4 flex flex-wrap gap-3">
+        <form action={completeReminderAction}>
+          <input type="hidden" name="reminderId" value={item.id} />
+          <button
+            type="submit"
+            className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-95"
+          >
+            Mark complete
+          </button>
+        </form>
+
+        <form action={skipReminderAction}>
+          <input type="hidden" name="reminderId" value={item.id} />
+          <button
+            type="submit"
+            className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"
+          >
+            Skip
+          </button>
+        </form>
+
+        <form action={snoozeReminderAction} className="flex items-center gap-2">
+          <input type="hidden" name="reminderId" value={item.id} />
+          <input type="hidden" name="snoozeMinutes" value="30" />
+          <button
+            type="submit"
+            className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"
+          >
+            Snooze 30 min
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  if (item.category === "SEVERE_SYMPTOM") {
+    return (
+      <div className="mt-4 flex flex-wrap gap-3">
+        <form action={toggleSymptomResolved}>
+          <input type="hidden" name="id" value={item.id} />
+          <button
+            type="submit"
+            className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-95"
+          >
+            Mark resolved
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 text-xs text-muted-foreground">
+      Review the source record for follow-up details and any needed next steps.
+    </div>
+  );
+}
 
 export default async function ReviewQueuePage() {
   const user = await requireUser();
@@ -99,7 +166,7 @@ export default async function ReviewQueuePage() {
           <CardHeader>
             <CardTitle>Items needing follow-up</CardTitle>
             <CardDescription>
-              Prioritized operational view across reminders, symptoms, and labs.
+              Prioritized operational view across reminders, symptoms, and labs, with quick actions for the items you can resolve immediately.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -121,14 +188,26 @@ export default async function ReviewQueuePage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
+                  <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                    <Clock3 className="h-4 w-4" />
                     <p>{new Date(item.occurredAt).toLocaleString()}</p>
+                  </div>
+
+                  <ReviewQueueActions item={item} />
+
+                  <div className="mt-4 flex flex-wrap gap-3">
                     <a
                       href={item.href}
                       className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"
                     >
                       Open record
                     </a>
+                    {(item.category === "OVERDUE_REMINDER" || item.category === "MISSED_REMINDER") ? (
+                      <div className="inline-flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-700 dark:text-emerald-300">
+                        <CheckCircle2 className="h-4 w-4" />
+                        Quick actions available
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               ))
