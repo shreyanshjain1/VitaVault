@@ -1,27 +1,16 @@
-# Phase 04I — Review Queue Quick Actions
+# Phase 04I - Review Queue Quick Actions
 
-This patch makes the review queue actionable without adding new infrastructure or schema changes.
+This patch adds low-risk operational actions directly on the review queue page.
 
 ## Added
-- Reminder quick actions directly from `/review-queue`
-  - Mark complete
-  - Skip
-  - Snooze 30 minutes
-- Severe symptom quick action
-  - Mark resolved
-- Clearer operational copy in the queue cards
+- Mark complete for reminder items
+- Skip for reminder items
+- Snooze 30 minutes for reminder items
+- Mark resolved for severe symptom items
+- Keeps abnormal labs as open-record items only
 
-## Why this phase is low risk
+## Why this phase is safe
 - Reuses existing server actions
-- No Prisma migration
-- No Redis/BullMQ changes
-- No action-surface rewrite
-- No new environment requirements
-
-## Validation
-Run:
-
-```bash
-npm run typecheck
-npm run build
-```
+- No migration
+- No Redis or BullMQ dependency
+- No shared action export reshuffle
