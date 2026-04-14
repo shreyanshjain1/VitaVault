@@ -1,17 +1,28 @@
-import { AlertTriangle, BellRing, CheckCircle2, FlaskConical, Stethoscope } from "lucide-react";
-import { completeReminderAction, skipReminderAction, snoozeReminderAction } from "@/app/reminders/actions";
-import { toggleSymptomResolved } from "@/app/actions";
+import { AlertTriangle, BellRing, FlaskConical, Stethoscope } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader, StatusPill } from "@/components/common";
 import {
+  Button,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+  Textarea,
 } from "@/components/ui";
+import { toggleSymptomResolved } from "@/app/actions";
+import {
+  completeReminderAction,
+  skipReminderAction,
+  snoozeReminderAction,
+} from "@/app/reminders/actions";
+import {
+  addAppointmentFollowUpDraftAction,
+  addReminderReviewNoteAction,
+  addSymptomReviewNoteAction,
+} from "@/app/review-queue/actions";
 import { requireUser } from "@/lib/session";
-import { getReviewQueueData, type ReviewQueueCategory, type ReviewQueueItem } from "@/lib/review-queue";
+import { getReviewQueueData } from "@/lib/review-queue";
 
 const toneClasses = {
   danger: "danger",
@@ -21,78 +32,12 @@ const toneClasses = {
   neutral: "neutral",
 } as const;
 
-const categoryLabel: Record<ReviewQueueCategory, string> = {
+const categoryLabel: Record<string, string> = {
   OVERDUE_REMINDER: "Overdue reminder",
   MISSED_REMINDER: "Missed reminder",
   SEVERE_SYMPTOM: "Severe symptom",
   ABNORMAL_LAB: "Abnormal lab",
 };
-
-function renderQueueActions(item: ReviewQueueItem) {
-  if (item.category === "OVERDUE_REMINDER" || item.category === "MISSED_REMINDER") {
-    return (
-      <div className="flex flex-wrap gap-2">
-        <form action={completeReminderAction}>
-          <input type="hidden" name="reminderId" value={item.id} />
-          <button
-            type="submit"
-            className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"
-          >
-            Mark complete
-          </button>
-        </form>
-
-        <form action={skipReminderAction}>
-          <input type="hidden" name="reminderId" value={item.id} />
-          <button
-            type="submit"
-            className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"
-          >
-            Skip
-          </button>
-        </form>
-
-        <form action={snoozeReminderAction}>
-          <input type="hidden" name="reminderId" value={item.id} />
-          <input type="hidden" name="snoozeMinutes" value="30" />
-          <button
-            type="submit"
-            className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"
-          >
-            Snooze 30 min
-          </button>
-        </form>
-      </div>
-    );
-  }
-
-  if (item.category === "SEVERE_SYMPTOM") {
-    return (
-      <div className="flex flex-wrap gap-2">
-        <form action={toggleSymptomResolved}>
-          <input type="hidden" name="id" value={item.id} />
-          <button
-            type="submit"
-            className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"
-          >
-            Mark resolved
-          </button>
-        </form>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-wrap gap-2">
-      <a
-        href={item.href}
-        className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"
-      >
-        Open record
-      </a>
-    </div>
-  );
-}
 
 export default async function ReviewQueuePage() {
   const user = await requireUser();
@@ -179,12 +124,7 @@ export default async function ReviewQueuePage() {
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-semibold">{item.title}</p>
-                        {(item.category === "MISSED_REMINDER" || item.category === "SEVERE_SYMPTOM") && (
-                          <CheckCircle2 className="h-4 w-4 text-amber-500" />
-                        )}
-                      </div>
+                      <p className="text-sm font-semibold">{item.title}</p>
                       <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -196,8 +136,81 @@ export default async function ReviewQueuePage() {
 
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
                     <p>{new Date(item.occurredAt).toLocaleString()}</p>
-                    {renderQueueActions(item)}
+                    <a
+                      href={item.href}
+                      className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"
+                    >
+                      Open record
+                    </a>
                   </div>
+
+                  {(item.category === "OVERDUE_REMINDER" || item.category === "MISSED_REMINDER") && (
+                    <div className="mt-4 rounded-3xl border border-border/60 bg-card/60 p-4 space-y-4">
+                      <div className="flex flex-wrap gap-2">
+                        <form action={completeReminderAction}>
+                          <input type="hidden" name="reminderId" value={item.id} />
+                          <Button size="sm">Mark complete</Button>
+                        </form>
+                        <form action={skipReminderAction}>
+                          <input type="hidden" name="reminderId" value={item.id} />
+                          <Button size="sm" variant="outline">Skip</Button>
+                        </form>
+                        <form action={snoozeReminderAction}>
+                          <input type="hidden" name="reminderId" value={item.id} />
+                          <input type="hidden" name="snoozeMinutes" value="30" />
+                          <Button size="sm" variant="secondary">Snooze 30m</Button>
+                        </form>
+                      </div>
+
+                      <form action={addReminderReviewNoteAction} className="grid gap-3">
+                        <input type="hidden" name="reminderId" value={item.id} />
+                        <Textarea
+                          name="note"
+                          placeholder="Add follow-up context, handoff note, or why this was deferred."
+                          className="min-h-[92px]"
+                          required
+                        />
+                        <div className="flex justify-end">
+                          <Button size="sm" variant="outline">Save follow-up note</Button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+
+                  {item.category === "SEVERE_SYMPTOM" && (
+                    <div className="mt-4 rounded-3xl border border-border/60 bg-card/60 p-4 space-y-4">
+                      <div className="flex flex-wrap gap-2">
+                        <form action={toggleSymptomResolved}>
+                          <input type="hidden" name="id" value={item.id} />
+                          <Button size="sm" variant="secondary">Mark resolved</Button>
+                        </form>
+                        <form action={addAppointmentFollowUpDraftAction}>
+                          <input type="hidden" name="title" value={`Follow-up review: ${item.title}`} />
+                          <input type="hidden" name="note" value={item.description} />
+                          <Button size="sm" variant="outline">Create follow-up draft</Button>
+                        </form>
+                      </div>
+
+                      <form action={addSymptomReviewNoteAction} className="grid gap-3">
+                        <input type="hidden" name="symptomId" value={item.id} />
+                        <Textarea
+                          name="note"
+                          placeholder="Add triage note, escalation context, or handoff details."
+                          className="min-h-[92px]"
+                          required
+                        />
+                        <div className="flex justify-end">
+                          <Button size="sm" variant="outline">Save symptom note</Button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+
+                  {item.category === "ABNORMAL_LAB" && (
+                    <div className="mt-4 rounded-3xl border border-dashed border-border/60 bg-background/30 p-4 text-sm text-muted-foreground">
+                      Use the lab record to review the flagged result in full. This queue keeps the item visible so it is not missed during follow-up.
+                    </div>
+                  )}
                 </div>
               ))
             ) : (
