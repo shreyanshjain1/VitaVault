@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { PageHeader, EmptyState } from "@/components/common";
 import { deleteSymptom, saveSymptom, toggleSymptomResolved, updateSymptom } from "@/app/actions";
 import { requireUser } from "@/lib/session";
+import { getFocusedCardClass } from "@/lib/record-focus";
 import { db } from "@/lib/db";
 import { Badge, Button, Input, Label, Select, Textarea } from "@/components/ui";
 import { formatDateTime } from "@/lib/utils";
@@ -18,7 +19,6 @@ import {
   StaggerGroup,
   StaggerItem,
 } from "@/components/page-transition";
-import { getFocusedCardClass } from "@/lib/record-focus";
 
 function dateTimeLocalValue(value: Date) {
   return format(value, "yyyy-MM-dd'T'HH:mm");
@@ -151,7 +151,6 @@ export default async function SymptomsPage({
                     symptoms.map((symptom) => (
                       <DataCard
                           key={symptom.id}
-                          id={`item-${symptom.id}`}
                           className={getFocusedCardClass(focus, symptom.id)}
                         >
                         <div className="flex flex-wrap items-start justify-between gap-3">

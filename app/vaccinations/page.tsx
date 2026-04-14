@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { PageHeader, EmptyState } from "@/components/common";
 import { deleteVaccination, saveVaccination, updateVaccination } from "@/app/actions";
 import { requireUser } from "@/lib/session";
+import { getFocusedCardClass } from "@/lib/record-focus";
 import { db } from "@/lib/db";
 import { Badge, Button, Input, Label, Textarea } from "@/components/ui";
 import { formatDate } from "@/lib/utils";
@@ -18,7 +19,6 @@ import {
   StaggerGroup,
   StaggerItem,
 } from "@/components/page-transition";
-import { getFocusedCardClass } from "@/lib/record-focus";
 
 function dateInputValue(value: Date | null) {
   return value ? format(value, "yyyy-MM-dd") : "";
@@ -142,10 +142,9 @@ export default async function VaccinationsPage({
                     {records.length ? (
                       records.map((record) => (
                         <DataCard
-                          key={record.id}
-                          id={`item-${record.id}`}
-                          className={getFocusedCardClass(focus, record.id)}
-                        >
+                        key={record.id}
+                        className={getFocusedCardClass(focus, record.id)}
+                      >
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <div>
                               <h3 className="text-lg font-semibold">{record.vaccineName}</h3>

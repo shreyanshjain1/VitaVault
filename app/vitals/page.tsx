@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { PageHeader, EmptyState } from "@/components/common";
 import { deleteVital, saveVital, updateVital } from "@/app/actions";
 import { requireUser } from "@/lib/session";
+import { getFocusedCardClass } from "@/lib/record-focus";
 import { db } from "@/lib/db";
 import { Badge, Button, Input, Label, Textarea } from "@/components/ui";
 import { formatDateTime } from "@/lib/utils";
@@ -18,7 +19,6 @@ import {
   StaggerGroup,
   StaggerItem,
 } from "@/components/page-transition";
-import { getFocusedCardClass } from "@/lib/record-focus";
 
 function dateTimeLocalValue(value: Date) {
   return format(value, "yyyy-MM-dd'T'HH:mm");
@@ -27,7 +27,7 @@ function dateTimeLocalValue(value: Date) {
 export default async function VitalsPage({
   searchParams,
 }: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+  searchParams?: Promise<Record<string, string[] | string | undefined>>;
 }) {
   const user = await requireUser();
   const params = (await searchParams) ?? {};
@@ -156,10 +156,9 @@ export default async function VitalsPage({
                   {vitals.length ? (
                     vitals.map((vital) => (
                       <DataCard
-                          key={vital.id}
-                          id={`item-${vital.id}`}
-                          className={getFocusedCardClass(focus, vital.id)}
-                        >
+                        key={vital.id}
+                        className={getFocusedCardClass(focus, vital.id)}
+                      >
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
                             <h3 className="text-lg font-semibold">{formatDateTime(vital.recordedAt)}</h3>
