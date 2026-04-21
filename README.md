@@ -1,157 +1,270 @@
 # VitaVault
 
-**VitaVault** is a business-focused personal health record platform built to feel like a real product, not a classroom CRUD app. It combines structured medical record management, AI-assisted summaries, care collaboration, alerts, reminders, exports, and background job processing into one polished health workspace.
+![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)
+![React](https://img.shields.io/badge/React-19-149eca?style=for-the-badge&logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue?style=for-the-badge&logo=typescript)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38bdf8?style=for-the-badge&logo=tailwind-css)
+![Prisma](https://img.shields.io/badge/Prisma-6.x-2D3748?style=for-the-badge&logo=prisma)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=for-the-badge&logo=postgresql)
+![Auth.js](https://img.shields.io/badge/Auth.js-5-black?style=for-the-badge)
+![BullMQ](https://img.shields.io/badge/BullMQ-Redis-red?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-<p align="center">
-  <img src=".mkdir/Landing-Page.jpg" alt="VitaVault Landing Page" width="100%" />
-</p>
+**VitaVault** is a full-stack personal health record platform built to feel more like a real product than a simple CRUD demo.
 
-## Product Positioning
+It combines structured health record management, shared-care access, alert workflows, background jobs, AI-assisted summaries, and mobile/device ingestion foundations in one authenticated workspace.
 
-VitaVault is designed around a simple idea: health records should be **organized, reviewable, shareable, and operationally useful**.
+---
 
-Instead of scattering information across notes, messages, PDFs, and memory, VitaVault brings everything into a single system with:
-- patient-facing record management
-- care-team sharing foundations
-- reminder and alert workflows
-- AI-assisted record summaries
-- background jobs for asynchronous processing
-- exportable clinical data views
-- operational visibility for product/admin workflows
+## Why this project stands out
 
-## Core Highlights
+Most health-record portfolio apps stop at basic forms and a dashboard.
+VitaVault goes further by modeling the operational side of a real product:
 
-### Unified Health Record Workspace
-- Health profile and baseline patient context
-- Medications and adherence tracking
-- Appointments and care follow-ups
-- Lab result tracking
-- Vitals trend logging
-- Symptom journaling
-- Vaccination records
-- Document upload and organization
-- Doctor directory and linked care context
+- longitudinal health records across multiple modules
+- patient-controlled care sharing and invite flows
+- alert rules, alert events, and alert audit trails
+- queue-backed background processing with Redis + BullMQ
+- mobile token foundations and device reading ingestion
+- AI summary and insight workflows
+- exports, print views, and operational pages
 
-### Collaboration and Review
-- Care-team invite flows
-- Shared access foundations
-- Review queue concepts for triage-style workflows
-- Timeline-style activity and record linking
+This repo is aimed at the intersection of **product engineering**, **health-data workflows**, and **production-minded full-stack architecture**.
 
-### Intelligence and Monitoring
-- AI-generated health summaries and insight surfaces
-- Alert rules and alert event tracking foundations
-- Reminder center for due and overdue actions
-- Device connection and sync foundations
+---
 
-### Operational Foundations
-- BullMQ + Redis background jobs
-- Job runs and queue visibility
-- Export workflows
-- Audit-minded data modeling
-- Prisma-backed schema for a serious product surface
+## Product highlights
 
-## Feature Surface
+### Personal Health Record Workspace
+Users can manage:
+- health profile and baseline medical context
+- medications, schedules, and adherence logs
+- appointments and care providers
+- lab results
+- vitals history
+- symptoms and vaccinations
+- medical documents
+- reminders, summaries, and exports
 
-| Area | What VitaVault Covers |
-|---|---|
-| Authentication | Secure sign-in and protected app access |
-| Patient Records | Health profile, medications, labs, vitals, symptoms, vaccinations, documents |
-| Care Collaboration | Invite workflows and shared access foundations |
-| AI Layer | Insight generation and summary experiences |
-| Alerts & Reminders | Rule-driven alerting foundation and task tracking |
-| Exports | Structured exports for selected record areas |
-| Device / Mobile | Device connection, mobile auth, and reading sync groundwork |
-| Jobs & Ops | Worker queues, job dispatch, logs, and operational visibility |
+### Shared Care Foundations
+VitaVault includes collaboration-oriented flows such as:
+- care-team invite creation and acceptance
+- scoped shared access
+- access-aware patient views
+- access auditing foundations
 
-## Architecture Snapshot
+### Alerting and Monitoring
+The platform includes a strong early alerting foundation:
+- threshold-based alert rules
+- alert severity and lifecycle states
+- source-linked alert events
+- alert audit history
+- worker-backed evaluation and scan flows
+
+### Device and Mobile Readiness
+The app is already structured for connected-data expansion:
+- device connection tracking
+- device reading ingestion
+- sync job lifecycle tracking
+- mirrored readings into normalized vitals
+- bearer-token foundation for mobile sync flows
+
+### AI and Review Workflows
+VitaVault also pushes beyond storage into interpretation:
+- AI-generated health insights
+- summary generation
+- review-queue and print-oriented review flows
+
+---
+
+## Current application surface
+
+The repo currently contains real pages and flows for:
+
+- `/dashboard`
+- `/health-profile`
+- `/medications`
+- `/appointments`
+- `/labs`
+- `/vitals`
+- `/symptoms`
+- `/vaccinations`
+- `/documents`
+- `/doctors`
+- `/summary`
+- `/summary/print`
+- `/exports`
+- `/care-team`
+- `/patient/[ownerUserId]`
+- `/alerts`
+- `/alerts/rules`
+- `/timeline`
+- `/reminders`
+- `/ai-insights`
+- `/device-connection`
+- `/jobs`
+- `/ops`
+- `/review-queue`
+- `/review-queue/print`
+
+This is one of the reasons the project already feels closer to a product workspace than a single-feature app.
+
+---
+
+## Technical architecture
 
 ### Frontend
 - Next.js 15 App Router
 - React 19
 - TypeScript
 - Tailwind CSS
-- Framer Motion
-- Lucide icons
+- reusable component system with utility-first styling
+- charting and animated UI support
 
-### Backend / Platform
+### Backend
 - Auth.js / NextAuth
 - Prisma ORM
 - PostgreSQL
-- BullMQ
-- Redis
-- Zod validations
+- Zod validation
+- server actions and route handlers
+- ownership and shared-access checks
 
-### Product Design Goals
-- premium SaaS-style UI
-- health-record-first workflows
-- extensible data model
-- portfolio-quality structure with business use potential
-- scalable foundation for reminders, alerts, exports, and collaboration
+### Background processing
+- BullMQ queue layer
+- Redis-backed worker runtime
+- persisted job runs and job logs
+- internal dispatch routes for operational workflows
 
-## Gallery
+### Domain model coverage
+The schema includes models for:
 
-<p align="center">
-  <img src=".mkdir/Dashboard.jpg" alt="Dashboard" width="48%" />
-  <img src=".mkdir/Health-Profile.jpg" alt="Health Profile" width="48%" />
-</p>
-<p align="center">
-  <img src=".mkdir/Medications.jpg" alt="Medications" width="48%" />
-  <img src=".mkdir/Lab-Results.jpg" alt="Lab Results" width="48%" />
-</p>
-<p align="center">
-  <img src=".mkdir/Vitals.jpg" alt="Vitals" width="48%" />
-  <img src=".mkdir/Documents.jpg" alt="Documents" width="48%" />
-</p>
-<p align="center">
-  <img src=".mkdir/Care-Team.jpg" alt="Care Team" width="48%" />
-  <img src=".mkdir/Alert-Center.jpg" alt="Alert Center" width="48%" />
-</p>
-<p align="center">
-  <img src=".mkdir/AI-Insights.jpg" alt="AI Insights" width="48%" />
-  <img src=".mkdir/Exports-Page.jpg" alt="Exports" width="48%" />
-</p>
+- user and health profile data
+- medications and adherence logs
+- appointments, doctors, labs, vitals, symptoms, vaccinations, documents
+- reminders and exports
+- care access and invites
+- AI insights
+- device connections, readings, sync jobs, mobile session tokens
+- alert rules, events, and alert audits
+- job runs and operational job logs
 
-## Why This Repo Stands Out
+---
 
-VitaVault is not just a UI concept. The repo already includes:
-- a real Prisma domain model
-- modular route structure across many health workflows
-- background worker scaffolding
-- queue/job visibility
-- care-access modeling
-- upload handling
-- AI integration foundations
-- export/report surfaces
+## Product status
 
-That gives it stronger product depth than a typical demo health tracker.
+VitaVault is already a serious portfolio-grade application with strong architectural depth.
 
-## Current Product Direction
+At the same time, the repo is best described as **feature-rich and production-minded, but still evolving**.
+Current strengths are strongest in:
 
-The project is moving toward a more complete business-ready platform with focus on:
-- stronger record integrity
-- cleaner collaboration flows
-- deeper reporting and exports
-- hardened internal APIs
-- improved operational health tooling
-- better test and CI confidence
+- data modeling
+- authenticated app structure
+- breadth of health modules
+- alerting foundations
+- worker/job architecture
+- care collaboration groundwork
 
-## Repository Standards
+The main opportunity now is not adding random features.
+It is finishing and hardening the existing foundations into a more polished business-ready product.
 
-The repo includes GitHub-first hygiene to support iterative PR-based development:
-- pull request template
-- issue templates
-- CI for Prisma validation, typecheck, and linting
-- dedicated lint workflow for fast PR signal
+---
 
-## Suggested PR Theme for This Phase
+## Core experience
 
-**Phase 01 — Data Integrity and Repo Hygiene**
-- fix document type mismatch in the Documents module
-- align device connection route references
-- upgrade repository presentation in README
-- add lint automation for pull requests
+| Dashboard | Health Profile |
+|---|---|
+| <img src=".mkdir/Dashboard.jpg" alt="Dashboard" width="100%"> | <img src=".mkdir/Health-Profile.jpg" alt="Health Profile" width="100%"> |
 
-## License
+| Medications | Appointments |
+|---|---|
+| <img src=".mkdir/Medications.jpg" alt="Medications" width="100%"> | <img src=".mkdir/Appointments.jpg" alt="Appointments" width="100%"> |
 
-This project is released under the MIT License.
+| Labs | Exports |
+|---|---|
+| <img src=".mkdir/Lab-Results.jpg" alt="Lab Results" width="100%"> | <img src=".mkdir/Exports-Page.jpg" alt="Exports Page" width="100%"> |
+
+## Collaboration and intelligence
+
+| AI Insights | Care Team |
+|---|---|
+| <img src=".mkdir/AI-Insights.jpg" alt="AI Insights" width="100%"> | <img src=".mkdir/Care-Team.jpg" alt="Care Team" width="100%"> |
+
+| Alert Center | Device Connection |
+|---|---|
+| <img src=".mkdir/Alert-Center.jpg" alt="Alert Center" width="100%"> | <img src=".mkdir/Device-Connections.jpg" alt="Device Connection" width="100%"> |
+
+## Clinical records
+
+| Vaccinations | Doctors |
+|---|---|
+| <img src=".mkdir/Vaccinations.jpg" alt="Vaccinations" width="100%"> | <img src=".mkdir/Doctors.jpg" alt="Doctors" width="100%"> |
+
+| Summary | Vitals |
+|---|---|
+| <img src=".mkdir/Summary.jpg" alt="Summary" width="100%"> | <img src=".mkdir/Vitals.jpg" alt="Vitals" width="100%"> |
+
+| Symptoms | Documents |
+|---|---|
+| <img src=".mkdir/Symptoms.jpg" alt="Symptoms" width="100%"> | <img src=".mkdir/Documents.jpg" alt="Documents" width="100%"> |
+
+## Entry screens
+
+| Landing Page | Login Page |
+|---|---|
+| <img src=".mkdir/Landing-Page.jpg" alt="Landing Page" width="100%"> | <img src=".mkdir/Login-Page.jpg" alt="Login Page" width="100%"> |
+
+---
+
+## Tech stack
+
+- **Next.js 15**
+- **React 19**
+- **TypeScript**
+- **Tailwind CSS**
+- **Prisma ORM**
+- **PostgreSQL**
+- **Auth.js / NextAuth**
+- **Zod**
+- **BullMQ**
+- **Redis**
+- **Recharts**
+- **lucide-react**
+- **Framer Motion**
+
+---
+
+## Repository notes
+
+A few important points about the current repo state:
+
+- this repository intentionally showcases the implemented product surface more than local setup instructions
+- some areas are complete user flows, while others are foundations prepared for future iterations
+- local file uploads are currently stored on disk rather than a production object-storage layer
+- the app includes internal and worker-facing infrastructure that is useful for product realism, even where some operational polish is still in progress
+
+---
+
+## Demo account
+
+```text
+Email: demo@health.local
+Password: demo12345
+```
+
+---
+
+## What comes next
+
+The strongest next upgrades for VitaVault are:
+- tighter security hardening around internal and operational routes
+- richer export and printable patient summary flows
+- stronger admin and ops visibility
+- better invite delivery and reminder delivery mechanisms
+- production-grade document storage strategy
+- more formal test coverage
+
+---
+
+## Repository link
+
+GitHub: [shreyanshjain1/VitaVault](https://github.com/shreyanshjain1/VitaVault)

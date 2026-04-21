@@ -1,19 +1,25 @@
 ## Summary
-Describe what this PR changes.
+Briefly describe what this PR improves.
 
-## Changes made
+## Product impact
 - 
 - 
 - 
 
-## Why this matters
-Explain the technical or product value.
+## Technical changes
+- 
+- 
+- 
 
-## Testing
-- [ ] Ran local test or smoke check
-- [ ] Verified changed flows manually
+## Validation
+- [ ] Ran the relevant local checks
+- [ ] Manually verified the changed flow
 - [ ] No secrets added
 - [ ] No unintended schema breakage
+- [ ] README / docs remain accurate after this change
 
-## Related issues
+## Screenshots or notes
+Add screenshots, before/after notes, or sample payloads when useful.
+
+## Related issue
 Closes #
