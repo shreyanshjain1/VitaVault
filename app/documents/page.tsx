@@ -83,9 +83,9 @@ export default async function DocumentsPage({
                     <Select name="type" defaultValue="OTHER">
                       <option value="LAB_RESULT">Lab Result</option>
                       <option value="PRESCRIPTION">Prescription</option>
-                      <option value="IMAGING">Imaging</option>
+                      <option value="SCAN">Imaging / Scan</option>
                       <option value="DISCHARGE_SUMMARY">Discharge Summary</option>
-                      <option value="CONSULT_NOTE">Consult Note</option>
+                      <option value="CERTIFICATE">Consult / Medical Certificate</option>
                       <option value="OTHER">Other</option>
                     </Select>
                   </div>
@@ -182,9 +182,9 @@ export default async function DocumentsPage({
                                 <Select name="type" defaultValue={document.type}>
                                   <option value="LAB_RESULT">Lab Result</option>
                                   <option value="PRESCRIPTION">Prescription</option>
-                                  <option value="IMAGING">Imaging</option>
+                                  <option value="SCAN">Imaging / Scan</option>
                                   <option value="DISCHARGE_SUMMARY">Discharge Summary</option>
-                                  <option value="CONSULT_NOTE">Consult Note</option>
+                                  <option value="CERTIFICATE">Consult / Medical Certificate</option>
                                   <option value="OTHER">Other</option>
                                 </Select>
                               </div>

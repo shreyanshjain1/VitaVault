@@ -151,7 +151,7 @@ export function AppShell({ children }: AppShellProps) {
       "/ai-insights",
       "/care-team",
       "/alerts",
-      "/device-connections",
+      "/device-connection",
     ]);
 
     const records = primaryRoutes.filter(
@@ -161,7 +161,7 @@ export function AppShell({ children }: AppShellProps) {
           "/ai-insights",
           "/care-team",
           "/alerts",
-          "/device-connections",
+          "/device-connection",
           "/summary",
         ].includes(r.href)
     ) as AppRouteItem[];

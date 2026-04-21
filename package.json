@@ -10,17 +10,18 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "typecheck": "tsc --noEmit",
+    "lint": "next lint",
     "worker": "tsx --env-file=.env worker/index.ts",
     "worker:dev": "tsx watch --env-file=.env worker/index.ts",
     "postinstall": "prisma generate",
     "reminders:scan": "tsx scripts/scan-reminders.ts",
     "db:validate": "node scripts/prisma-validate.cjs",
     "db:validate:ci": "prisma validate",
-    "check": "npm run db:validate && npm run typecheck",
+    "check": "npm run db:validate && npm run lint && npm run typecheck",
     "actions:check": "node scripts/check-action-exports.cjs",
     "actions:imports": "node scripts/check-page-action-imports.cjs",
     "actions:shadow": "node scripts/check-shadow-action-files.cjs",
-    "verify": "npm run actions:check && npm run actions:imports && npm run actions:shadow && npm run typecheck"
+    "verify": "npm run actions:check && npm run actions:imports && npm run actions:shadow && npm run lint && npm run typecheck"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",
