@@ -9,18 +9,25 @@ const compat = new FlatCompat({
   baseDirectory: __dirname,
 });
 
-export default [
+const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     ignores: [
       ".next/**",
       "node_modules/**",
+      "coverage/**",
       "dist/**",
       "build/**",
-      "coverage/**",
-      "generated/**",
-      "public/uploads/**",
-      "prisma/migrations/**",
+      "scripts/**/*.cjs",
+      "next-env.d.ts",
     ],
   },
+  {
+    files: ["tailwind.config.ts"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
 ];
+
+export default eslintConfig;
