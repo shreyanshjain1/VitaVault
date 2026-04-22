@@ -5,13 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { requireUser } from "@/lib/session";
 import { getReviewQueueData } from "@/lib/review-queue";
 
-const toneClasses = {
-  danger: "danger",
-  warning: "warning",
-  success: "success",
-  info: "info",
-  neutral: "neutral",
-} as const;
 
 const categoryLabel: Record<string, string> = {
   OVERDUE_REMINDER: "Overdue reminder",

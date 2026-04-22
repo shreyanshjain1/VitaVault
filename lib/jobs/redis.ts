@@ -2,7 +2,6 @@ import IORedis from "ioredis";
 import { hasRedisConfig } from "@/lib/jobs/connection";
 
 declare global {
-  // eslint-disable-next-line no-var
   var vitavaultBullRedis: IORedis | undefined;
 }
 

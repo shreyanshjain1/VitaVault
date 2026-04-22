@@ -1,4 +1,4 @@
-import { Prisma, ReminderState } from "@prisma/client";
+import { Prisma, ReminderState, ReminderType } from "@prisma/client";
 import { db } from "@/lib/db";
 
 export async function getReminderCenterData(args: {
@@ -8,8 +8,8 @@ export async function getReminderCenterData(args: {
 }) {
   const where: Prisma.ReminderWhereInput = {
     userId: args.userId,
-    ...(args.state && args.state !== "ALL" ? { state: args.state as any } : {}),
-    ...(args.type && args.type !== "ALL" ? { type: args.type as any } : {}),
+    ...(args.state && args.state !== "ALL" ? { state: args.state as ReminderState } : {}),
+    ...(args.type && args.type !== "ALL" ? { type: args.type as ReminderType } : {}),
   };
 
   const reminders = await db.reminder.findMany({

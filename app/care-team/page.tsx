@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { headers } from "next/headers";
-import { Sparkles, UserRoundPlus, Users } from "lucide-react";
+import { Sparkles, UserRoundPlus } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { getSharedPatientCards } from "@/lib/access";
@@ -16,7 +16,7 @@ import {
   updateCareAccessPermissionsAction,
 } from "./actions";
 
-function inviteTone(status: string, expiresAt: Date) {
+function inviteTone(status: string, expiresAt: Date): "neutral" | "warning" | "success" | "danger" {
   const expired = status === "PENDING" && expiresAt <= new Date();
   if (expired) return "danger";
   if (status === "ACTIVE") return "success";
@@ -224,7 +224,7 @@ export default async function CareTeamPage() {
                         </p>
                         <p className="text-sm text-muted-foreground">Owner email: {invite.owner.email}</p>
                       </div>
-                      <StatusPill tone={inviteTone(invite.status, invite.expiresAt) as any}>
+                      <StatusPill tone={inviteTone(invite.status, invite.expiresAt)}>
                         {displayStatus(invite.status, invite.expiresAt)}
                       </StatusPill>
                     </div>
@@ -342,7 +342,7 @@ export default async function CareTeamPage() {
                           Expires: {invite.expiresAt.toLocaleString()}
                         </p>
                       </div>
-                      <StatusPill tone={inviteTone(invite.status, invite.expiresAt) as any}>
+                      <StatusPill tone={inviteTone(invite.status, invite.expiresAt)}>
                         {shownStatus}
                       </StatusPill>
                     </div>

@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { HeartPulse, Activity } from "lucide-react";
+import { Activity } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader, EmptyState } from "@/components/common";
 import { deleteVital, saveVital, updateVital } from "@/app/actions";

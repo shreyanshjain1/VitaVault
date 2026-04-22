@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { ActivitySquare, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader, EmptyState } from "@/components/common";
 import { deleteSymptom, saveSymptom, toggleSymptomResolved, updateSymptom } from "@/app/actions";

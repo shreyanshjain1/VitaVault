@@ -4,7 +4,6 @@ import { JOB_BACKOFF_DELAY_MS } from "@/lib/jobs/constants";
 import { QUEUE_NAMES } from "@/lib/jobs/contracts";
 
 declare global {
-  // eslint-disable-next-line no-var
   var vitavaultQueues:
     | {
         alertsQueue?: Queue;

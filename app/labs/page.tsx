@@ -1,3 +1,4 @@
+import { LabFlag } from "@prisma/client";
 import { FlaskConical, PencilLine, Search, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader, EmptyState } from "@/components/common";
@@ -39,7 +40,7 @@ export default async function LabsPage({
             ],
           }
         : {}),
-      ...(flag ? { flag: flag as any } : {}),
+      ...(flag ? { flag: flag as LabFlag } : {}),
     },
     orderBy: { dateTaken: "desc" },
   });

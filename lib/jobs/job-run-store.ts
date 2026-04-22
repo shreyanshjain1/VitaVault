@@ -1,6 +1,5 @@
 import { db } from "@/lib/db";
 import {
-  JOB_KIND,
   JOB_RUN_STATUS,
   type JobKindValue,
 } from "@/lib/domain/enums";

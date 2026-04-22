@@ -1,5 +1,5 @@
 import { endOfDay, format, startOfDay } from "date-fns";
-import { Pill, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { EmptyState, PageHeader } from "@/components/common";
 import {

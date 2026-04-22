@@ -1,5 +1,6 @@
 import {
   AlertStatus,
+  CareAccessStatus,
   DeviceConnectionStatus,
   JobRunStatus,
   LabFlag,
@@ -136,8 +137,8 @@ export async function getOpsHealthData(userId: string, role: SupportedRole): Pro
       }),
     }),
     isAdmin(role)
-      ? db.careAccess.count({ where: { status: "ACTIVE" as any } })
-      : db.careAccess.count({ where: { ownerUserId: userId, status: "ACTIVE" as any } }),
+      ? db.careAccess.count({ where: { status: CareAccessStatus.ACTIVE } })
+      : db.careAccess.count({ where: { ownerUserId: userId, status: CareAccessStatus.ACTIVE } }),
     db.jobRun.findMany({
       where: scopedWhere(role, userId, {
         status: { in: [JobRunStatus.FAILED, JobRunStatus.RETRYING] },

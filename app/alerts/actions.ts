@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { AlertRuleCategory, AlertSeverity, AlertSourceType, AlertStatus, ThresholdOperator } from "@prisma/client";
+import { AlertRuleCategory, AlertSeverity, AlertSourceType, AlertStatus, SymptomSeverity, ThresholdOperator } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { createAlertAuditLog } from "@/lib/alerts/audit";
@@ -83,7 +83,7 @@ export async function createAlertRule(formData: FormData) {
       thresholdOperator: thresholdOperatorValue ? (thresholdOperatorValue as ThresholdOperator) : null,
       thresholdValue: toOptionalNumber(formData.get("thresholdValue")),
       thresholdValueSecondary: toOptionalNumber(formData.get("thresholdValueSecondary")),
-      symptomSeverity: toOptionalString(formData.get("symptomSeverity")) as any,
+      symptomSeverity: toOptionalString(formData.get("symptomSeverity")) as SymptomSeverity | null,
       medicationMissedCount: toOptionalNumber(formData.get("medicationMissedCount")),
       syncStaleHours: toOptionalNumber(formData.get("syncStaleHours")),
       metadataJson: null,
@@ -126,7 +126,7 @@ export async function updateAlertRule(formData: FormData) {
       thresholdOperator: thresholdOperatorValue ? (thresholdOperatorValue as ThresholdOperator) : null,
       thresholdValue: toOptionalNumber(formData.get("thresholdValue")),
       thresholdValueSecondary: toOptionalNumber(formData.get("thresholdValueSecondary")),
-      symptomSeverity: toOptionalString(formData.get("symptomSeverity")) as any,
+      symptomSeverity: toOptionalString(formData.get("symptomSeverity")) as SymptomSeverity | null,
       medicationMissedCount: toOptionalNumber(formData.get("medicationMissedCount")),
       syncStaleHours: toOptionalNumber(formData.get("syncStaleHours")),
     },

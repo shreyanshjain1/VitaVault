@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { AlertRuleCategory, AlertSeverity, AlertStatus, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { resolveAlertSource } from "@/lib/alerts/source";
 import type { AlertDetail, AlertListItem } from "@/lib/alerts/types";
@@ -45,9 +45,9 @@ export async function getAlertList(args: {
 }) {
   const where: Prisma.AlertEventWhereInput = {
     userId: args.userId,
-    ...(args.status && args.status !== "ALL" ? { status: args.status as any } : {}),
-    ...(args.severity && args.severity !== "ALL" ? { severity: args.severity as any } : {}),
-    ...(args.category && args.category !== "ALL" ? { category: args.category as any } : {}),
+    ...(args.status && args.status !== "ALL" ? { status: args.status as AlertStatus } : {}),
+    ...(args.severity && args.severity !== "ALL" ? { severity: args.severity as AlertSeverity } : {}),
+    ...(args.category && args.category !== "ALL" ? { category: args.category as AlertRuleCategory } : {}),
   };
 
   const rows = await db.alertEvent.findMany({

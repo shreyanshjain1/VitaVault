@@ -1,4 +1,4 @@
-import { AppointmentStatus, ReadingSource, SyncJobStatus } from "@prisma/client";
+import { ReadingSource, ReminderState, SyncJobStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
   type AlertEvaluationJobData,
@@ -89,9 +89,9 @@ export async function handleDailyHealthSummaryJob(
     where: {
       userId: payload.userId,
       state: {
-        in: ["DUE", "SENT", "OVERDUE"] as any,
+        in: [ReminderState.DUE, ReminderState.SENT, ReminderState.OVERDUE],
       },
-    } as any,
+    },
   });
 
   const summaryLines = [
