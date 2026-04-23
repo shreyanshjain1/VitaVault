@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DeviceConnectionStatus } from "@prisma/client";
 import { LockKeyhole, ShieldCheck, Smartphone, TriangleAlert } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader, StatusPill } from "@/components/common";
@@ -51,7 +52,10 @@ export default async function SecurityPage() {
       take: 12,
     }),
     db.deviceConnection.count({
-      where: { userId: user.id!, status: { in: ["CONNECTED", "SYNCING", "NEEDS_REAUTH"] } },
+      where: {
+        userId: user.id!,
+        status: { in: [DeviceConnectionStatus.ACTIVE, DeviceConnectionStatus.ERROR] },
+      },
     }),
     db.careInvite.count({
       where: { ownerUserId: user.id!, status: "PENDING" },
