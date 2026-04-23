@@ -10,8 +10,40 @@ import { requireUser } from "@/lib/session";
 import { logAccessAudit } from "@/lib/access";
 import { CareAccessRole } from "@prisma/client";
 
+import { sendCareInviteEmail } from "@/lib/invite-email";
+
 function boolFromForm(formData: FormData, key: string) {
   return formData.get(key) === "on";
+}
+
+
+function getAppOrigin() {
+  return (
+    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
+    process.env.NEXTAUTH_URL?.replace(/\/$/, "") ||
+    "http://localhost:3000"
+  );
+}
+
+async function deliverInviteEmail(args: {
+  email: string;
+  token: string;
+  ownerName: string;
+  ownerEmail: string;
+  accessRole: CareAccessRole;
+  expiresAt: Date;
+  note?: string | null;
+}) {
+  const inviteLink = `${getAppOrigin()}/invite/${args.token}`;
+  return sendCareInviteEmail({
+    to: args.email,
+    inviteLink,
+    ownerName: args.ownerName,
+    ownerEmail: args.ownerEmail,
+    accessRole: args.accessRole,
+    expiresAt: args.expiresAt,
+    note: args.note,
+  });
 }
 
 async function activateInviteForActor(args: {
@@ -191,6 +223,31 @@ export async function inviteCareMemberAction(formData: FormData) {
     },
   });
 
+  let emailDelivery:
+    | { attempted: false; sent: false; reason: string }
+    | { attempted: true; sent: true; provider: string; messageId: string | null }
+    | { attempted: true; sent: false; reason: string };
+
+  try {
+    const result = await deliverInviteEmail({
+      email,
+      token: invite.token,
+      ownerName: actor.name ?? "A VitaVault patient",
+      ownerEmail: actor.email ?? "no-reply@vitavault.local",
+      accessRole,
+      expiresAt: invite.expiresAt,
+      note,
+    });
+
+    emailDelivery = result;
+  } catch (error) {
+    emailDelivery = {
+      attempted: true,
+      sent: false,
+      reason: error instanceof Error ? error.message : "Unknown invite email failure.",
+    };
+  }
+
   await logAccessAudit({
     ownerUserId: actor.id,
     actorUserId: actor.id,
@@ -200,6 +257,119 @@ export async function inviteCareMemberAction(formData: FormData) {
     metadata: {
       email,
       accessRole,
+      token: invite.token,
+      emailDelivery,
+    },
+  });
+
+  revalidatePath("/care-team");
+}
+
+export async function resendCareInviteAction(formData: FormData) {
+  const actor = await requireUser();
+  const inviteId = String(formData.get("inviteId") || "").trim();
+
+  if (!inviteId) {
+    throw new Error("Invite ID is required.");
+  }
+
+  const invite = await db.careInvite.findFirst({
+    where: {
+      id: inviteId,
+      ownerUserId: actor.id,
+      status: "PENDING",
+    },
+  });
+
+  if (!invite) {
+    throw new Error("Pending invite not found.");
+  }
+
+  const refreshedInvite = await db.careInvite.update({
+    where: { id: invite.id },
+    data: {
+      token: randomUUID(),
+      expiresAt: addDays(new Date(), 7),
+      updatedAt: new Date(),
+    },
+  });
+
+  let emailDelivery:
+    | { attempted: false; sent: false; reason: string }
+    | { attempted: true; sent: true; provider: string; messageId: string | null }
+    | { attempted: true; sent: false; reason: string };
+
+  try {
+    const result = await deliverInviteEmail({
+      email: refreshedInvite.email,
+      token: refreshedInvite.token,
+      ownerName: actor.name ?? "A VitaVault patient",
+      ownerEmail: actor.email ?? "no-reply@vitavault.local",
+      accessRole: refreshedInvite.accessRole,
+      expiresAt: refreshedInvite.expiresAt,
+      note: refreshedInvite.note,
+    });
+
+    emailDelivery = result;
+  } catch (error) {
+    emailDelivery = {
+      attempted: true,
+      sent: false,
+      reason: error instanceof Error ? error.message : "Unknown invite email failure.",
+    };
+  }
+
+  await logAccessAudit({
+    ownerUserId: actor.id,
+    actorUserId: actor.id,
+    action: "CARE_INVITE_RESENT",
+    targetType: "CareInvite",
+    targetId: refreshedInvite.id,
+    metadata: {
+      email: refreshedInvite.email,
+      token: refreshedInvite.token,
+      emailDelivery,
+    },
+  });
+
+  revalidatePath("/care-team");
+}
+
+export async function revokeCareInviteAction(formData: FormData) {
+  const actor = await requireUser();
+  const inviteId = String(formData.get("inviteId") || "").trim();
+
+  if (!inviteId) {
+    throw new Error("Invite ID is required.");
+  }
+
+  const invite = await db.careInvite.findFirst({
+    where: {
+      id: inviteId,
+      ownerUserId: actor.id,
+      status: "PENDING",
+    },
+  });
+
+  if (!invite) {
+    throw new Error("Pending invite not found.");
+  }
+
+  await db.careInvite.update({
+    where: { id: invite.id },
+    data: {
+      status: "REVOKED",
+    },
+  });
+
+  await logAccessAudit({
+    ownerUserId: actor.id,
+    actorUserId: actor.id,
+    action: "CARE_INVITE_REVOKED",
+    targetType: "CareInvite",
+    targetId: invite.id,
+    metadata: {
+      email: invite.email,
       token: invite.token,
     },
   });

@@ -12,7 +12,9 @@ import {
   acceptCareInviteAction,
   declineCareInviteAction,
   inviteCareMemberAction,
+  resendCareInviteAction,
   revokeCareAccessAction,
+  revokeCareInviteAction,
   updateCareAccessPermissionsAction,
 } from "./actions";
 
@@ -41,6 +43,8 @@ export default async function CareTeamPage() {
     headerStore.get("x-forwarded-proto") ?? (host.includes("localhost") ? "http" : "https");
   const origin =
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || (host ? `${proto}://${host}` : "");
+
+  const emailDeliveryEnabled = Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL);
 
   const [outgoingInvites, currentTeam, incomingInvites, sharedPatients] =
     await Promise.all([
@@ -79,7 +83,7 @@ export default async function CareTeamPage() {
       <div className="mx-auto max-w-7xl space-y-6 p-6">
         <PageHeader
           title="Care Team"
-          description="Invite caregivers, doctors, or lab staff to collaborate securely. Each invite generates a shareable link and can be accepted via email-matched sign-in."
+          description="Invite caregivers, doctors, or lab staff to collaborate securely. Each invite can now be emailed directly and still includes a fallback shareable link."
           action={
             <div className="flex flex-wrap gap-3">
               <Link
@@ -347,8 +351,13 @@ export default async function CareTeamPage() {
                       </StatusPill>
                     </div>
 
-                    <div className="mt-4">
+                    <div className="mt-4 space-y-2">
                       <CopyInviteField value={inviteLink} />
+                      <p className="text-xs text-muted-foreground">
+                        {emailDeliveryEnabled
+                          ? "Invite emails are enabled. You can resend the email anytime while the invite is pending."
+                          : "Manual link mode is active. Copy this invite URL and send it yourself."}
+                      </p>
                     </div>
 
                     <div className="mt-4 flex flex-wrap gap-3">
@@ -358,6 +367,30 @@ export default async function CareTeamPage() {
                       >
                         Open invite preview
                       </Link>
+
+                      {shownStatus === "PENDING" ? (
+                        <>
+                          <form action={resendCareInviteAction}>
+                            <input type="hidden" name="inviteId" value={invite.id} />
+                            <button
+                              type="submit"
+                              className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"
+                            >
+                              Resend email
+                            </button>
+                          </form>
+
+                          <form action={revokeCareInviteAction}>
+                            <input type="hidden" name="inviteId" value={invite.id} />
+                            <button
+                              type="submit"
+                              className="inline-flex items-center justify-center rounded-2xl border border-rose-200/70 bg-rose-50/70 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100/70 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200"
+                            >
+                              Revoke invite
+                            </button>
+                          </form>
+                        </>
+                      ) : null}
                     </div>
                   </div>
                 );
