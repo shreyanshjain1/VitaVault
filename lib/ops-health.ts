@@ -4,6 +4,7 @@ import {
   DeviceConnectionStatus,
   JobRunStatus,
   LabFlag,
+  ReminderChannel,
   ReminderState,
   SyncJobStatus,
   SymptomSeverity,
@@ -34,6 +35,9 @@ export type OpsHealthData = {
     failedSyncJobs: number;
     staleConnections: number;
     activeCareAccess: number;
+    pendingInvites: number;
+    emailedReminders7d: number;
+    resolvedAlerts24h: number;
   };
   recentFailedRuns: Array<{
     id: string;
@@ -71,6 +75,26 @@ export type OpsHealthData = {
     createdAt: Date;
     user: { id: string; name: string | null; email: string | null };
   }>;
+  recentPendingInvites: Array<{
+    id: string;
+    email: string;
+    accessRole: string;
+    status: CareAccessStatus;
+    expiresAt: Date;
+    createdAt: Date;
+    owner: { id: string; name: string | null; email: string | null };
+    grantedBy: { id: string; name: string | null; email: string | null };
+  }>;
+  recentReminderDeliveries: Array<{
+    id: string;
+    title: string;
+    type: string;
+    state: ReminderState;
+    channel: ReminderChannel;
+    dueAt: Date;
+    sentAt: Date | null;
+    user: { id: string; name: string | null; email: string | null };
+  }>;
 };
 
 function isAdmin(role: SupportedRole) {
@@ -89,6 +113,8 @@ function envTone(available: boolean, recommended = false): OpsTone {
 
 export async function getOpsHealthData(userId: string, role: SupportedRole): Promise<OpsHealthData> {
   const staleCutoff = new Date(Date.now() - 1000 * 60 * 60 * 24 * 3);
+  const reminderEmailCutoff = new Date(Date.now() - 1000 * 60 * 60 * 24 * 7);
+  const resolvedAlertCutoff = new Date(Date.now() - 1000 * 60 * 60 * 24);
 
   const [
     openAlerts,
@@ -99,9 +125,14 @@ export async function getOpsHealthData(userId: string, role: SupportedRole): Pro
     failedSyncJobs,
     staleConnections,
     activeCareAccess,
+    pendingInvites,
+    emailedReminders7d,
+    resolvedAlerts24h,
     recentFailedRuns,
     recentSyncFailures,
     recentOpenAlerts,
+    recentPendingInvites,
+    recentReminderDeliveries,
   ] = await Promise.all([
     db.alertEvent.count({
       where: scopedWhere(role, userId, { status: AlertStatus.OPEN }),
@@ -139,6 +170,21 @@ export async function getOpsHealthData(userId: string, role: SupportedRole): Pro
     isAdmin(role)
       ? db.careAccess.count({ where: { status: CareAccessStatus.ACTIVE } })
       : db.careAccess.count({ where: { ownerUserId: userId, status: CareAccessStatus.ACTIVE } }),
+    isAdmin(role)
+      ? db.careInvite.count({ where: { status: CareAccessStatus.PENDING } })
+      : db.careInvite.count({ where: { ownerUserId: userId, status: CareAccessStatus.PENDING } }),
+    db.reminder.count({
+      where: scopedWhere(role, userId, {
+        channel: ReminderChannel.EMAIL,
+        sentAt: { gte: reminderEmailCutoff },
+      }),
+    }),
+    db.alertEvent.count({
+      where: scopedWhere(role, userId, {
+        status: AlertStatus.RESOLVED,
+        resolvedAt: { gte: resolvedAlertCutoff },
+      }),
+    }),
     db.jobRun.findMany({
       where: scopedWhere(role, userId, {
         status: { in: [JobRunStatus.FAILED, JobRunStatus.RETRYING] },
@@ -167,6 +213,36 @@ export async function getOpsHealthData(userId: string, role: SupportedRole): Pro
       orderBy: { createdAt: "desc" },
       take: 8,
     }),
+    isAdmin(role)
+      ? db.careInvite.findMany({
+          where: { status: CareAccessStatus.PENDING },
+          include: {
+            owner: { select: { id: true, name: true, email: true } },
+            grantedBy: { select: { id: true, name: true, email: true } },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 6,
+        })
+      : db.careInvite.findMany({
+          where: { ownerUserId: userId, status: CareAccessStatus.PENDING },
+          include: {
+            owner: { select: { id: true, name: true, email: true } },
+            grantedBy: { select: { id: true, name: true, email: true } },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 6,
+        }),
+    db.reminder.findMany({
+      where: scopedWhere(role, userId, {
+        channel: ReminderChannel.EMAIL,
+        sentAt: { not: null },
+      }),
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+      },
+      orderBy: { sentAt: "desc" },
+      take: 6,
+    }),
   ]);
 
   const envReadiness: OpsEnvItem[] = [
@@ -190,6 +266,24 @@ export async function getOpsHealthData(userId: string, role: SupportedRole): Pro
       available: Boolean(process.env.REDIS_URL),
       tone: envTone(Boolean(process.env.REDIS_URL)),
       detail: process.env.REDIS_URL ? "Configured for BullMQ and job processing." : "Missing Redis URL. Jobs will run in degraded mode.",
+    },
+    {
+      label: "Outbound email",
+      key: "RESEND_API_KEY",
+      available: Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL),
+      tone: envTone(Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL), true),
+      detail: process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL
+        ? "Invite, reminder, and digest email delivery is enabled."
+        : "Optional. Manual invite links still work, but outbound email is not configured.",
+    },
+    {
+      label: "Internal API",
+      key: "INTERNAL_API_SECRET",
+      available: Boolean(process.env.INTERNAL_API_SECRET),
+      tone: envTone(Boolean(process.env.INTERNAL_API_SECRET), true),
+      detail: process.env.INTERNAL_API_SECRET
+        ? "Internal automation calls can be authenticated."
+        : "Recommended for protected internal jobs and cron-style calls.",
     },
     {
       label: "Host trust",
@@ -218,9 +312,14 @@ export async function getOpsHealthData(userId: string, role: SupportedRole): Pro
       failedSyncJobs,
       staleConnections,
       activeCareAccess,
+      pendingInvites,
+      emailedReminders7d,
+      resolvedAlerts24h,
     },
     recentFailedRuns,
     recentSyncFailures,
     openAlerts: recentOpenAlerts,
+    recentPendingInvites,
+    recentReminderDeliveries,
   };
 }

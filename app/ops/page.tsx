@@ -1,7 +1,17 @@
-import { AlertTriangle, Database, HeartPulse, RefreshCcw, ShieldAlert, WifiOff } from "lucide-react";
+import {
+  AlertTriangle,
+  Database,
+  HeartPulse,
+  Mail,
+  RefreshCcw,
+  ShieldAlert,
+  UserPlus,
+  WifiOff,
+} from "lucide-react";
+import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader, StatusPill } from "@/components/common";
-import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
 import { getOpsHealthData, type OpsTone } from "@/lib/ops-health";
 import { requireUser } from "@/lib/session";
 
@@ -23,9 +33,9 @@ function toneLabel(tone: OpsTone) {
 
 function statusTone(status: string): OpsTone {
   if (["FAILED", "ERROR", "REVOKED"].includes(status)) return "danger";
-  if (["RETRYING", "PARTIAL", "DISCONNECTED", "OVERDUE", "MISSED"].includes(status)) return "warning";
+  if (["RETRYING", "PARTIAL", "DISCONNECTED", "OVERDUE", "MISSED", "PENDING"].includes(status)) return "warning";
   if (["ACTIVE", "RUNNING", "OPEN"].includes(status)) return "info";
-  if (["COMPLETED", "SUCCEEDED", "ACTIVE_OK"].includes(status)) return "success";
+  if (["COMPLETED", "SUCCEEDED", "ACTIVE_OK", "RESOLVED", "SENT"].includes(status)) return "success";
   return "neutral";
 }
 
@@ -57,10 +67,17 @@ export default async function OpsPage() {
       <div className="mx-auto max-w-7xl space-y-6 p-6">
         <PageHeader
           title="Operations"
-          description="Monitor deployment readiness, operational failure signals, and unresolved clinical load from one admin-facing workspace."
+          description="Monitor deployment readiness, delivery health, and unresolved clinical workload from one business-facing workspace."
+          actions={(
+            <div className="flex flex-wrap gap-2">
+              <Button asChild variant="outline"><Link href="/jobs">Job runs</Link></Button>
+              <Button asChild variant="outline"><Link href="/care-team">Care Team</Link></Button>
+              <Button asChild variant="outline"><Link href="/exports">Exports</Link></Button>
+            </div>
+          )}
         />
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-7">
           {data.envReadiness.map((item) => (
             <Card key={item.key}>
               <CardHeader className="pb-3">
@@ -89,6 +106,12 @@ export default async function OpsPage() {
           <StatCard title="Failed sync jobs" value={data.summary.failedSyncJobs} description="Device sync jobs that ended in failure." icon={<WifiOff className="h-5 w-5 text-rose-500" />} />
           <StatCard title="Stale connections" value={data.summary.staleConnections} description="Active device connections with no recent successful sync." icon={<WifiOff className="h-5 w-5 text-amber-500" />} />
           <StatCard title="Active care access" value={data.summary.activeCareAccess} description="Currently active care-team access relationships." icon={<ShieldAlert className="h-5 w-5 text-emerald-500" />} />
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <StatCard title="Pending invites" value={data.summary.pendingInvites} description="Outstanding care-team invites still waiting to be accepted or revoked." icon={<UserPlus className="h-5 w-5 text-violet-500" />} />
+          <StatCard title="Reminder emails (7d)" value={data.summary.emailedReminders7d} description="Email reminder sends recorded in the last 7 days across the current scope." icon={<Mail className="h-5 w-5 text-cyan-500" />} />
+          <StatCard title="Resolved alerts (24h)" value={data.summary.resolvedAlerts24h} description="Alerts resolved during the last 24 hours, useful for workload throughput tracking." icon={<ShieldAlert className="h-5 w-5 text-emerald-500" />} />
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
@@ -174,6 +197,56 @@ export default async function OpsPage() {
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        <div className="grid gap-6 xl:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending care invite queue</CardTitle>
+              <CardDescription>Recent invites still waiting for delivery follow-up, acceptance, or revocation.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {data.recentPendingInvites.length ? data.recentPendingInvites.map((invite) => (
+                <div key={invite.id} className="rounded-3xl border border-border/60 p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge>{invite.accessRole.replaceAll("_", " ")}</Badge>
+                    <StatusPill tone={statusTone(invite.status)}>{invite.status}</StatusPill>
+                  </div>
+                  <div className="mt-3 space-y-1">
+                    <p className="font-medium">{invite.email}</p>
+                    <p className="text-sm text-muted-foreground">Owner: {invite.owner.name || invite.owner.email || invite.owner.id}</p>
+                    <p className="text-sm text-muted-foreground">Granted by: {invite.grantedBy.name || invite.grantedBy.email || invite.grantedBy.id}</p>
+                    <p className="text-sm text-muted-foreground">Created: {formatDateTime(invite.createdAt)}</p>
+                    <p className="text-sm text-muted-foreground">Expires: {formatDateTime(invite.expiresAt)}</p>
+                  </div>
+                </div>
+              )) : <div className="rounded-2xl border border-border/60 px-4 py-6 text-sm text-muted-foreground">No pending invites right now.</div>}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent reminder email deliveries</CardTitle>
+              <CardDescription>Latest reminders sent through the email channel for patient follow-up visibility.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {data.recentReminderDeliveries.length ? data.recentReminderDeliveries.map((reminder) => (
+                <div key={reminder.id} className="rounded-3xl border border-border/60 p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge>{reminder.type.replaceAll("_", " ")}</Badge>
+                    <StatusPill tone={statusTone(reminder.state)}>{reminder.state}</StatusPill>
+                    <Badge>{reminder.channel}</Badge>
+                  </div>
+                  <div className="mt-3 space-y-1">
+                    <p className="font-medium">{reminder.title}</p>
+                    <p className="text-sm text-muted-foreground">Owner: {reminder.user.name || reminder.user.email || reminder.user.id}</p>
+                    <p className="text-sm text-muted-foreground">Due: {formatDateTime(reminder.dueAt)}</p>
+                    <p className="text-sm text-muted-foreground">Sent: {formatDateTime(reminder.sentAt)}</p>
+                  </div>
+                </div>
+              )) : <div className="rounded-2xl border border-border/60 px-4 py-6 text-sm text-muted-foreground">No reminder emails have been sent yet in this scope.</div>}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </AppShell>
