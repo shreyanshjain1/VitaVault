@@ -1,4 +1,4 @@
-import { BellRing, CalendarSync, Clock3, Pill, Stethoscope } from "lucide-react";
+import { BellRing, CalendarSync, Clock3, Mail, Pill, Stethoscope } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader, StatusPill } from "@/components/common";
 import {
@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui";
 import { requireUser } from "@/lib/session";
+import { outboundEmailEnabled } from "@/lib/outbound-email";
 import { getReminderCenterData } from "@/lib/reminders/queries";
 import {
   reminderStateLabel,
@@ -18,6 +19,8 @@ import {
 import {
   completeReminderAction,
   regenerateRemindersAction,
+  sendDueReminderDigestAction,
+  sendReminderEmailAction,
   skipReminderAction,
   snoozeReminderAction,
 } from "./actions";
@@ -45,6 +48,7 @@ export default async function RemindersPage({
     type,
   });
 
+  const emailEnabled = outboundEmailEnabled();
   const overdueCount = data.reminders.filter((item) => item.state === "OVERDUE").length;
   const dueSoonCount = data.reminders.filter((item) => {
     const dueMs = new Date(item.dueAt).getTime();
@@ -58,20 +62,32 @@ export default async function RemindersPage({
           title="Reminder Center"
           description="Medication and appointment reminders with due-state tracking, snooze controls, and regeneration tools."
           action={
-            <form action={regenerateRemindersAction} className="flex items-center gap-3">
-              <input
-                type="date"
-                name="targetDate"
-                defaultValue={toDateInputValue(new Date())}
-                className="rounded-2xl border border-border/70 bg-background/70 px-4 py-2.5 text-sm"
-              />
-              <button
-                type="submit"
-                className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-95"
-              >
-                Regenerate
-              </button>
-            </form>
+            <div className="flex flex-wrap items-center gap-3">
+              <form action={regenerateRemindersAction} className="flex items-center gap-3">
+                <input
+                  type="date"
+                  name="targetDate"
+                  defaultValue={toDateInputValue(new Date())}
+                  className="rounded-2xl border border-border/70 bg-background/70 px-4 py-2.5 text-sm"
+                />
+                <button
+                  type="submit"
+                  className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-95"
+                >
+                  Regenerate
+                </button>
+              </form>
+
+              <form action={sendDueReminderDigestAction}>
+                <button
+                  type="submit"
+                  className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2.5 text-sm font-medium hover:bg-muted/50"
+                >
+                  <Mail className="mr-2 h-4 w-4" />
+                  Email due reminders
+                </button>
+              </form>
+            </div>
           }
         />
 
@@ -110,10 +126,13 @@ export default async function RemindersPage({
 
               <div className="rounded-3xl border border-border/60 bg-background/40 p-5">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-muted-foreground">Coverage</p>
+                  <p className="text-sm font-medium text-muted-foreground">Delivery mode</p>
                   <Pill className="h-5 w-5 text-emerald-500" />
                 </div>
-                <p className="mt-4 text-lg font-semibold">Medication + appointment</p>
+                <p className="mt-4 text-lg font-semibold">{emailEnabled ? "In-app + email" : "In-app only"}</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {emailEnabled ? "Resend-backed email delivery is ready." : "Configure Resend to unlock outbound reminder emails."}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -232,6 +251,17 @@ export default async function RemindersPage({
                         className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"
                       >
                         Snooze
+                      </button>
+                    </form>
+
+                    <form action={sendReminderEmailAction}>
+                      <input type="hidden" name="reminderId" value={reminder.id} />
+                      <button
+                        type="submit"
+                        className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"
+                      >
+                        <Mail className="mr-2 h-4 w-4" />
+                        Send email
                       </button>
                     </form>
 

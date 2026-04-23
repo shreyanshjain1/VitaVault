@@ -2,6 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/session";
+import { db } from "@/lib/db";
+import { createReminderAuditLog } from "@/lib/reminders/service";
+import { outboundEmailEnabled, sendReminderEmail } from "@/lib/outbound-email";
 import {
   generateReminderInstances,
   markDueRemindersAsOverdue,
@@ -119,6 +122,125 @@ export async function updateReminderScheduleAction(formData: FormData) {
     quietHoursStart: parseOptionalString(formData.get("quietHoursStart")) ?? undefined,
     quietHoursEnd: parseOptionalString(formData.get("quietHoursEnd")) ?? undefined,
   });
+
+  revalidateReminderSurfaces();
+}
+
+export async function sendReminderEmailAction(formData: FormData) {
+  const user = await requireUser();
+  const reminderId = String(formData.get("reminderId") || "").trim();
+
+  if (!user.email) {
+    throw new Error("Your account must have an email address to receive reminder emails.");
+  }
+
+  const reminder = await db.reminder.findFirst({
+    where: {
+      id: reminderId,
+      userId: user.id!,
+    },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      dueAt: true,
+      state: true,
+      timezone: true,
+      gracePeriodMinutes: true,
+    },
+  });
+
+  if (!reminder) {
+    throw new Error("Reminder not found.");
+  }
+
+  if (!outboundEmailEnabled()) {
+    throw new Error("Email delivery is not configured.");
+  }
+
+  await sendReminderEmail({
+    to: user.email,
+    patientName: user.name || user.email,
+    reminder,
+  });
+
+  await db.reminder.update({
+    where: { id: reminder.id },
+    data: {
+      channel: "EMAIL",
+      state: reminder.state === "DUE" ? "SENT" : reminder.state,
+      sentAt: new Date(),
+    },
+  });
+
+  await createReminderAuditLog({
+    userId: user.id!,
+    actorUserId: user.id!,
+    reminderId: reminder.id,
+    action: "reminder.email_sent",
+    metadata: { manualSend: true },
+  });
+
+  revalidateReminderSurfaces();
+}
+
+export async function sendDueReminderDigestAction() {
+  const user = await requireUser();
+
+  if (!user.email) {
+    throw new Error("Your account must have an email address to receive reminder emails.");
+  }
+
+  if (!outboundEmailEnabled()) {
+    throw new Error("Email delivery is not configured.");
+  }
+
+  const reminders = await db.reminder.findMany({
+    where: {
+      userId: user.id!,
+      state: { in: ["DUE", "OVERDUE"] },
+    },
+    orderBy: [{ dueAt: "asc" }, { createdAt: "desc" }],
+    take: 5,
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      dueAt: true,
+      state: true,
+      timezone: true,
+      gracePeriodMinutes: true,
+    },
+  });
+
+  if (!reminders.length) {
+    throw new Error("No due or overdue reminders found.");
+  }
+
+  for (const reminder of reminders) {
+    await sendReminderEmail({
+      to: user.email,
+      patientName: user.name || user.email,
+      reminder,
+    });
+
+    await db.reminder.update({
+      where: { id: reminder.id },
+      data: {
+        channel: "EMAIL",
+        state: reminder.state === "DUE" ? "SENT" : reminder.state,
+        sentAt: new Date(),
+      },
+    });
+
+    await createReminderAuditLog({
+      userId: user.id!,
+      actorUserId: user.id!,
+      reminderId: reminder.id,
+      action: "reminder.email_sent",
+      metadata: { manualSend: false, batchSend: true },
+    });
+  }
 
   revalidateReminderSurfaces();
 }

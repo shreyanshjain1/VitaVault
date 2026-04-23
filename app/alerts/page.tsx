@@ -1,12 +1,14 @@
 import Link from "next/link";
-import { BellRing, CircleAlert, ShieldCheck, Workflow } from "lucide-react";
+import { BellRing, CircleAlert, Mail, ShieldCheck, Workflow } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader, StatusPill } from "@/components/common";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
 import { requireUser } from "@/lib/session";
+import { outboundEmailEnabled } from "@/lib/outbound-email";
 import { getAlertList, getAlertRules } from "@/lib/alerts/queries";
 import { AlertFilterBar } from "@/components/alerts/alert-filter-bar";
 import { AlertList } from "@/components/alerts/alert-list";
+import { sendAlertDigestAction } from "./actions";
 
 export default async function AlertsPage({
   searchParams,
@@ -19,6 +21,8 @@ export default async function AlertsPage({
   const status = typeof params.status === "string" ? params.status : "ALL";
   const severity = typeof params.severity === "string" ? params.severity : "ALL";
   const category = typeof params.category === "string" ? params.category : "ALL";
+
+  const emailEnabled = outboundEmailEnabled();
 
   const [alerts, rules] = await Promise.all([
     getAlertList({
@@ -47,6 +51,15 @@ export default async function AlertsPage({
               >
                 Manage rules
               </Link>
+              <form action={sendAlertDigestAction}>
+                <button
+                  type="submit"
+                  className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"
+                >
+                  <Mail className="mr-2 h-4 w-4" />
+                  Email digest
+                </button>
+              </form>
               <Link
                 href="/dashboard"
                 className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"

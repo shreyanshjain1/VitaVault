@@ -5,6 +5,7 @@ import { AlertRuleCategory, AlertSeverity, AlertSourceType, AlertStatus, Symptom
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { createAlertAuditLog } from "@/lib/alerts/audit";
+import { outboundEmailEnabled, sendAlertDigestEmail } from "@/lib/outbound-email";
 
 function toOptionalString(value: FormDataEntryValue | null) {
   const text = String(value ?? "").trim();
@@ -161,4 +162,60 @@ export async function deleteAlertRule(formData: FormData) {
 
   revalidatePath("/alerts/rules");
   revalidatePath("/alerts");
+}
+
+
+export async function sendAlertDigestAction() {
+  const user = await requireUser();
+
+  if (!user.email) {
+    throw new Error("Your account must have an email address to receive alert digests.");
+  }
+
+  if (!outboundEmailEnabled()) {
+    throw new Error("Email delivery is not configured.");
+  }
+
+  const alerts = await db.alertEvent.findMany({
+    where: {
+      userId: user.id!,
+      status: {
+        in: ["OPEN", "ACKNOWLEDGED"],
+      },
+    },
+    orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
+    take: 10,
+    select: {
+      id: true,
+      title: true,
+      message: true,
+      severity: true,
+      status: true,
+      createdAt: true,
+    },
+  });
+
+  if (!alerts.length) {
+    throw new Error("No open or acknowledged alerts found.");
+  }
+
+  await sendAlertDigestEmail({
+    to: user.email,
+    patientName: user.name || user.email,
+    alerts,
+  });
+
+  await Promise.all(
+    alerts.map((alert) =>
+      createAlertAuditLog({
+        userId: user.id!,
+        alertId: alert.id,
+        actorUserId: user.id!,
+        action: "alert.digest_emailed",
+      }),
+    ),
+  );
+
+  revalidatePath("/alerts");
+  revalidatePath("/dashboard");
 }
