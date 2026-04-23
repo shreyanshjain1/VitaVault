@@ -211,17 +211,22 @@ model VaccinationRecord {
 }
 
 model MedicalDocument {
-  id        String       @id @default(cuid())
-  userId    String
-  title     String
-  type      DocumentType
-  filePath  String
-  fileName  String
-  mimeType  String
-  sizeBytes Int
-  notes     String?
-  createdAt DateTime     @default(now())
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String           @id @default(cuid())
+  userId           String
+  title            String
+  type             DocumentType
+  filePath         String
+  fileName         String
+  mimeType         String
+  sizeBytes        Int
+  notes            String?
+  linkedRecordType DocumentLinkType?
+  linkedRecordId   String?
+  createdAt        DateTime         @default(now())
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, linkedRecordType, linkedRecordId])
 }
 
 model Reminder {
@@ -723,6 +728,12 @@ enum DocumentType {
   CERTIFICATE
   SCAN
   OTHER
+}
+
+enum DocumentLinkType {
+  APPOINTMENT
+  LAB_RESULT
+  DOCTOR
 }
 
 enum CareAccessRole {

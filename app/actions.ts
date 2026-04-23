@@ -16,6 +16,7 @@ import { auth, signIn } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { deleteUpload, saveUpload } from "@/lib/upload";
+import { validateDocumentLinkOwnership } from "@/lib/document-links";
 import { healthProfileSchema, signupSchema } from "@/lib/validations";
 
 export type AuthActionState = {
@@ -749,6 +750,7 @@ export async function uploadDocument(formData: FormData) {
   }
 
   const upload = await saveUpload(file);
+  const link = await validateDocumentLinkOwnership(user.id, formData.get("linkedRecordKey"));
 
   await db.medicalDocument.create({
     data: {
@@ -756,17 +758,23 @@ export async function uploadDocument(formData: FormData) {
       title: requiredString(formData, "title", "Document title"),
       type: String(formData.get("type") || "OTHER") as DocumentType,
       notes: String(formData.get("notes") || "").trim() || null,
+      linkedRecordType: link.linkedRecordType,
+      linkedRecordId: link.linkedRecordId,
       ...upload,
     },
   });
 
   revalidatePath("/documents");
   revalidatePath("/dashboard");
+  revalidatePath("/appointments");
+  revalidatePath("/labs");
+  revalidatePath("/doctors");
 }
 
 export async function updateDocumentMetadata(formData: FormData) {
   const user = await requireUser();
   const id = requiredString(formData, "id", "Document id");
+  const link = await validateDocumentLinkOwnership(user.id, formData.get("linkedRecordKey"));
 
   await db.medicalDocument.updateMany({
     where: { id, userId: user.id },
@@ -774,11 +782,16 @@ export async function updateDocumentMetadata(formData: FormData) {
       title: requiredString(formData, "title", "Document title"),
       type: String(formData.get("type") || "OTHER") as DocumentType,
       notes: String(formData.get("notes") || "").trim() || null,
+      linkedRecordType: link.linkedRecordType,
+      linkedRecordId: link.linkedRecordId,
     },
   });
 
   revalidatePath("/documents");
   revalidatePath("/dashboard");
+  revalidatePath("/appointments");
+  revalidatePath("/labs");
+  revalidatePath("/doctors");
 }
 
 export async function deleteDocument(formData: FormData) {
