@@ -2,7 +2,19 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
 import { toCsv } from "@/lib/export";
-import { formatDate, formatDateTime, bpLabel, formatBytes } from "@/lib/utils";
+import { formatDate, formatDateTime, bpLabel } from "@/lib/utils";
+
+function formatBytes(bytes: number | null | undefined) {
+  if (!bytes || bytes <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  return `${value >= 10 || unitIndex === 0 ? Math.round(value) : value.toFixed(1)} ${units[unitIndex]}`;
+}
 import { exportDefinitionMap } from "@/lib/export-definitions";
 
 function csvResponse(type: string, rows: Record<string, unknown>[]) {

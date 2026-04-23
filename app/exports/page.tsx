@@ -57,7 +57,7 @@ export default function ExportsPage() {
                       <div key={group} className="space-y-3">
                         <div className="flex items-center justify-between gap-3">
                           <p className="text-sm font-semibold tracking-wide text-foreground/90">{group}</p>
-                          <Badge variant="secondary" className="rounded-full">{items.length} exports</Badge>
+                          <Badge className="rounded-full bg-background/70">{items.length} exports</Badge>
                         </div>
                         <div className="grid gap-4 md:grid-cols-2">
                           {items.map((item) => (
