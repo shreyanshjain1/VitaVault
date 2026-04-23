@@ -13,7 +13,7 @@ function parseTimeOfDay(timeOfDay: string) {
   };
 }
 
-async function createReminderAuditLog(args: {
+export async function createReminderAuditLog(args: {
   userId: string;
   reminderId?: string | null;
   actorUserId?: string | null;

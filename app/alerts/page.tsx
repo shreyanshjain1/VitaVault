@@ -4,7 +4,6 @@ import { AppShell } from "@/components/app-shell";
 import { PageHeader, StatusPill } from "@/components/common";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
 import { requireUser } from "@/lib/session";
-import { outboundEmailEnabled } from "@/lib/outbound-email";
 import { getAlertList, getAlertRules } from "@/lib/alerts/queries";
 import { AlertFilterBar } from "@/components/alerts/alert-filter-bar";
 import { AlertList } from "@/components/alerts/alert-list";
@@ -22,7 +21,6 @@ export default async function AlertsPage({
   const severity = typeof params.severity === "string" ? params.severity : "ALL";
   const category = typeof params.category === "string" ? params.category : "ALL";
 
-  const emailEnabled = outboundEmailEnabled();
 
   const [alerts, rules] = await Promise.all([
     getAlertList({
