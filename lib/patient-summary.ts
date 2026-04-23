@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 
 export async function getPatientSummaryData(userId: string) {
+  const generatedAt = new Date();
+
   const [
     profile,
     meds,
@@ -12,6 +14,8 @@ export async function getPatientSummaryData(userId: string) {
     reminders,
     docs,
     alerts,
+    latestInsight,
+    careAccess,
   ] = await Promise.all([
     db.healthProfile.findUnique({ where: { userId } }),
     db.medication.findMany({
@@ -60,9 +64,28 @@ export async function getPatientSummaryData(userId: string) {
       orderBy: { createdAt: "desc" },
       take: 8,
     }),
+    db.aiInsight.findFirst({
+      where: { ownerUserId: userId },
+      orderBy: { createdAt: "desc" },
+    }),
+    db.careAccess.findMany({
+      where: { ownerUserId: userId, status: "ACTIVE" },
+      include: {
+        member: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 6,
+    }),
   ]);
 
   return {
+    generatedAt,
     profile,
     meds,
     appointments,
@@ -73,6 +96,8 @@ export async function getPatientSummaryData(userId: string) {
     reminders,
     docs,
     alerts,
+    latestInsight,
+    careAccess,
     stats: {
       medications: meds.length,
       appointments: appointments.length,
@@ -83,6 +108,8 @@ export async function getPatientSummaryData(userId: string) {
       reminders: reminders.length,
       documents: docs.length,
       alerts: alerts.length,
+      careMembers: careAccess.length,
+      hasInsight: latestInsight ? 1 : 0,
     },
   };
 }

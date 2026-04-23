@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Printer } from "lucide-react";
+import { FileText, Printer, Sparkles } from "lucide-react";
 
 export function SummaryExportActions() {
   return (
@@ -17,10 +17,19 @@ export function SummaryExportActions() {
         href="/summary/print"
         target="_blank"
         rel="noreferrer"
-        className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium transition hover:bg-muted/60 hover:border-border"
+        className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium transition hover:border-border hover:bg-muted/60"
       >
         <FileText className="h-4 w-4" />
-        Open print view
+        Standard PDF view
+      </a>
+      <a
+        href="/summary/print?mode=compact&autoprint=1"
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium transition hover:border-border hover:bg-muted/60"
+      >
+        <Sparkles className="h-4 w-4" />
+        Compact auto-print PDF
       </a>
     </div>
   );

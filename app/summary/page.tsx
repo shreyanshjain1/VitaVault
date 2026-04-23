@@ -1,4 +1,4 @@
-import { AlertTriangle, CalendarDays, FileText, ShieldCheck } from "lucide-react";
+import { AlertTriangle, CalendarDays, FileText, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { requireUser } from "@/lib/session";
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
@@ -12,7 +12,22 @@ import { getPatientSummaryData } from "@/lib/patient-summary";
 export default async function SummaryPage() {
   const user = await requireUser();
   const data = await getPatientSummaryData(user.id!);
-  const { profile, meds, appointments, labs, vitals, symptoms, vaccinations, reminders, docs, alerts, stats } = data;
+  const {
+    generatedAt,
+    profile,
+    meds,
+    appointments,
+    labs,
+    vitals,
+    symptoms,
+    vaccinations,
+    reminders,
+    docs,
+    alerts,
+    stats,
+    latestInsight,
+    careAccess,
+  } = data;
 
   return (
     <AppShell>
@@ -25,6 +40,7 @@ export default async function SummaryPage() {
               <div className="flex flex-wrap gap-3">
                 <Badge className="bg-background/70">Print-ready</Badge>
                 <Badge className="bg-background/70">PDF-friendly</Badge>
+                <Badge className="bg-background/70">{stats.careMembers} active share{stats.careMembers === 1 ? "" : "s"}</Badge>
                 <SummaryExportActions />
               </div>
             }
@@ -84,6 +100,87 @@ export default async function SummaryPage() {
                       <p className="text-sm font-medium">Care notes</p>
                       <p className="mt-2 text-sm text-muted-foreground">{profile?.notes ?? "—"}</p>
                     </DataCard>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-primary" />
+                      <CardTitle>Export profile</CardTitle>
+                    </div>
+                    <CardDescription className="mt-1">
+                      Snapshot metadata for handoff-ready PDF exports.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <DataCard>
+                      <div className="grid gap-3 text-sm md:grid-cols-2">
+                        <p><span className="font-medium">Prepared:</span> {formatDateTime(generatedAt)}</p>
+                        <p><span className="font-medium">Prepared by:</span> {user.name ?? user.email ?? "Signed-in user"}</p>
+                        <p><span className="font-medium">Reminder items:</span> {stats.reminders}</p>
+                        <p><span className="font-medium">Documents attached:</span> {stats.documents}</p>
+                        <p><span className="font-medium">Open alerts:</span> {stats.alerts}</p>
+                        <p><span className="font-medium">AI insight included:</span> {latestInsight ? "Yes" : "No"}</p>
+                      </div>
+                    </DataCard>
+                    <DataCard>
+                      <p className="text-sm font-medium">Print modes</p>
+                      <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+                        <li>• Standard PDF view for detailed patient handoff exports.</li>
+                        <li>• Compact auto-print view for a tighter browser Save as PDF flow.</li>
+                        <li>• Current page print keeps the richer card layout intact for internal use.</li>
+                      </ul>
+                    </DataCard>
+                  </CardContent>
+                </Card>
+
+                {latestInsight ? (
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        <CardTitle>Latest AI insight</CardTitle>
+                      </div>
+                      <CardDescription className="mt-1">
+                        Most recent generated clinical-style summary.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <DataCard>
+                        <p className="font-medium">{latestInsight.title}</p>
+                        <p className="mt-2 text-sm text-muted-foreground">{latestInsight.summary}</p>
+                        <p className="mt-2 text-xs text-muted-foreground">Generated {formatDateTime(latestInsight.createdAt)}</p>
+                      </DataCard>
+                    </CardContent>
+                  </Card>
+                ) : null}
+
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-primary" />
+                      <CardTitle>Care-team export access</CardTitle>
+                    </div>
+                    <CardDescription className="mt-1">
+                      Active members currently included in the patient-sharing layer.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {careAccess.length ? careAccess.map((member) => (
+                      <DataCard key={member.id}>
+                        <div className="flex flex-wrap items-start justify-between gap-3 text-sm">
+                          <div>
+                            <p className="font-medium">{member.member.name ?? member.member.email ?? "Care team member"}</p>
+                            <p className="mt-1 text-muted-foreground">{member.accessRole} • {member.status}</p>
+                          </div>
+                          <div className="text-right text-muted-foreground">
+                            <p>Export {member.canExport ? "enabled" : "disabled"}</p>
+                            <p>Edit {member.canEditRecords ? "enabled" : "disabled"}</p>
+                          </div>
+                        </div>
+                      </DataCard>
+                    )) : <p className="text-sm text-muted-foreground">No active care-team access relationships.</p>}
                   </CardContent>
                 </Card>
 
@@ -182,41 +279,47 @@ export default async function SummaryPage() {
                         <DataCard key={item.id}>
                           <p className="font-medium">{item.vaccineName}</p>
                           <p className="mt-1 text-sm text-muted-foreground">Dose {item.doseNumber} • {formatDate(item.dateTaken)}</p>
-                          <p className="text-sm text-muted-foreground">Next due: {formatDate(item.nextDueDate)}</p>
+                          <p className="text-sm text-muted-foreground">Next due {formatDate(item.nextDueDate)}</p>
                         </DataCard>
-                      )) : <p className="text-sm text-muted-foreground">No vaccination records available.</p>}
+                      )) : <p className="text-sm text-muted-foreground">No vaccinations available.</p>}
                     </CardContent>
                   </Card>
                 </div>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Labs and recent vitals</CardTitle>
-                    <CardDescription className="mt-1">Recent clinical results and basic vital snapshot.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="grid gap-6 lg:grid-cols-2">
-                    <div className="space-y-3">
-                      <p className="text-sm font-medium">Lab results</p>
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Recent labs</CardTitle>
+                      <CardDescription className="mt-1">Latest tests and highlighted flags.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
                       {labs.length ? labs.map((item) => (
                         <DataCard key={item.id}>
                           <p className="font-medium">{item.testName}</p>
-                          <p className="mt-1 text-sm text-muted-foreground">{formatDate(item.dateTaken)} • {item.resultSummary}</p>
-                          <p className="text-sm text-muted-foreground">{item.flag}</p>
+                          <p className="mt-1 text-sm text-muted-foreground">{formatDate(item.dateTaken)} • {item.flag}</p>
+                          <p className="text-sm text-muted-foreground">{item.resultSummary}</p>
                         </DataCard>
                       )) : <p className="text-sm text-muted-foreground">No lab results available.</p>}
-                    </div>
-                    <div className="space-y-3">
-                      <p className="text-sm font-medium">Vitals</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Recent vitals</CardTitle>
+                      <CardDescription className="mt-1">Recent measurements captured in the record.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
                       {vitals.length ? vitals.map((item) => (
                         <DataCard key={item.id}>
                           <p className="font-medium">{formatDateTime(item.recordedAt)}</p>
                           <p className="mt-1 text-sm text-muted-foreground">BP {bpLabel(item.systolic, item.diastolic)} • HR {item.heartRate ?? "—"}</p>
-                          <p className="text-sm text-muted-foreground">Sugar {item.bloodSugar ?? "—"} • Weight {item.weightKg ?? "—"}</p>
+                          <p className="text-sm text-muted-foreground">Blood sugar {item.bloodSugar ?? "—"} • O₂ {item.oxygenSaturation ?? "—"}</p>
+                          <p className="text-sm text-muted-foreground">Temp {item.temperatureC ?? "—"} • Weight {item.weightKg ?? "—"}</p>
                         </DataCard>
-                      )) : <p className="text-sm text-muted-foreground">No vitals available.</p>}
-                    </div>
-                  </CardContent>
-                </Card>
+                      )) : <p className="text-sm text-muted-foreground">No vital records available.</p>}
+                    </CardContent>
+                  </Card>
+                </div>
 
                 <div className="grid gap-6 lg:grid-cols-2">
                   <Card>
