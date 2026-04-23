@@ -11,7 +11,7 @@ import {
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader, StatusPill } from "@/components/common";
-import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
+import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
 import { getOpsHealthData, type OpsTone } from "@/lib/ops-health";
 import { requireUser } from "@/lib/session";
 
@@ -68,11 +68,11 @@ export default async function OpsPage() {
         <PageHeader
           title="Operations"
           description="Monitor deployment readiness, delivery health, and unresolved clinical workload from one business-facing workspace."
-          actions={(
+          action={(
             <div className="flex flex-wrap gap-2">
-              <Button asChild variant="outline"><Link href="/jobs">Job runs</Link></Button>
-              <Button asChild variant="outline"><Link href="/care-team">Care Team</Link></Button>
-              <Button asChild variant="outline"><Link href="/exports">Exports</Link></Button>
+              <Link href="/jobs" className="inline-flex h-10 items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium transition-all hover:border-border hover:bg-muted/60">Job runs</Link>
+              <Link href="/care-team" className="inline-flex h-10 items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium transition-all hover:border-border hover:bg-muted/60">Care Team</Link>
+              <Link href="/exports" className="inline-flex h-10 items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium transition-all hover:border-border hover:bg-muted/60">Exports</Link>
             </div>
           )}
         />
