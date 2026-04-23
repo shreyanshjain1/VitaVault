@@ -5,29 +5,9 @@ import { PageHeader } from "@/components/common";
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
 import { ModuleHero, DataCard } from "@/components/module-sections";
 import { PageTransition, StaggerGroup, StaggerItem } from "@/components/page-transition";
+import { exportDefinitions } from "@/lib/export-definitions";
 
-const exportsList = [
-  {
-    href: "/exports/appointments",
-    title: "Appointments CSV",
-    description: "Visit history, doctors, clinics, and statuses.",
-  },
-  {
-    href: "/exports/medications",
-    title: "Medications CSV",
-    description: "Medication plans, schedules, and current tracking data.",
-  },
-  {
-    href: "/exports/labs",
-    title: "Lab Results CSV",
-    description: "Lab history with dates, summaries, and flags.",
-  },
-  {
-    href: "/exports/vitals",
-    title: "Vitals CSV",
-    description: "Structured vital history for spreadsheet review.",
-  },
-];
+const groups = ["Core", "Monitoring", "Coordination"] as const;
 
 export default function ExportsPage() {
   return (
@@ -36,10 +16,10 @@ export default function ExportsPage() {
         <PageTransition>
           <PageHeader
             title="Exports"
-            description="Download structured CSV exports of your records for offline review, analysis, or handoff."
+            description="Download structured CSV exports of your records for offline review, spreadsheet analysis, handoff, or internal reporting."
             action={
               <div className="flex flex-wrap gap-2">
-                <Badge className="bg-background/70">{exportsList.length} export types</Badge>
+                <Badge className="bg-background/70">{exportDefinitions.length} export types</Badge>
                 <Badge className="bg-background/70">CSV only</Badge>
               </div>
             }
@@ -49,57 +29,67 @@ export default function ExportsPage() {
         <PageTransition delay={0.04}>
           <ModuleHero
             eyebrow="Data portability"
-            title="Structured record exports"
-            description="Exports are intentionally simple and operational so your data can move easily into Excel, reports, or client workflows."
+            title="Operational exports across the patient workspace"
+            description="Export coverage now extends beyond the original core modules so patient handoffs, admin review, and spreadsheet-based workflows are easier to support."
             stats={[
-              { label: "Available exports", value: exportsList.length },
+              { label: "Available exports", value: exportDefinitions.length },
               { label: "Format", value: "CSV" },
-              { label: "Scope", value: "Your records only" },
-              { label: "Use case", value: "Offline analysis" },
+              { label: "Coverage", value: "Core + coordination" },
+              { label: "Use case", value: "Offline reporting" },
             ]}
           />
         </PageTransition>
 
         <StaggerGroup delay={0.08}>
-          <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+          <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
             <StaggerItem>
               <Card>
                 <CardHeader>
                   <CardTitle>Export options</CardTitle>
                   <CardDescription className="mt-1">
-                    Download structured datasets from the main health modules.
+                    Download structured datasets from the main health, monitoring, and coordination modules.
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {exportsList.map((item) => (
-                      <DataCard key={item.href}>
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-start gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                              <FileSpreadsheet className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-semibold">{item.title}</p>
-                              <p className="mt-1 text-sm text-muted-foreground">
-                                {item.description}
-                              </p>
-                            </div>
-                          </div>
+                <CardContent className="space-y-6">
+                  {groups.map((group) => {
+                    const items = exportDefinitions.filter((item) => item.group === group);
+                    return (
+                      <div key={group} className="space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-semibold tracking-wide text-foreground/90">{group}</p>
+                          <Badge variant="secondary" className="rounded-full">{items.length} exports</Badge>
                         </div>
+                        <div className="grid gap-4 md:grid-cols-2">
+                          {items.map((item) => (
+                            <DataCard key={item.href}>
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-start gap-3">
+                                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                                    <FileSpreadsheet className="h-4 w-4" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-semibold">{item.title}</p>
+                                    <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
+                                  </div>
+                                </div>
+                              </div>
 
-                        <div className="mt-4">
-                          <Link
-                            href={item.href}
-                            className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-95"
-                          >
-                            <Download className="mr-2 h-4 w-4" />
-                            Download
-                          </Link>
+                              <div className="mt-4 flex items-center justify-between gap-3">
+                                <Badge className="bg-background/70">{item.format}</Badge>
+                                <Link
+                                  href={item.href}
+                                  className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-95"
+                                >
+                                  <Download className="mr-2 h-4 w-4" />
+                                  Download
+                                </Link>
+                              </div>
+                            </DataCard>
+                          ))}
                         </div>
-                      </DataCard>
-                    ))}
-                  </div>
+                      </div>
+                    );
+                  })}
                 </CardContent>
               </Card>
             </StaggerItem>
@@ -110,7 +100,7 @@ export default function ExportsPage() {
                   <CardHeader>
                     <CardTitle>Export guidance</CardTitle>
                     <CardDescription className="mt-1">
-                      Keep exports useful and controlled.
+                      Keep exports useful, readable, and operational.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -118,16 +108,23 @@ export default function ExportsPage() {
                       <p className="text-sm font-medium">Best use cases</p>
                       <ul className="mt-2 space-y-2 text-sm text-muted-foreground">
                         <li>Spreadsheet review</li>
-                        <li>Admin reporting</li>
-                        <li>Record backup</li>
-                        <li>Manual data analysis</li>
+                        <li>Clinical handoff support</li>
+                        <li>Operational reporting</li>
+                        <li>Record backup and audit prep</li>
                       </ul>
                     </DataCard>
 
                     <DataCard>
                       <p className="text-sm font-medium">Current format</p>
                       <p className="mt-2 text-sm text-muted-foreground">
-                        CSV keeps the export simple, widely compatible, and easy to inspect.
+                        CSV keeps the export simple, widely compatible, and easy to open in Excel, Google Sheets, or internal reporting tools.
+                      </p>
+                    </DataCard>
+
+                    <DataCard>
+                      <p className="text-sm font-medium">Also available</p>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        For print-ready handoffs, the patient summary page provides a separate PDF-friendly browser print workflow.
                       </p>
                     </DataCard>
                   </CardContent>
@@ -138,7 +135,7 @@ export default function ExportsPage() {
                     <div className="flex items-start gap-3">
                       <ShieldCheck className="mt-0.5 h-4 w-4 text-primary" />
                       <p className="text-sm text-muted-foreground">
-                        These exports are scoped to the signed-in user’s records and meant for controlled operational use.
+                        These exports are scoped to the signed-in user’s records and intended for controlled operational use only.
                       </p>
                     </div>
                   </CardContent>
