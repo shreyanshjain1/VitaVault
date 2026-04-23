@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Pill,
   ShieldPlus,
+  ShieldCheck,
   Smartphone,
   Sparkles,
   Stethoscope,
@@ -125,6 +126,12 @@ export const primaryRoutes: AppRouteItem[] = [
 ];
 
 export const utilityRoutes: AppRouteItem[] = [
+  {
+    title: "Security",
+    href: "/security",
+    description: "Password rotation and mobile session visibility",
+    icon: ShieldCheck,
+  },
   {
     title: "Exports",
     href: "/exports",
