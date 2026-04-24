@@ -64,7 +64,12 @@ export function SignupForm({ callbackUrl }: { callbackUrl?: string }) {
             </div>
 
             <div className="space-y-2">
-              <p className="text-sm font-medium text-foreground/90">Password</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-medium text-foreground/90">Password</p>
+                <Link href="/forgot-password" className="text-xs font-medium text-primary">
+                  Forgot password?
+                </Link>
+              </div>
               <Input name="password" type="password" placeholder="••••••••" required />
             </div>
 
@@ -115,7 +120,12 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
             </div>
 
             <div className="space-y-2">
-              <p className="text-sm font-medium text-foreground/90">Password</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-medium text-foreground/90">Password</p>
+                <Link href="/forgot-password" className="text-xs font-medium text-primary">
+                  Forgot password?
+                </Link>
+              </div>
               <Input name="password" type="password" placeholder="••••••••" required />
             </div>
 

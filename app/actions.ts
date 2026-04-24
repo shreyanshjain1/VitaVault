@@ -18,6 +18,11 @@ import { requireUser } from "@/lib/session";
 import { deleteUpload, saveUpload } from "@/lib/upload";
 import { validateDocumentLinkOwnership } from "@/lib/document-links";
 import { healthProfileSchema, signupSchema } from "@/lib/validations";
+import {
+  isEmailDeliveryConfigured,
+  isEmailVerificationRequired,
+  sendEmailVerificationEmail,
+} from "@/lib/account-email";
 
 export type AuthActionState = {
   error: string | null;
@@ -74,9 +79,18 @@ export async function signupAction(
     return { error: "An account with that email already exists.", success: null };
   }
 
+  const requireVerification = isEmailVerificationRequired();
+
+  if (requireVerification && !isEmailDeliveryConfigured()) {
+    return {
+      error: "Email verification is required, but email delivery is not configured yet.",
+      success: null,
+    };
+  }
+
   const passwordHash = await bcrypt.hash(password, 12);
 
-  await db.user.create({
+  const createdUser = await db.user.create({
     data: {
       name: parsed.data.name.trim(),
       email,
@@ -87,7 +101,23 @@ export async function signupAction(
         },
       },
     },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+    },
   });
+
+  if (isEmailDeliveryConfigured()) {
+    await sendEmailVerificationEmail(createdUser);
+  }
+
+  if (requireVerification) {
+    return {
+      error: null,
+      success: "Account created. Please verify your email before signing in.",
+    };
+  }
 
   try {
     await signIn("credentials", {
@@ -122,6 +152,7 @@ export async function loginAction(
     select: {
       id: true,
       passwordHash: true,
+      emailVerified: true,
     },
   });
 
@@ -132,6 +163,13 @@ export async function loginAction(
   const isValid = await bcrypt.compare(password, user.passwordHash);
   if (!isValid) {
     return { error: "Invalid email or password.", success: null };
+  }
+
+  if (isEmailVerificationRequired() && !user.emailVerified) {
+    return {
+      error: "Please verify your email before signing in.",
+      success: null,
+    };
   }
 
   try {

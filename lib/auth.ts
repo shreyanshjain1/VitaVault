@@ -7,6 +7,7 @@ import { z } from "zod";
 import { AppRole } from "@prisma/client";
 
 import { db } from "@/lib/db";
+import { isEmailVerificationRequired } from "@/lib/account-email";
 
 const credentialsSchema = z.object({
   email: z.string().trim().email(),
@@ -56,6 +57,10 @@ export const authConfig = {
         const isValid = await bcrypt.compare(password, user.passwordHash);
 
         if (!isValid) {
+          return null;
+        }
+
+        if (isEmailVerificationRequired() && !user.emailVerified) {
           return null;
         }
 
