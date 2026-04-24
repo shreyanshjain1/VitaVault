@@ -133,6 +133,12 @@ export const utilityRoutes: AppRouteItem[] = [
     icon: ShieldCheck,
   },
   {
+    title: "Admin",
+    href: "/admin",
+    description: "User oversight, audit review, and system visibility",
+    icon: Users,
+  },
+  {
     title: "Exports",
     href: "/exports",
     description: "Export records and reports",
