@@ -67,7 +67,11 @@ export async function resendVerificationEmailAction(): Promise<AccountActionStat
     };
   }
 
-  await sendEmailVerificationEmail(dbUser);
+  await sendEmailVerificationEmail({
+    userId: dbUser.id,
+    email: dbUser.email,
+    name: dbUser.name,
+  });
 
   return {
     error: null,
@@ -79,6 +83,8 @@ export async function forgotPasswordAction(
   _: AccountActionState = initialResponse,
   formData: FormData
 ): Promise<AccountActionState> {
+  void _;
+
   const parsed = forgotPasswordSchema.safeParse({
     email: formData.get("email"),
   });
@@ -105,7 +111,11 @@ export async function forgotPasswordAction(
   });
 
   if (user?.passwordHash) {
-    await sendPasswordResetEmail(user);
+    await sendPasswordResetEmail({
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+    });
   }
 
   return {
@@ -118,6 +128,8 @@ export async function resetPasswordAction(
   _: AccountActionState = initialResponse,
   formData: FormData
 ): Promise<AccountActionState> {
+  void _;
+
   const parsed = resetPasswordSchema.safeParse({
     token: formData.get("token"),
     password: formData.get("password"),

@@ -109,7 +109,11 @@ export async function signupAction(
   });
 
   if (isEmailDeliveryConfigured()) {
-    await sendEmailVerificationEmail(createdUser);
+    await sendEmailVerificationEmail({
+      userId: createdUser.id,
+      email: createdUser.email,
+      name: createdUser.name,
+    });
   }
 
   if (requireVerification) {
