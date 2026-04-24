@@ -54,6 +54,10 @@ export const authConfig = {
           return null;
         }
 
+        if (user.deactivatedAt) {
+          return null;
+        }
+
         const isValid = await bcrypt.compare(password, user.passwordHash);
 
         if (!isValid) {
@@ -114,8 +118,13 @@ export const authConfig = {
             name: true,
             email: true,
             image: true,
+            deactivatedAt: true,
           },
         });
+
+        if (dbUser?.deactivatedAt) {
+          return {};
+        }
 
         if (dbUser) {
           token.role = dbUser.role;

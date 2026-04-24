@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 const authMock = vi.fn();
 const findManyMock = vi.fn();
+const findUniqueMock = vi.fn();
 
 vi.mock("@/lib/auth", () => ({
   auth: authMock,
@@ -9,6 +10,9 @@ vi.mock("@/lib/auth", () => ({
 
 vi.mock("@/lib/db", () => ({
   db: {
+    user: {
+      findUnique: findUniqueMock,
+    },
     medication: {
       findMany: findManyMock,
     },
@@ -20,10 +24,17 @@ describe("exports route", () => {
     vi.resetModules();
     authMock.mockReset();
     findManyMock.mockReset();
+    findUniqueMock.mockReset();
+    findUniqueMock.mockResolvedValue({
+      id: "user_1",
+      email: "user@example.com",
+      deactivatedAt: null,
+    });
   });
 
   it("returns 404 json for an unknown export type", async () => {
     authMock.mockResolvedValue({ user: { id: "user_1" } });
+
     const { GET } = await import("@/app/exports/[type]/route");
     const response = await GET(new Request("http://localhost/exports/nope"), {
       params: Promise.resolve({ type: "nope" }),
