@@ -89,8 +89,8 @@ export default async function DocumentsPage({
             stats={[
               { label: "Stored files", value: documents.length },
               { label: "Linked records", value: linkedCount },
+              { label: "Access mode", value: "Protected delivery" },
               { label: "Latest upload", value: latest ? latest.title : "—" },
-              { label: "Latest type", value: latest ? latest.type : "—" },
             ]}
           />
         </PageTransition>
@@ -235,12 +235,12 @@ export default async function DocumentsPage({
 
                             {document.filePath ? (
                               <a
-                                href={document.filePath}
+                                href={`/api/documents/${document.id}/download`}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="text-sm font-medium text-primary"
                               >
-                                Open file
+                                Open secure file
                               </a>
                             ) : null}
                           </div>

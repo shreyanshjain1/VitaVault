@@ -29,6 +29,8 @@ prisma/dev.db-journal
 # uploads
 public/uploads/*
 !public/uploads/.gitkeep
+private-uploads/*
+!private-uploads/.gitkeep
 
 # misc
 .DS_Store
