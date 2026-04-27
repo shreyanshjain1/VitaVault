@@ -4,7 +4,7 @@ import { demoTimeline } from "@/lib/demo-data";
 export default function DemoTimelinePage() {
   return (
     <div className="space-y-6">
-      <DemoHeader eyebrow="Unified history" title="Timeline" description="A public mirror of VitaVault’s cross-module patient timeline, combining reminders, labs, appointments, and alert events into one longitudinal view." />
+      <DemoHeader eyebrow="Unified history" title="Timeline" description="Follow the patient story in order, with reminders, labs, appointments, and alerts all shown in one running history." />
       <MetricGrid items={[
         { label: "Events shown", value: String(demoTimeline.length), note: "Cross-module activity" },
         { label: "Sources", value: "4", note: "Reminder, alert, lab, appointment" },

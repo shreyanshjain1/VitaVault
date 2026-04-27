@@ -5,7 +5,7 @@ import { demoNav, demoDashboardStats, demoSummary, demoOps } from "@/lib/demo-da
 export default function DemoOverviewPage() {
   return (
     <div className="space-y-6">
-      <DemoHeader eyebrow="No login required" title="Explore VitaVault Demo" description="This public demo is a deeper mirror of VitaVault’s real authenticated product: patient records, reminders, alerts, exports, security, operations, and admin oversight, all shown with safe sample data." actions={<><Link href="/demo/dashboard" className="rounded-2xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Open dashboard</Link><Link href="/demo/admin" className="rounded-2xl border border-border/60 px-4 py-2 text-sm font-medium hover:bg-muted/60">See admin view</Link></>} />
+      <DemoHeader eyebrow="No login required" title="Explore VitaVault Demo" description="Walk through the main VitaVault modules with sample patient data. Everything here is read-only, but the layouts and workflows match the real product closely." actions={<><Link href="/demo/dashboard" className="rounded-2xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Start tour</Link><Link href="/demo/admin" className="rounded-2xl border border-border/60 px-4 py-2 text-sm font-medium hover:bg-muted/60">Open admin preview</Link></>} />
       <MetricGrid items={demoDashboardStats} />
       <DemoSection title="What this demo covers" description="The goal here is parity with the real VitaVault product surface, not just a landing-page teaser.">
         <SimpleTable headers={["Area", "What you can inspect in demo"]} rows={demoNav.slice(1).map((item) => [item.label, item.description ?? `Read-only mirror of the ${item.label.toLowerCase()} module`])} />
