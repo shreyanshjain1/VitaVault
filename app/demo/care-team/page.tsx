@@ -3,27 +3,17 @@ import { demoCareTeam } from "@/lib/demo-data";
 
 export default function DemoCareTeamPage() {
   const memberHeaders = ["Name", "Role", "Access", "Status"];
-  const memberRows = demoCareTeam.members.map((item, index) => ({
-    key: `${item.name}-${index}`,
-    cells: [item.name, item.role, item.access, item.status],
-  }));
+  const memberRows = demoCareTeam.members.map((item) => ({ key: item.name, cells: [item.name, item.role, item.access, item.status] }));
   const inviteHeaders = ["Recipient", "Role", "Sent", "Delivery", "Status"];
-  const inviteRows = demoCareTeam.invites.map((item, index) => ({
-    key: `${item.recipient}-${index}`,
-    cells: [item.recipient, item.role, item.sentAt, item.delivery, item.status],
-  }));
-
+  const inviteRows = demoCareTeam.invites.map((item) => ({ key: `${item.recipient}-${item.sentAt}`, cells: [item.recipient, item.role, item.sentAt, item.delivery, item.status] }));
   return (
     <div className="space-y-6">
-      <DemoHeader
-        title="Care Team"
-        description="Show how family members and clinicians can be invited into the record with the right level of access."
-      />
+      <DemoHeader title="Care Team" description="Shared access, pending invites, and role-based collaboration across patient care." />
       <div className="grid gap-6 xl:grid-cols-2">
-        <DemoSection title="Active members" description="People who currently have access to the patient workspace.">
+        <DemoSection title="Active members">
           <SimpleTable headers={memberHeaders} rows={memberRows} />
         </DemoSection>
-        <DemoSection title="Pending invites" description="Invite status, delivery state, and role selection in one glance.">
+        <DemoSection title="Pending invites">
           <SimpleTable headers={inviteHeaders} rows={inviteRows} />
         </DemoSection>
       </div>

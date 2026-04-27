@@ -13,10 +13,10 @@ export default function DemoDashboardPage() {
       ]} />
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <DemoSection title="Recent timeline" description="Mirrors the real dashboard’s running patient activity feed.">
-          <SimpleTable headers={["When", "Type", "Title", "Detail"]} rows={demoTimeline.map((item) => [item.at, item.type, item.title, item.detail])} />
+          <SimpleTable headers={["When", "Type", "Title", "Detail"]} rows={demoTimeline.map((item) => ({ key: `${item.at}-${item.title}`, cells: [item.at, item.type, item.title, item.detail] }))} />
         </DemoSection>
         <DemoSection title="Reminder center snapshot" description="Upcoming and recently dispatched nudges across medication and appointments.">
-          <SimpleTable headers={["Reminder", "When", "Channel", "State"]} rows={demoReminders.map((item) => [item.title, item.when, item.channel, item.state])} />
+          <SimpleTable headers={["Reminder", "When", "Channel", "State"]} rows={demoReminders.map((item) => ({ key: `${item.title}-${item.when}`, cells: [item.title, item.when, item.channel, item.state] }))} />
         </DemoSection>
       </div>
       <DemoSection title="Demo-only actions" description="These mirror the real app action zones, but stay safely read-only here.">
