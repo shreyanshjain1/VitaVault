@@ -86,7 +86,9 @@ export function Badge({ children }: { children: ReactNode }) {
   return <span className="inline-flex rounded-full border border-border/60 bg-background/70 px-2.5 py-1 text-xs font-medium">{children}</span>;
 }
 
-export function SimpleTable({ headers, rows }: { headers: string[]; rows: { key: string; cells: ReactNode[] }[] }) {
+type SimpleTableRow = { key: string; cells: ReactNode[] } | ReactNode[];
+
+export function SimpleTable({ headers, rows }: { headers: string[]; rows: SimpleTableRow[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full text-sm">
@@ -98,13 +100,17 @@ export function SimpleTable({ headers, rows }: { headers: string[]; rows: { key:
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={row.key} className="border-b border-border/40 last:border-0">
-              {row.cells.map((cell, cellIndex) => (
-                <td key={`${row.key}-${cellIndex}`} className="px-3 py-3 align-top">{cell}</td>
+          {rows.map((row, rowIndex) => {
+            const resolvedRow = Array.isArray(row) ? row : row.cells;
+            const rowKey = Array.isArray(row) ? `row-${rowIndex}` : row.key;
+            return (
+            <tr key={rowKey} className="border-b border-border/40 last:border-0">
+              {resolvedRow.map((cell, cellIndex) => (
+                <td key={`${rowKey}-${cellIndex}`} className="px-3 py-3 align-top">{cell}</td>
               ))}
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>

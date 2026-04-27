@@ -1,4 +1,4 @@
-import { BulletList, DemoHeader, DemoSection, MetricGrid, StatCards } from "@/components/demo-primitives";
+import { BulletList, DemoHeader, DemoSection, MetricGrid, StatCards, ToneBadge } from "@/components/demo-primitives";
 import { demoAiInsights } from "@/lib/demo-data";
 
 export default function DemoAiInsightsPage() {
