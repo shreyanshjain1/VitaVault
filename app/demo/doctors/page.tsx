@@ -4,7 +4,7 @@ import { demoDoctors } from "@/lib/demo-data";
 export default function DemoDoctorsPage() {
   return (
     <div className="space-y-6">
-      <DemoHeader eyebrow="Care network" title="Doctors" description="Shows the provider directory users manage in VitaVault, including specialties, clinic linkage, and communication context." />
+      <DemoHeader eyebrow="Care network" title="Doctors" description="Keep the care network in one place, with specialties, clinics, and contact details ready when follow-up is needed." />
       <MetricGrid items={[
         { label: "Tracked providers", value: String(demoDoctors.length), note: "Primary and specialty care" },
         { label: "Specialties", value: "3", note: "Endocrinology, internal medicine, ophthalmology" },

@@ -2,6 +2,7 @@ import { DemoHeader, DemoSection, SimpleTable } from "@/components/demo-primitiv
 import { demoMedications } from "@/lib/demo-data";
 
 export default function DemoMedicationsPage() {
+  const headers = ["Medication", "Dosage", "Frequency", "Times", "Status", "Doctor", "Adherence", "Instructions"];
   const rows = demoMedications.map((item) => [
     item.name,
     item.dosage,
@@ -12,12 +13,11 @@ export default function DemoMedicationsPage() {
     item.adherence,
     item.instructions,
   ]);
-
   return (
     <div className="space-y-6">
       <DemoHeader title="Medications" description="Schedules, adherence signals, linked doctors, and patient-facing instructions." />
       <DemoSection title="Active medication plan">
-        <SimpleTable headers={["Medication", "Dosage", "Frequency", "Times", "Status", "Doctor", "Adherence", "Instructions"]} rows={rows} />
+        <SimpleTable headers={headers} rows={rows} />
       </DemoSection>
     </div>
   );

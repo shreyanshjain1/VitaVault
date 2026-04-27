@@ -4,7 +4,7 @@ import { demoDashboardStats, demoTimeline, demoReminders, demoSummary, demoAlert
 export default function DemoDashboardPage() {
   return (
     <div className="space-y-6">
-      <DemoHeader eyebrow="Patient command center" title="Dashboard" description="A richer public mirror of VitaVault’s patient dashboard, showing health status, reminders, alerts, and the running care story for Elena Cruz." />
+      <DemoHeader eyebrow="Patient command center" title="Dashboard" description="Get a quick picture of the patient record, with reminders, alerts, recent activity, and the main care priorities in one place." />
       <MetricGrid items={demoDashboardStats} />
       <StatCards items={[
         { title: "Clinical snapshot", body: demoSummary.snapshot, status: "Healthy" },

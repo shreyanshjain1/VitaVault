@@ -4,14 +4,14 @@ import { demoPatient } from "@/lib/demo-data";
 export default function DemoHealthProfilePage() {
   return (
     <div className="space-y-6">
-      <DemoHeader eyebrow="Patient identity and baseline" title="Health Profile" description="This mirrors VitaVault’s health profile page with patient basics, contact context, risk factors, and baseline measurements using safe hardcoded demo data." />
+      <DemoHeader eyebrow="Patient identity and baseline" title="Health Profile" description="See the patient basics, emergency details, baseline clinical context, and notes that set up the rest of the record." />
       <MetricGrid items={[
         { label: "Age", value: String(demoPatient.age), note: demoPatient.sex },
         { label: "Blood type", value: demoPatient.bloodType, note: "Recorded and verified" },
         { label: "BMI", value: String(demoPatient.bmi), note: `${demoPatient.heightCm} cm · ${demoPatient.weightKg} kg` },
         { label: "Last updated", value: demoPatient.lastUpdated, note: "Profile review complete" },
       ]} />
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid gap-6 2xl:grid-cols-[1.1fr_0.9fr]">
         <DemoSection title="Profile details">
           <KeyValueList items={[
             { label: "Full name", value: demoPatient.name },
@@ -26,7 +26,7 @@ export default function DemoHealthProfilePage() {
           <StatCards items={[
             { title: "Allergies", body: demoPatient.allergies.join(", "), status: "Watch" },
             { title: "Chronic conditions", body: demoPatient.chronicConditions.join(", "), status: "Monitor" },
-            { title: "Risk framing", body: "Current records show stable blood pressure and improving diabetes control, with neuropathy monitoring still needed.", status: "Info" },
+            { title: "Current focus", body: "Blood pressure is stable, diabetes control is improving, and recurring tingling is still being watched before the next specialist visit.", status: "Info" },
           ]} />
         </DemoSection>
       </div>

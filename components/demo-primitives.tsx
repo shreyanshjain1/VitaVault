@@ -20,12 +20,12 @@ function inferTone(value: string) {
 
 export function DemoHeader({ title, description, eyebrow, actions }: { title: string; description: string; eyebrow?: string; actions?: ReactNode }) {
   return (
-    <div className="rounded-[28px] border border-border/60 bg-background/75 p-6 shadow-sm">
+    <div className="rounded-[28px] border border-border/60 bg-background/80 p-6 shadow-sm">
       {eyebrow ? <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">{eyebrow}</p> : null}
       <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
-        <div>
+        <div className="max-w-3xl">
           <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
-          <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{description}</p>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
         </div>
         <div className="flex flex-wrap gap-2">{actions ?? (
           <>
@@ -40,10 +40,10 @@ export function DemoHeader({ title, description, eyebrow, actions }: { title: st
 
 export function DemoSection({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return (
-    <section className="rounded-[28px] border border-border/60 bg-background/75 p-6 shadow-sm">
+    <section className="rounded-[28px] border border-border/60 bg-background/80 p-6 shadow-sm">
       <div className="mb-4">
         <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
-        {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
+        {description ? <p className="mt-1 text-sm leading-6 text-muted-foreground">{description}</p> : null}
       </div>
       {children}
     </section>
@@ -52,12 +52,12 @@ export function DemoSection({ title, description, children }: { title: string; d
 
 export function MetricGrid({ items }: { items: { label: string; value: string; note?: string }[] }) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
       {items.map((item) => (
-        <div key={item.label} className="rounded-[28px] border border-border/60 bg-background/75 p-5 shadow-sm">
+        <div key={item.label} className="rounded-[24px] border border-border/60 bg-background/80 p-5 shadow-sm">
           <p className="text-sm text-muted-foreground">{item.label}</p>
           <p className="mt-2 text-3xl font-semibold tracking-tight">{item.value}</p>
-          {item.note ? <p className="mt-2 text-sm text-muted-foreground">{item.note}</p> : null}
+          {item.note ? <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.note}</p> : null}
         </div>
       ))}
     </div>
@@ -66,11 +66,11 @@ export function MetricGrid({ items }: { items: { label: string; value: string; n
 
 export function KeyValueList({ items }: { items: { label: string; value: string }[] }) {
   return (
-    <dl className="grid gap-3 sm:grid-cols-2">
+    <dl className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
       {items.map((item) => (
         <div key={item.label} className="rounded-2xl border border-border/60 bg-background/60 p-4">
           <dt className="text-sm text-muted-foreground">{item.label}</dt>
-          <dd className="mt-1 font-medium">{item.value}</dd>
+          <dd className="mt-1 text-sm font-medium leading-6 text-foreground">{item.value}</dd>
         </div>
       ))}
     </dl>
@@ -115,7 +115,7 @@ export function BulletList({ items }: { items: string[] }) {
   return (
     <ul className="space-y-3 text-sm text-muted-foreground">
       {items.map((item) => (
-        <li key={item} className="rounded-2xl border border-border/50 bg-background/60 px-4 py-3 text-foreground">{item}</li>
+        <li key={item} className="rounded-2xl border border-border/50 bg-background/60 px-4 py-3 leading-6 text-foreground">{item}</li>
       ))}
     </ul>
   );
@@ -123,14 +123,14 @@ export function BulletList({ items }: { items: string[] }) {
 
 export function StatCards({ items }: { items: { title: string; body: string; status?: string }[] }) {
   return (
-    <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
       {items.map((item) => (
-        <div key={item.title} className="rounded-[28px] border border-border/60 bg-background/75 p-5 shadow-sm">
+        <div key={item.title} className="rounded-[24px] border border-border/60 bg-background/80 p-5 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <h3 className="font-semibold tracking-tight">{item.title}</h3>
             {item.status ? <ToneBadge value={item.status} /> : null}
           </div>
-          <p className="mt-3 text-sm text-muted-foreground">{item.body}</p>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">{item.body}</p>
         </div>
       ))}
     </div>

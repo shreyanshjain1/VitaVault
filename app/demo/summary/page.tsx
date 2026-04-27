@@ -4,7 +4,7 @@ import { demoSummary, demoPatient, demoCareTeam } from "@/lib/demo-data";
 export default function DemoSummaryPage() {
   return (
     <div className="space-y-6">
-      <DemoHeader eyebrow="Patient handoff" title="Summary" description="A more app-like version of VitaVault’s patient summary and export handoff page, combining high-level narrative, care-team context, and snapshot highlights." />
+      <DemoHeader eyebrow="Patient handoff" title="Summary" description="Read the same kind of high-level handoff view you would use before a consult, family update, or care transition." />
       <MetricGrid items={[
         { label: "Patient", value: demoPatient.name, note: `${demoPatient.age} · ${demoPatient.sex}` },
         { label: "Care members", value: String(demoCareTeam.members.length), note: "Included in handoff context" },
