@@ -86,7 +86,7 @@ export function Badge({ children }: { children: ReactNode }) {
   return <span className="inline-flex rounded-full border border-border/60 bg-background/70 px-2.5 py-1 text-xs font-medium">{children}</span>;
 }
 
-export function SimpleTable({ headers, rows }: { headers: string[]; rows: ReactNode[][] }) {
+export function SimpleTable({ headers, rows }: { headers: string[]; rows: { key: string; cells: ReactNode[] }[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full text-sm">
@@ -98,10 +98,10 @@ export function SimpleTable({ headers, rows }: { headers: string[]; rows: ReactN
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, rowIndex) => (
-            <tr key={rowIndex} className="border-b border-border/40 last:border-0">
-              {row.map((cell, cellIndex) => (
-                <td key={`${rowIndex}-${cellIndex}`} className="px-3 py-3 align-top">{cell}</td>
+          {rows.map((row) => (
+            <tr key={row.key} className="border-b border-border/40 last:border-0">
+              {row.cells.map((cell, cellIndex) => (
+                <td key={`${row.key}-${cellIndex}`} className="px-3 py-3 align-top">{cell}</td>
               ))}
             </tr>
           ))}
