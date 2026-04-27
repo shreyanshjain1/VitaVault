@@ -2,11 +2,13 @@ import { DemoHeader, DemoSection, SimpleTable } from "@/components/demo-primitiv
 import { demoReviewQueue } from "@/lib/demo-data";
 
 export default function DemoReviewQueuePage() {
+  const rows = demoReviewQueue.map((item) => [item.item, item.source, item.tone, item.owner, item.status]);
+
   return (
     <div className="space-y-6">
       <DemoHeader title="Review Queue" description="Items surfaced for clinical follow-up, caregiver action, and admin handoff." />
       <DemoSection title="Review workload">
-        <SimpleTable headers={["Item", "Source", "Tone", "Owner", "Status"]} rows={demoReviewQueue.map((item) => [item.item, item.source, item.tone, item.owner, item.status])} />
+        <SimpleTable headers={["Item", "Source", "Tone", "Owner", "Status"]} rows={rows} />
       </DemoSection>
     </div>
   );

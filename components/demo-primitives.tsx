@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ReactNode } from "react";
 
 const toneClasses: Record<string, string> = {
   danger: "border-red-200 bg-red-50 text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300",
@@ -11,28 +12,33 @@ const toneClasses: Record<string, string> = {
 function inferTone(value: string) {
   const normalized = value.toLowerCase();
   if (["critical", "deactivated", "error", "failed", "revoked"].some((token) => normalized.includes(token))) return "danger";
-  if (["warning", "due", "retry", "watch"].some((token) => normalized.includes(token))) return "warning";
-  if (["active", "good", "ready", "verified", "succeeded", "up to date", "healthy", "configured"].some((token) => normalized.includes(token))) return "success";
-  if (["pending", "monitor", "open", "queued", "info"].some((token) => normalized.includes(token))) return "info";
+  if (["warning", "due", "retry", "watch", "pending"].some((token) => normalized.includes(token))) return "warning";
+  if (["active", "good", "ready", "verified", "succeeded", "up to date", "healthy", "configured", "completed", "sent"].some((token) => normalized.includes(token))) return "success";
+  if (["monitor", "open", "queued", "info", "limited"].some((token) => normalized.includes(token))) return "info";
   return "neutral";
 }
 
-export function DemoHeader({ title, description }: { title: string; description: string }) {
+export function DemoHeader({ title, description, eyebrow, actions }: { title: string; description: string; eyebrow?: string; actions?: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-4 rounded-[28px] border border-border/60 bg-background/75 p-6 shadow-sm">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
-        <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{description}</p>
-      </div>
-      <div className="flex gap-2">
-        <Link href="/demo/summary" className="rounded-2xl border border-border/60 px-4 py-2 text-sm font-medium hover:bg-muted/60">Summary</Link>
-        <Link href="/demo/admin" className="rounded-2xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Admin view</Link>
+    <div className="rounded-[28px] border border-border/60 bg-background/75 p-6 shadow-sm">
+      {eyebrow ? <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">{eyebrow}</p> : null}
+      <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
+          <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{description}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">{actions ?? (
+          <>
+            <Link href="/demo/summary" className="rounded-2xl border border-border/60 px-4 py-2 text-sm font-medium hover:bg-muted/60">Summary</Link>
+            <Link href="/demo/admin" className="rounded-2xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Admin view</Link>
+          </>
+        )}</div>
       </div>
     </div>
   );
 }
 
-export function DemoSection({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+export function DemoSection({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return (
     <section className="rounded-[28px] border border-border/60 bg-background/75 p-6 shadow-sm">
       <div className="mb-4">
@@ -76,11 +82,11 @@ export function ToneBadge({ value }: { value: string }) {
   return <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${toneClasses[tone]}`}>{value}</span>;
 }
 
-export function Badge({ children }: { children: React.ReactNode }) {
+export function Badge({ children }: { children: ReactNode }) {
   return <span className="inline-flex rounded-full border border-border/60 bg-background/70 px-2.5 py-1 text-xs font-medium">{children}</span>;
 }
 
-export function SimpleTable({ headers, rows }: { headers: string[]; rows: React.ReactNode[][] }) {
+export function SimpleTable({ headers, rows }: { headers: string[]; rows: ReactNode[][] }) {
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full text-sm">
@@ -101,6 +107,42 @@ export function SimpleTable({ headers, rows }: { headers: string[]; rows: React.
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+export function BulletList({ items }: { items: string[] }) {
+  return (
+    <ul className="space-y-3 text-sm text-muted-foreground">
+      {items.map((item) => (
+        <li key={item} className="rounded-2xl border border-border/50 bg-background/60 px-4 py-3 text-foreground">{item}</li>
+      ))}
+    </ul>
+  );
+}
+
+export function StatCards({ items }: { items: { title: string; body: string; status?: string }[] }) {
+  return (
+    <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+      {items.map((item) => (
+        <div key={item.title} className="rounded-[28px] border border-border/60 bg-background/75 p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="font-semibold tracking-tight">{item.title}</h3>
+            {item.status ? <ToneBadge value={item.status} /> : null}
+          </div>
+          <p className="mt-3 text-sm text-muted-foreground">{item.body}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function ActionChips({ items }: { items: string[] }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {items.map((item) => (
+        <span key={item} className="rounded-2xl border border-border/60 bg-background/70 px-3 py-2 text-xs font-medium text-muted-foreground">{item}</span>
+      ))}
     </div>
   );
 }

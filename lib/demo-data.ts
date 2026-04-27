@@ -58,7 +58,7 @@ export const demoMedications = [
 ];
 
 export const demoAppointments = [
-  { title: "Quarterly endocrinology review", when: "May 4, 2026 · 9:00 AM", location: "St. Luke's BGC", status: "UPCOMING", doctor: "Dr. Santos", note: "Discuss A1C trend and weight management plan" },
+  { title: "Quarterly endocrinology review", when: "May 4, 2026 · 9:00 AM", location: "St. Luke\"s BGC", status: "UPCOMING", doctor: "Dr. Santos", note: "Discuss A1C trend and weight management plan" },
   { title: "Eye screening", when: "May 11, 2026 · 2:00 PM", location: "VisionPlus Clinic", status: "UPCOMING", doctor: "Dr. Lim", note: "Annual diabetic retinopathy check" },
   { title: "Annual physical exam", when: "April 10, 2026 · 11:30 AM", location: "Healthway", status: "COMPLETED", doctor: "Dr. Reyes", note: "Updated lab orders and cardiovascular risk review" },
 ];
@@ -66,7 +66,7 @@ export const demoAppointments = [
 export const demoLabs = [
   { test: "HbA1c", value: "6.8%", trend: "Improved from 7.4%", status: "Good", collectedAt: "Apr 20, 2026", lab: "Hi-Precision Diagnostics" },
   { test: "LDL Cholesterol", value: "92 mg/dL", trend: "Stable", status: "Watch", collectedAt: "Apr 20, 2026", lab: "Hi-Precision Diagnostics" },
-  { test: "Creatinine", value: "0.88 mg/dL", trend: "Normal", status: "Normal", collectedAt: "Apr 20, 2026", lab: "St. Luke's Lab" },
+  { test: "Creatinine", value: "0.88 mg/dL", trend: "Normal", status: "Normal", collectedAt: "Apr 20, 2026", lab: "St. Luke\"s Lab" },
 ];
 
 export const demoVitals = [
@@ -89,7 +89,7 @@ export const demoVaccinations = [
 ];
 
 export const demoDoctors = [
-  { name: "Dr. Angela Santos", specialty: "Endocrinology", clinic: "St. Luke's BGC", phone: "+63 2 8789 7700", email: "asantos@stlukes.example.com" },
+  { name: "Dr. Angela Santos", specialty: "Endocrinology", clinic: "St. Luke\"s BGC", phone: "+63 2 8789 7700", email: "asantos@stlukes.example.com" },
   { name: "Dr. Paolo Reyes", specialty: "Internal Medicine", clinic: "Healthway Quezon City", phone: "+63 2 8123 4567", email: "preyes@healthway.example.com" },
   { name: "Dr. Hazel Lim", specialty: "Ophthalmology", clinic: "VisionPlus Clinic", phone: "+63 2 8555 2100", email: "hlim@visionplus.example.com" },
 ];

@@ -2,11 +2,13 @@ import { DemoHeader, DemoSection, SimpleTable } from "@/components/demo-primitiv
 import { demoJobs } from "@/lib/demo-data";
 
 export default function DemoJobsPage() {
+  const rows = demoJobs.map((item) => [item.job, item.queue, item.status, item.at]);
+
   return (
     <div className="space-y-6">
       <DemoHeader title="Jobs" description="Background processing visibility for alert scans, reminders, and sync workflows." />
       <DemoSection title="Recent job runs">
-        <SimpleTable headers={["Job", "Queue", "Status", "When"]} rows={demoJobs.map((item) => [item.job, item.queue, item.status, item.at])} />
+        <SimpleTable headers={["Job", "Queue", "Status", "When"]} rows={rows} />
       </DemoSection>
     </div>
   );
