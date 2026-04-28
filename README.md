@@ -11,117 +11,119 @@
 ![Vitest](https://img.shields.io/badge/Vitest-Tested-6e9f18?style=for-the-badge&logo=vitest)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-**VitaVault** is a full-stack personal health record platform built as a product-style healthcare workspace. It is designed to show more than simple CRUD screens: the app combines structured health records, care-team collaboration, alerts, reminders, AI-assisted summaries, exports, mobile/device ingestion foundations, admin visibility, and security workflows inside one cohesive application.
+**VitaVault** is a full-stack personal health record platform built as a product-style healthcare workspace rather than a simple CRUD demo.
+
+It combines structured health records, reminder and alert workflows, care-team collaboration, AI-assisted summaries, exports, security controls, admin tooling, and device/mobile-ready foundations inside one application.
 
 The project is intentionally built like a business-grade product foundation: clean domain modeling, protected workflows, audit-aware actions, operational pages, public demo surfaces, and a roadmap-ready architecture for future healthcare, wellness, and care coordination features.
 
 ---
 
-## Project links
+## Links
 
-- **Repository:** [github.com/shreyanshjain1/VitaVault](https://github.com/shreyanshjain1/VitaVault)
-- **Vercel demo:** [vita-vault-s6up.vercel.app](https://vita-vault-s6up.vercel.app/)
-- **Public walkthrough:** `/demo`
-
-> The public deployment is currently best treated as a product showcase/demo surface. Database-backed live flows depend on production environment configuration.
+- **GitHub:** [shreyanshjain1/VitaVault](https://github.com/shreyanshjain1/VitaVault)
+- **Vercel Demo:** [vita-vault-s6up.vercel.app](https://vita-vault-s6up.vercel.app/)
+- **Public walkthrough:** open `/demo` on the deployed app
+- **Demo note:** database-backed live flows depend on production environment configuration, so the no-login demo surface is the best way to review the product online.
 
 ---
 
 ## What VitaVault demonstrates
 
-VitaVault is a portfolio-grade health-tech product foundation focused on real full-stack engineering depth:
+A lot of health-record portfolio apps stop at forms and a dashboard. VitaVault goes further by modeling the operational side of a real product.
 
-- patient-owned health records across multiple clinical modules
-- medication, appointment, lab, vital, symptom, vaccination, doctor, and document workflows
-- care-team invite and shared-access foundations
-- threshold-based alert rules and alert-event tracking
+The app demonstrates:
+
+- longitudinal patient records across multiple clinical modules
+- patient-controlled care-team sharing and invite flows
+- alert rules, alert events, and audit history
 - reminder workflows and review queues
-- AI-assisted health insight support
-- background job architecture with Redis and BullMQ
-- mobile API and device ingestion foundations
-- protected document delivery
-- security, admin, ops, exports, and print-oriented views
-- public demo routes for reviewer-friendly exploration without login friction
+- queue-backed background processing with Redis and BullMQ
+- device and mobile ingestion foundations
+- AI-assisted summaries and insight workflows
+- exports, print views, admin, ops, and security workflows
+- public no-login demo experience for product showcasing
 
-This repo is not positioned as a lightweight mockup. It is a full-stack product base with enough backend structure to support continued iteration.
+This repo sits at the intersection of **product engineering**, **health-data workflows**, and **production-minded full-stack architecture**.
 
 ---
 
 ## Product pillars
 
-### 1. Personal health record workspace
+### Personal Health Record Workspace
 
-VitaVault gives users a centralized workspace for managing their health information:
+Users can manage:
 
-- health profile and baseline details
-- medications and adherence logs
-- appointments and doctors
+- health profile and baseline context
+- medications, schedules, and adherence logs
+- appointments and care providers
 - lab results
 - vital readings
 - symptom tracking
 - vaccinations
 - medical documents
-- longitudinal timeline and summary views
+- reminders, summaries, exports, and print-oriented views
 
-### 2. Care-team collaboration
+### Shared Care Foundations
 
-The app includes foundations for patient-controlled sharing:
+VitaVault includes collaboration-oriented flows such as:
 
-- care-team invite creation
-- invite acceptance and rejection flows
-- scoped access records
+- care-team invite creation and acceptance
+- scoped shared access
 - shared patient routes
-- access-aware views
-- audit-friendly care access structure
+- access-aware patient views
+- invite email support and fallback link sharing
+- access auditing foundations
 
-### 3. Alerts, reminders, and review workflows
+### Alerting and Monitoring
 
-VitaVault includes healthcare workflow primitives beyond basic record storage:
+The platform includes a strong alerting foundation:
 
-- alert rules
+- threshold-based alert rules
 - alert events
 - alert severity and lifecycle states
 - reminder scheduling
 - review queue pages
 - print-oriented review flows
-- worker-backed scan/evaluation foundations
+- worker-backed scan and evaluation foundations
 
-### 4. Mobile and device readiness
+### Device and Mobile Readiness
 
-The codebase already includes API foundations for future mobile and connected-device workflows:
+The app is already structured for connected-data expansion:
 
-- mobile login/logout/me endpoints
-- bearer-token mobile sessions
+- mobile login, logout, and session endpoints
+- bearer-token foundations for mobile sync flows
 - device connection tracking
 - device reading ingestion
-- sync job modeling
-- normalized readings into health records
+- sync job lifecycle tracking
+- mirrored readings into normalized health records
 
-### 5. AI-assisted health summaries
+### AI and Review Workflows
 
 The AI module is designed as an assistant layer on top of structured records:
 
-- AI insights page
+- AI-generated health insights
 - insight persistence model
 - summary-generation foundations
-- reviewable product surface for future clinical/workflow intelligence
+- review queue workflows
+- print-oriented review and summary views
 
-### 6. Security and operations
+### Security and Admin Controls
 
-The repo includes business-product signals that go beyond a normal portfolio app:
+The application includes stronger operational controls such as:
 
-- Auth.js / NextAuth integration
+- Auth.js / NextAuth authentication
 - protected user workflows
+- password rotation
+- email verification and password reset flows
 - mobile/API session visibility and revocation foundations
-- password reset and email verification flows
-- protected document download route
-- admin dashboard foundations
-- ops and job visibility pages
-- repo checks and CI-ready scripts
+- protected document delivery
+- admin user lifecycle controls
+- admin, ops, jobs, and security visibility pages
 
 ---
 
-## Application surface
+## Current application surface
 
 ### Authenticated product routes
 
@@ -138,7 +140,7 @@ The repo includes business-product signals that go beyond a normal portfolio app
 
 ### Public demo routes
 
-The app includes a no-login demo surface for product review and portfolio showcasing:
+The app includes a no-login demo surface for product review and portfolio showcasing.
 
 | Demo area | Routes |
 |---|---|
@@ -236,6 +238,25 @@ This gives the project enough depth to support future upgrades without constantl
 
 ---
 
+## Tech stack
+
+- **Next.js 15**
+- **React 19**
+- **TypeScript**
+- **Tailwind CSS**
+- **Prisma ORM**
+- **PostgreSQL**
+- **Auth.js / NextAuth**
+- **Zod**
+- **BullMQ**
+- **Redis**
+- **Recharts**
+- **lucide-react**
+- **Framer Motion**
+- **Vitest**
+
+---
+
 ## Current product status
 
 VitaVault is currently best described as a **feature-rich full-stack health platform foundation**.
@@ -250,6 +271,7 @@ Strongest areas:
 - mobile/device API foundations
 - demo and portfolio presentation surface
 - repo health scripts and test foundations
+- security, admin, and ops foundations
 
 Main areas for future polish:
 
