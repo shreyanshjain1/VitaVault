@@ -8,6 +8,7 @@ import {
   FileHeart,
   HeartPulse,
   LayoutDashboard,
+  ClipboardCheck,
   Pill,
   ShieldPlus,
   ShieldCheck,
@@ -32,6 +33,12 @@ export const primaryRoutes: AppRouteItem[] = [
     href: "/dashboard",
     description: "Command center for your health workspace",
     icon: LayoutDashboard,
+  },
+  {
+    title: "Onboarding",
+    href: "/onboarding",
+    description: "Guided first-run health setup",
+    icon: ClipboardCheck,
   },
   {
     title: "AI Insights",

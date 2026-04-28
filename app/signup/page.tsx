@@ -7,7 +7,7 @@ export default async function SignupPage({
 }) {
   const params = (await searchParams) ?? {};
   const callbackUrl =
-    typeof params.callbackUrl === "string" ? params.callbackUrl : undefined;
+    typeof params.callbackUrl === "string" ? params.callbackUrl : "/onboarding";
 
   return <SignupForm callbackUrl={callbackUrl} />;
 }

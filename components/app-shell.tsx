@@ -146,7 +146,7 @@ export function AppShell({ children }: AppShellProps) {
     const pick = (hrefs: string[]) =>
       hrefs.map((h) => routeMap.get(h)).filter(Boolean) as AppRouteItem[];
 
-    const overview = pick(["/dashboard"]);
+    const overview = pick(["/dashboard", "/onboarding"]);
     const collaboration = pick([
       "/ai-insights",
       "/care-team",
