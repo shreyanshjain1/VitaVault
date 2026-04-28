@@ -1,37 +1,71 @@
-personal-health-record-companion/
+VitaVault/
 ├─ app/
-│  ├─ api/auth/[...nextauth]/route.ts
-│  ├─ exports/[type]/route.ts
-│  ├─ actions.ts
+│  ├─ api/
+│  │  ├─ auth/[...nextauth]/route.ts
+│  │  ├─ documents/[id]/download/route.ts
+│  │  ├─ internal/alerts/evaluate/route.ts
+│  │  ├─ internal/alerts/scan/route.ts
+│  │  ├─ jobs/dispatch/route.ts
+│  │  └─ mobile/
+│  │     ├─ auth/login/route.ts
+│  │     ├─ auth/logout/route.ts
+│  │     ├─ auth/me/route.ts
+│  │     ├─ connections/route.ts
+│  │     └─ device-readings/route.ts
+│  ├─ admin/page.tsx
+│  ├─ ai-insights/page.tsx
+│  ├─ alerts/
 │  ├─ appointments/page.tsx
+│  ├─ care-team/page.tsx
 │  ├─ dashboard/page.tsx
+│  ├─ demo/
+│  ├─ device-connection/page.tsx
 │  ├─ doctors/page.tsx
 │  ├─ documents/page.tsx
-│  ├─ exports/page.tsx
-│  ├─ globals.css
+│  ├─ exports/
 │  ├─ health-profile/page.tsx
+│  ├─ invite/[token]/page.tsx
+│  ├─ jobs/page.tsx
 │  ├─ labs/page.tsx
-│  ├─ layout.tsx
 │  ├─ login/page.tsx
 │  ├─ medications/page.tsx
-│  ├─ page.tsx
+│  ├─ ops/page.tsx
+│  ├─ patient/[ownerUserId]/page.tsx
+│  ├─ reminders/page.tsx
+│  ├─ review-queue/
+│  ├─ security/page.tsx
 │  ├─ signup/page.tsx
-│  ├─ summary/page.tsx
+│  ├─ summary/
 │  ├─ symptoms/page.tsx
+│  ├─ timeline/page.tsx
 │  ├─ vaccinations/page.tsx
+│  ├─ verify-email/page.tsx
 │  └─ vitals/page.tsx
 ├─ components/
 │  ├─ app-shell.tsx
 │  ├─ auth-form.tsx
 │  ├─ charts.tsx
 │  ├─ common.tsx
+│  ├─ demo-shell.tsx
+│  ├─ page-transition.tsx
 │  ├─ providers.tsx
-│  └─ ui.tsx
+│  ├─ ui.tsx
+│  └─ user-menu.tsx
+├─ docs/
+│  ├─ ACTION_EXPORT_CONTRACT.md
+│  ├─ KNOWN_LIMITATIONS.md
+│  ├─ PATCH_01_STABILIZATION.md
+│  └─ phase and roadmap planning notes
 ├─ lib/
+│  ├─ actions/
 │  ├─ auth.ts
 │  ├─ dashboard-data.ts
 │  ├─ db.ts
+│  ├─ demo-data.ts
+│  ├─ email.ts
 │  ├─ export.ts
+│  ├─ jobs.ts
+│  ├─ security-actions.ts
 │  ├─ session.ts
 │  ├─ upload.ts
 │  ├─ utils.ts
@@ -39,10 +73,21 @@ personal-health-record-companion/
 ├─ prisma/
 │  ├─ schema.prisma
 │  └─ seed.ts
+├─ scripts/
+│  ├─ check-action-exports.cjs
+│  ├─ check-page-action-imports.cjs
+│  ├─ check-shadow-action-files.cjs
+│  ├─ prisma-validate.cjs
+│  ├─ repo-hygiene-check.cjs
+│  ├─ scan-alerts.ts
+│  ├─ scan-reminders.ts
+│  └─ verify-env.cjs
+├─ tests/
+├─ types/
+├─ worker/
 ├─ .env.example
-├─ middleware.ts
 ├─ next.config.ts
 ├─ package.json
-├─ postcss.config.mjs
 ├─ tailwind.config.ts
-└─ tsconfig.json
+├─ tsconfig.json
+└─ vitest.config.ts
