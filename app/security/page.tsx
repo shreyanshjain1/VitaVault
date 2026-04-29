@@ -81,6 +81,12 @@ export default async function SecurityPage() {
           action={
             <div className="flex flex-wrap gap-3">
               <Link
+                href="/audit-log"
+                className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2.5 text-sm font-medium hover:bg-muted/50"
+              >
+                Audit log
+              </Link>
+              <Link
                 href="/device-connection"
                 className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2.5 text-sm font-medium hover:bg-muted/50"
               >
