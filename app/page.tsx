@@ -64,6 +64,11 @@ export default function HomePage() {
         <header className="flex items-center justify-between rounded-3xl border bg-white/70 px-4 py-4 shadow-sm backdrop-blur md:px-6">
           <Logo />
           <div className="flex items-center gap-3">
+            <Link href="/demo">
+              <Button variant="outline" className="rounded-2xl px-6">
+                Demo
+              </Button>
+            </Link>
             <Link href="/login">
               <Button variant="outline" className="rounded-2xl px-6">
                 Login
@@ -102,7 +107,7 @@ export default function HomePage() {
                 </Button>
               </Link>
 
-              <Link href="/login">
+              <Link href="/demo">
                 <Button size="lg" variant="outline" className="rounded-2xl px-7">
                   View demo
                 </Button>
