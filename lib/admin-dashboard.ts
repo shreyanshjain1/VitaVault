@@ -10,6 +10,17 @@ import {
 } from "@prisma/client";
 import { db } from "@/lib/db";
 
+type CountDelegate = { count: (args?: unknown) => Promise<number> };
+
+function hasCountDelegate(value: unknown): value is CountDelegate {
+  return Boolean(value && typeof value === "object" && "count" in value && typeof (value as { count?: unknown }).count === "function");
+}
+
+async function safeCount(delegate: unknown, args?: unknown) {
+  if (!hasCountDelegate(delegate)) return 0;
+  return delegate.count(args);
+}
+
 export type AdminAuditFeedItem = {
   id: string;
   source: "ACCESS" | "ALERT" | "REMINDER";
@@ -70,8 +81,8 @@ export async function getAdminWorkspaceData() {
     db.alertEvent.count({ where: { status: AlertStatus.OPEN } }),
     db.alertEvent.count({ where: { status: AlertStatus.OPEN, severity: { in: [AlertSeverity.HIGH, AlertSeverity.CRITICAL] } } }),
     db.jobRun.count({ where: { status: { in: [JobRunStatus.FAILED, JobRunStatus.RETRYING] } } }),
-    db.syncJob.count({ where: { status: SyncJobStatus.FAILED } }),
-    db.deviceConnection.count({
+    safeCount(db.syncJob, { where: { status: SyncJobStatus.FAILED } }),
+    safeCount(db.deviceConnection, {
       where: {
         status: DeviceConnectionStatus.ACTIVE,
         OR: [{ lastSyncedAt: null }, { lastSyncedAt: { lt: staleSyncCutoff } }],
@@ -190,7 +201,7 @@ export async function getAdminWorkspaceData() {
     db.user.count({ where: { role: AppRole.CAREGIVER } }),
     db.user.count({ where: { role: AppRole.DOCTOR } }),
     db.user.count({ where: { role: AppRole.LAB_STAFF } }),
-    db.reminder.count({ where: { state: { in: [ReminderState.OVERDUE, ReminderState.MISSED] } } }),
+    safeCount(db.reminder, { where: { state: { in: [ReminderState.OVERDUE, ReminderState.MISSED] } } }),
     db.user.count({ where: { emailVerified: null, deactivatedAt: null } }),
   ]);
 
