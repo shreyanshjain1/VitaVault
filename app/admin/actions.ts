@@ -102,3 +102,40 @@ export async function revokeUserMobileSessionsAction(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/security");
 }
+
+export async function deactivateUserAction(formData: FormData) {
+  const actor = await requireAdminActor();
+  const userId = formString(formData, "userId");
+  if (!userId) throw new Error("User id is required.");
+  if (userId === actor.id) throw new Error("You cannot moderate your own administrator account.");
+
+  const result = await db.mobileSessionToken.updateMany({
+    where: { userId, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+
+  await writeAdminAuditLog({
+    ownerUserId: userId,
+    actorUserId: actor.id!,
+    action: "ADMIN_USER_ACCESS_PAUSED",
+    note: `Admin paused access by revoking ${result.count} mobile/API session(s). Schema-level deactivation is not enabled in this branch.`,
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/security");
+}
+
+export async function reactivateUserAction(formData: FormData) {
+  const actor = await requireAdminActor();
+  const userId = formString(formData, "userId");
+  if (!userId) throw new Error("User id is required.");
+
+  await writeAdminAuditLog({
+    ownerUserId: userId,
+    actorUserId: actor.id!,
+    action: "ADMIN_USER_REVIEWED",
+    note: "Admin reviewed account status. Schema-level reactivation is not enabled in this branch.",
+  });
+
+  revalidatePath("/admin");
+}

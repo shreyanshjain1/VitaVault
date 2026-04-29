@@ -18,8 +18,9 @@ export type AdminAuditFeedItem = {
   note: string | null;
 };
 
-function labelForUser(user: { id: string; name?: string | null; email?: string | null } | null | undefined) {
-  return user?.name || user?.email || user?.id || "System";
+function personLabel(person: { id: string; name: string | null; email: string | null } | null | undefined) {
+  if (!person) return "System";
+  return person.name || person.email || person.id;
 }
 
 export async function getAdminWorkspaceData() {
@@ -63,7 +64,7 @@ export async function getAdminWorkspaceData() {
       },
     }),
     db.user.findMany({
-      orderBy: [{ createdAt: "desc" }],
+      orderBy: { createdAt: "desc" },
       take: 12,
       select: {
         id: true,
@@ -153,16 +154,14 @@ export async function getAdminWorkspaceData() {
     }),
   ]);
 
-  const verificationRate = totalUsers ? Math.round((verifiedUsers / totalUsers) * 100) : 0;
-
   const auditFeed: AdminAuditFeedItem[] = [
     ...accessAuditLogs.map((log) => ({
       id: `access-${log.id}`,
       source: "ACCESS" as const,
       action: log.action,
       createdAt: log.createdAt,
-      ownerLabel: labelForUser(log.owner),
-      actorLabel: labelForUser(log.actor),
+      ownerLabel: personLabel(log.owner),
+      actorLabel: personLabel(log.actor),
       targetLabel: [log.targetType, log.targetId].filter(Boolean).join(" • ") || "Account access",
       note: log.metadataJson,
     })),
@@ -171,8 +170,8 @@ export async function getAdminWorkspaceData() {
       source: "ALERT" as const,
       action: log.action,
       createdAt: log.createdAt,
-      ownerLabel: labelForUser(log.user),
-      actorLabel: labelForUser(log.actor),
+      ownerLabel: personLabel(log.user),
+      actorLabel: personLabel(log.actor),
       targetLabel: log.alert?.title || log.rule?.name || "Alert workflow",
       note: log.note,
     })),
@@ -181,12 +180,17 @@ export async function getAdminWorkspaceData() {
       source: "REMINDER" as const,
       action: log.action,
       createdAt: log.createdAt,
-      ownerLabel: labelForUser(log.user),
-      actorLabel: labelForUser(log.actor),
+      ownerLabel: personLabel(log.user),
+      actorLabel: personLabel(log.actor),
       targetLabel: log.reminder?.title || `Reminder ${log.reminder?.state || ReminderState.DUE}`,
       note: log.note,
     })),
-  ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 16);
+  ]
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    .slice(0, 16);
+
+  const verificationRate = totalUsers > 0 ? Math.round((verifiedUsers / totalUsers) * 100) : 0;
+  const riskItems = openAlerts + failedJobs + pendingInvites;
 
   return {
     summary: {
@@ -199,6 +203,8 @@ export async function getAdminWorkspaceData() {
       openAlerts,
       failedJobs,
       activeMobileSessions,
+      deactivatedUsers: 0,
+      riskItems,
     },
     recentUsers,
     userRoster,
