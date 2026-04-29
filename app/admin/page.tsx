@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppRole } from "@prisma/client";
@@ -17,17 +18,18 @@ type RecentUserItem = AdminWorkspaceData["recentUsers"][number];
 type RecentInviteItem = AdminWorkspaceData["recentInvites"][number];
 type AuditFeedItem = AdminWorkspaceData["auditFeed"][number];
 type RecentJobRunItem = AdminWorkspaceData["recentJobRuns"][number];
+type Tone = "neutral" | "info" | "success" | "warning" | "danger";
 
 function formatDateTime(value: Date | null | undefined) {
   if (!value) return "—";
   return new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeStyle: "short" }).format(value);
 }
 
-function roleTone(role: AppRole) {
-  if (role === AppRole.ADMIN) return "danger" as const;
-  if (role === AppRole.DOCTOR || role === AppRole.LAB_STAFF) return "info" as const;
-  if (role === AppRole.CAREGIVER) return "warning" as const;
-  return "neutral" as const;
+function roleTone(role: AppRole): Tone {
+  if (role === AppRole.ADMIN) return "danger";
+  if (role === AppRole.DOCTOR || role === AppRole.LAB_STAFF) return "info";
+  if (role === AppRole.CAREGIVER) return "warning";
+  return "neutral";
 }
 
 function statusTone(status: string) {
@@ -38,15 +40,26 @@ function statusTone(status: string) {
   return "neutral" as const;
 }
 
-function sourceTone(source: "ACCESS" | "ALERT" | "REMINDER") {
-  if (source === "ALERT") return "danger" as const;
-  if (source === "REMINDER") return "warning" as const;
-  return "info" as const;
+function sourceTone(source: "ACCESS" | "ALERT" | "REMINDER"): Tone {
+  if (source === "ALERT") return "danger";
+  if (source === "REMINDER") return "warning";
+  return "info";
 }
 
-function StatCard({ title, value, description, icon }: { title: string; value: number; description: string; icon: React.ReactNode }) {
+function StatCard({ title, value, description, icon, tone = "neutral" }: { title: string; value: number | string; description: string; icon: ReactNode; tone?: Tone }) {
+  const ringClass =
+    tone === "danger"
+      ? "border-rose-200/80 bg-rose-50/70 dark:border-rose-900/40 dark:bg-rose-950/20"
+      : tone === "warning"
+        ? "border-amber-200/80 bg-amber-50/70 dark:border-amber-900/40 dark:bg-amber-950/20"
+        : tone === "success"
+          ? "border-emerald-200/80 bg-emerald-50/70 dark:border-emerald-900/40 dark:bg-emerald-950/20"
+          : tone === "info"
+            ? "border-sky-200/80 bg-sky-50/70 dark:border-sky-900/40 dark:bg-sky-950/20"
+            : "border-border/60 bg-card/85";
+
   return (
-    <Card>
+    <Card className={ringClass}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -124,13 +137,13 @@ export default async function AdminPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard title="Active care access" value={data.summary.activeCareAccess} description="Currently active care relationships across the system." icon={<Shield className="h-5 w-5 text-sky-500" />} />
-          <StatCard title="Open alerts" value={data.summary.openAlerts} description="Alert events still waiting for review or resolution." icon={<AlertTriangle className="h-5 w-5 text-amber-500" />} />
-          <StatCard title="Failed jobs" value={data.summary.failedJobs} description="Queue runs stuck in failed or retrying status." icon={<Cpu className="h-5 w-5 text-orange-500" />} />
-          <StatCard title="Active mobile sessions" value={data.summary.activeMobileSessions} description="Non-revoked API or mobile sessions still valid right now." icon={<CheckCircle2 className="h-5 w-5 text-emerald-500" />} />
+          <StatCard title="Active care access" value={data.summary.activeCareAccess} description="Active care-sharing relationships." icon={<Shield className="h-5 w-5 text-sky-500" />} tone="info" />
+          <StatCard title="Open alerts" value={data.summary.openAlerts} description="Alert events waiting for review." icon={<AlertTriangle className="h-5 w-5 text-amber-500" />} tone={data.summary.openAlerts ? "warning" : "success"} />
+          <StatCard title="Failed jobs" value={data.summary.failedJobs} description="Queue runs in failed or retrying state." icon={<Cpu className="h-5 w-5 text-orange-500" />} tone={data.summary.failedJobs ? "danger" : "success"} />
+          <StatCard title="Active sessions" value={data.summary.activeMobileSessions} description="Valid non-revoked API/mobile sessions." icon={<CheckCircle2 className="h-5 w-5 text-emerald-500" />} tone="success" />
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
           <Card>
             <CardHeader>
               <CardTitle>User roster snapshot</CardTitle>
@@ -273,6 +286,35 @@ export default async function AdminPage() {
             </CardContent>
           </Card>
         </div>
+
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <CardTitle>Recent audit feed</CardTitle>
+                <CardDescription>Access, alert, and reminder actions across the system.</CardDescription>
+              </div>
+              <Link href="/audit-log" className="inline-flex h-10 items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium transition-all hover:border-border hover:bg-muted/60">
+                Open full audit log
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {data.auditFeed.length ? data.auditFeed.map((item) => <AuditCard key={item.id} item={item} />) : <EmptyState title="No audit activity yet" description="Audited access and workflow activity will appear here." />}
+          </CardContent>
+        </Card>
+
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col gap-3 p-6 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className="flex items-center gap-2 font-medium"><ClipboardList className="h-4 w-4 text-primary" /> Patch 11 admin polish</div>
+              <p className="mt-1 text-sm text-muted-foreground">This screen now presents VitaVault as a stronger admin product surface with growth, verification, risk, moderation, and operations traceability.</p>
+            </div>
+            <Link href="/ops" className="inline-flex h-10 items-center justify-center rounded-2xl bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:opacity-90">
+              Review operations
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     </AppShell>
   );
