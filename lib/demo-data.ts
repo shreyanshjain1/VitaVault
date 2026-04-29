@@ -19,6 +19,7 @@ export const demoPatient = {
 
 export const demoNav: DemoNavItem[] = [
   { href: "/demo", label: "Overview", description: "Public product walkthrough" },
+  { href: "/demo/walkthrough", label: "Guided Walkthrough", description: "Recommended reviewer path" },
   { href: "/demo/dashboard", label: "Dashboard" },
   { href: "/demo/health-profile", label: "Health Profile" },
   { href: "/demo/medications", label: "Medications" },
@@ -228,3 +229,68 @@ export const demoAdmin = {
     { source: "access", message: "Caregiver invite accepted by Marco Cruz", at: "Apr 23, 2026 · 5:15 PM" },
   ],
 };
+
+export const demoTourSteps = [
+  {
+    step: "01",
+    title: "Start with the health command center",
+    route: "/demo/dashboard",
+    status: "Start here",
+    body: "Shows the patient snapshot, current risk posture, active reminders, and recent activity in one reviewer-friendly screen.",
+  },
+  {
+    step: "02",
+    title: "Open the core health record modules",
+    route: "/demo/health-profile",
+    status: "Records",
+    body: "Review the structured patient profile, medications, appointments, labs, vitals, symptoms, vaccinations, doctors, and documents.",
+  },
+  {
+    step: "03",
+    title: "Inspect action workflows",
+    route: "/demo/alerts",
+    status: "Workflow",
+    body: "Alert rules, reminder queues, AI insights, review queue, and summary exports show that VitaVault goes beyond storage.",
+  },
+  {
+    step: "04",
+    title: "Review collaboration and operations",
+    route: "/demo/care-team",
+    status: "Business-ready",
+    body: "Care-team access, security controls, admin visibility, device connections, jobs, and ops pages show the operational product layer.",
+  },
+];
+
+export const demoPersona = {
+  patient: "Elena Cruz",
+  profile: "34-year-old patient managing Type 2 Diabetes and Hypertension",
+  reviewerGoal: "Evaluate the product surface without needing a configured database or login flow.",
+  recommendedPath: ["Dashboard", "Medications", "Labs", "Alerts", "Summary", "Security", "Admin"],
+  showcaseStrengths: [
+    "Broad health-record coverage",
+    "Care-team sharing foundations",
+    "Alerts, reminders, review queue, and jobs",
+    "Mobile/device sync API groundwork",
+    "Security, admin, ops, exports, and public demo surfaces",
+  ],
+};
+
+export const demoShowcaseMetrics = [
+  { label: "Demo modules", value: "24", note: "Public read-only pages mirroring the authenticated product surface" },
+  { label: "Clinical records", value: "9", note: "Profile, meds, labs, vitals, symptoms, vaccines, doctors, documents, timeline" },
+  { label: "Workflow layers", value: "7", note: "Alerts, reminders, AI insights, review queue, exports, device sync, jobs" },
+  { label: "Ops surfaces", value: "4", note: "Security, admin, ops, jobs, and reviewer-friendly controls" },
+];
+
+export const demoReadinessChecklist = [
+  { label: "No-login product walkthrough", status: "Ready", detail: "The /demo surface can be shared with reviewers even while database-backed deployment is being configured." },
+  { label: "Demo persona consistency", status: "Ready", detail: "Core demo pages revolve around Elena Cruz and her care-management workflow." },
+  { label: "Reviewer path", status: "Ready", detail: "The overview now explains the best route through the product surface." },
+  { label: "Real-app handoff", status: "Preview", detail: "The demo links to login/signup for the real authenticated experience when environment variables are configured." },
+];
+
+export const demoFeatureHighlights = [
+  { title: "Health command center", body: "The dashboard brings together patient context, alerts, reminders, recent activity, and care tasks.", status: "Core" },
+  { title: "Patient handoff packet", body: "The summary and exports surfaces present the type of printable reports that can support doctor visits and care coordination.", status: "Business" },
+  { title: "Connected care foundation", body: "Care-team access, device sync, mobile tokens, alerting, jobs, and ops pages show how the app can grow into a real product.", status: "Architecture" },
+];
