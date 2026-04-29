@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   ClipboardCheck,
   Pill,
+  ShieldAlert,
   ShieldPlus,
   ShieldCheck,
   Smartphone,
@@ -39,6 +40,12 @@ export const primaryRoutes: AppRouteItem[] = [
     href: "/onboarding",
     description: "Guided first-run health setup",
     icon: ClipboardCheck,
+  },
+  {
+    title: "Emergency Card",
+    href: "/emergency-card",
+    description: "Printable critical care card",
+    icon: ShieldAlert,
   },
   {
     title: "AI Insights",
@@ -125,11 +132,11 @@ export const primaryRoutes: AppRouteItem[] = [
     icon: FileBarChart2,
   },
   {
-  title: "Reminders",
-  href: "/reminders",
-  description: "In-app reminder center for due and overdue tasks",
-  icon: BellRing,
-},
+    title: "Reminders",
+    href: "/reminders",
+    description: "In-app reminder center for due and overdue tasks",
+    icon: BellRing,
+  },
 ];
 
 export const utilityRoutes: AppRouteItem[] = [
