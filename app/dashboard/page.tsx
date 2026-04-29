@@ -37,13 +37,6 @@ function formatDateTime(value: Date) {
   });
 }
 
-function severityTone(severity: string) {
-  if (severity === "CRITICAL") return "danger";
-  if (severity === "HIGH") return "danger";
-  if (severity === "MEDIUM") return "warning";
-  return "info";
-}
-
 function completionTone(value: number) {
   if (value >= 85) return "success";
   if (value >= 60) return "info";
