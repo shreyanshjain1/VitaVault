@@ -11,10 +11,10 @@ const toneClasses: Record<string, string> = {
 
 function inferTone(value: string) {
   const normalized = value.toLowerCase();
-  if (["critical", "deactivated", "error", "failed", "revoked"].some((token) => normalized.includes(token))) return "danger";
-  if (["warning", "due", "retry", "watch", "pending"].some((token) => normalized.includes(token))) return "warning";
-  if (["active", "good", "ready", "verified", "succeeded", "up to date", "healthy", "configured", "completed", "sent"].some((token) => normalized.includes(token))) return "success";
-  if (["monitor", "open", "queued", "info", "limited"].some((token) => normalized.includes(token))) return "info";
+  if (["critical", "deactivated", "error", "failed", "revoked", "blocked"].some((token) => normalized.includes(token))) return "danger";
+  if (["warning", "due", "retry", "watch", "pending", "attention"].some((token) => normalized.includes(token))) return "warning";
+  if (["active", "good", "ready", "verified", "succeeded", "up to date", "healthy", "configured", "completed", "sent", "done"].some((token) => normalized.includes(token))) return "success";
+  if (["monitor", "open", "queued", "info", "limited", "preview"].some((token) => normalized.includes(token))) return "info";
   return "neutral";
 }
 
@@ -104,11 +104,11 @@ export function SimpleTable({ headers, rows }: { headers: string[]; rows: Simple
             const resolvedRow = Array.isArray(row) ? row : row.cells;
             const rowKey = Array.isArray(row) ? `row-${rowIndex}` : row.key;
             return (
-            <tr key={rowKey} className="border-b border-border/40 last:border-0">
-              {resolvedRow.map((cell, cellIndex) => (
-                <td key={`${rowKey}-${cellIndex}`} className="px-3 py-3 align-top">{cell}</td>
-              ))}
-            </tr>
+              <tr key={rowKey} className="border-b border-border/40 last:border-0">
+                {resolvedRow.map((cell, cellIndex) => (
+                  <td key={`${rowKey}-${cellIndex}`} className="px-3 py-3 align-top">{cell}</td>
+                ))}
+              </tr>
             );
           })}
         </tbody>
@@ -149,6 +149,45 @@ export function ActionChips({ items }: { items: string[] }) {
       {items.map((item) => (
         <span key={item} className="rounded-2xl border border-border/60 bg-background/70 px-3 py-2 text-xs font-medium text-muted-foreground">{item}</span>
       ))}
+    </div>
+  );
+}
+
+export function ProgressBar({ value, label }: { value: number; label?: string }) {
+  const safeValue = Math.max(0, Math.min(100, Math.round(value)));
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+        <span>{label ?? "Progress"}</span>
+        <span className="font-medium text-foreground">{safeValue}%</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-muted">
+        <div className="h-full rounded-full bg-primary" style={{ width: `${safeValue}%` }} />
+      </div>
+    </div>
+  );
+}
+
+export function TimelineList({ items }: { items: { title: string; body: string; meta?: string; status?: string; href?: string }[] }) {
+  return (
+    <div className="space-y-3">
+      {items.map((item) => {
+        const content = (
+          <div className="rounded-2xl border border-border/60 bg-background/60 p-4 transition hover:bg-muted/40">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="font-medium tracking-tight">{item.title}</p>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.body}</p>
+              </div>
+              {item.status ? <ToneBadge value={item.status} /> : null}
+            </div>
+            {item.meta ? <p className="mt-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">{item.meta}</p> : null}
+          </div>
+        );
+
+        return item.href ? <Link key={`${item.title}-${item.meta ?? item.body}`} href={item.href}>{content}</Link> : <div key={`${item.title}-${item.meta ?? item.body}`}>{content}</div>;
+      })}
     </div>
   );
 }
