@@ -19,6 +19,7 @@ import {
   Stethoscope,
   Syringe,
   Users,
+  TrendingUp,
   Workflow,
 } from "lucide-react";
 
@@ -53,6 +54,12 @@ export const primaryRoutes: AppRouteItem[] = [
     href: "/care-plan",
     description: "Prioritized next steps across records, alerts, reminders, and visits",
     icon: ClipboardCheck,
+  },
+  {
+    title: "Health Trends",
+    href: "/trends",
+    description: "Longitudinal vitals, labs, symptoms, and adherence analytics",
+    icon: TrendingUp,
   },
   {
     title: "Emergency Card",
