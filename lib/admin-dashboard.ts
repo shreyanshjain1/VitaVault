@@ -5,6 +5,7 @@ import {
   JobRunStatus,
   ReminderState,
 } from "@prisma/client";
+
 import { db } from "@/lib/db";
 
 export type AdminAuditFeedItem = {
@@ -18,6 +19,11 @@ export type AdminAuditFeedItem = {
   note: string | null;
 };
 
+function personLabel(person: { id: string; name: string | null; email: string | null } | null | undefined) {
+  if (!person) return "System";
+  return person.name || person.email || person.id;
+}
+
 export async function getAdminWorkspaceData() {
   const now = new Date();
 
@@ -30,7 +36,6 @@ export async function getAdminWorkspaceData() {
     openAlerts,
     failedJobs,
     activeMobileSessions,
-    deactivatedUsers,
     recentUsers,
     userRoster,
     recentInvites,
@@ -47,16 +52,20 @@ export async function getAdminWorkspaceData() {
     db.alertEvent.count({ where: { status: AlertStatus.OPEN } }),
     db.jobRun.count({ where: { status: { in: [JobRunStatus.FAILED, JobRunStatus.RETRYING] } } }),
     db.mobileSessionToken.count({ where: { revokedAt: null, expiresAt: { gt: now } } }),
-    db.user.count({ where: { deactivatedAt: { not: null } } }),
     db.user.findMany({
       orderBy: { createdAt: "desc" },
       take: 8,
       select: {
-        id: true, name: true, email: true, role: true, emailVerified: true, createdAt: true, deactivatedAt: true,
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        emailVerified: true,
+        createdAt: true,
       },
     }),
     db.user.findMany({
-      orderBy: [{ createdAt: "desc" }],
+      orderBy: { createdAt: "desc" },
       take: 12,
       select: {
         id: true,
@@ -65,8 +74,6 @@ export async function getAdminWorkspaceData() {
         role: true,
         createdAt: true,
         emailVerified: true,
-        deactivatedAt: true,
-        deactivatedReason: true,
         _count: {
           select: {
             reminders: true,
@@ -81,7 +88,12 @@ export async function getAdminWorkspaceData() {
       orderBy: { createdAt: "desc" },
       take: 8,
       select: {
-        id: true, email: true, accessRole: true, status: true, expiresAt: true, createdAt: true,
+        id: true,
+        email: true,
+        accessRole: true,
+        status: true,
+        expiresAt: true,
+        createdAt: true,
         owner: { select: { id: true, name: true, email: true } },
         grantedBy: { select: { id: true, name: true, email: true } },
       },
@@ -90,7 +102,13 @@ export async function getAdminWorkspaceData() {
       orderBy: { createdAt: "desc" },
       take: 8,
       select: {
-        id: true, jobKind: true, jobName: true, queueName: true, status: true, createdAt: true, errorMessage: true,
+        id: true,
+        jobKind: true,
+        jobName: true,
+        queueName: true,
+        status: true,
+        createdAt: true,
+        errorMessage: true,
         user: { select: { id: true, name: true, email: true } },
       },
     }),
@@ -98,7 +116,12 @@ export async function getAdminWorkspaceData() {
       orderBy: { createdAt: "desc" },
       take: 12,
       select: {
-        id: true, action: true, targetType: true, targetId: true, metadataJson: true, createdAt: true,
+        id: true,
+        action: true,
+        targetType: true,
+        targetId: true,
+        metadataJson: true,
+        createdAt: true,
         owner: { select: { id: true, name: true, email: true } },
         actor: { select: { id: true, name: true, email: true } },
       },
@@ -107,7 +130,10 @@ export async function getAdminWorkspaceData() {
       orderBy: { createdAt: "desc" },
       take: 12,
       select: {
-        id: true, action: true, note: true, createdAt: true,
+        id: true,
+        action: true,
+        note: true,
+        createdAt: true,
         user: { select: { id: true, name: true, email: true } },
         actor: { select: { id: true, name: true, email: true } },
         alert: { select: { id: true, title: true } },
@@ -118,7 +144,10 @@ export async function getAdminWorkspaceData() {
       orderBy: { createdAt: "desc" },
       take: 12,
       select: {
-        id: true, action: true, note: true, createdAt: true,
+        id: true,
+        action: true,
+        note: true,
+        createdAt: true,
         user: { select: { id: true, name: true, email: true } },
         actor: { select: { id: true, name: true, email: true } },
         reminder: { select: { id: true, title: true, state: true } },
@@ -132,8 +161,8 @@ export async function getAdminWorkspaceData() {
       source: "ACCESS" as const,
       action: log.action,
       createdAt: log.createdAt,
-      ownerLabel: log.owner.name || log.owner.email || log.owner.id,
-      actorLabel: log.actor?.name || log.actor?.email || "System",
+      ownerLabel: personLabel(log.owner),
+      actorLabel: personLabel(log.actor),
       targetLabel: [log.targetType, log.targetId].filter(Boolean).join(" • ") || "Account access",
       note: log.metadataJson,
     })),
@@ -142,8 +171,8 @@ export async function getAdminWorkspaceData() {
       source: "ALERT" as const,
       action: log.action,
       createdAt: log.createdAt,
-      ownerLabel: log.user.name || log.user.email || log.user.id,
-      actorLabel: log.actor?.name || log.actor?.email || "System",
+      ownerLabel: personLabel(log.user),
+      actorLabel: personLabel(log.actor),
       targetLabel: log.alert?.title || log.rule?.name || "Alert workflow",
       note: log.note,
     })),
@@ -152,24 +181,30 @@ export async function getAdminWorkspaceData() {
       source: "REMINDER" as const,
       action: log.action,
       createdAt: log.createdAt,
-      ownerLabel: log.user.name || log.user.email || log.user.id,
-      actorLabel: log.actor?.name || log.actor?.email || "System",
+      ownerLabel: personLabel(log.user),
+      actorLabel: personLabel(log.actor),
       targetLabel: log.reminder?.title || `Reminder ${log.reminder?.state || ReminderState.DUE}`,
       note: log.note,
     })),
-  ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 16);
+  ]
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    .slice(0, 16);
+
+  const verificationRate = totalUsers > 0 ? Math.round((verifiedUsers / totalUsers) * 100) : 0;
+  const riskItems = openAlerts + failedJobs + pendingInvites;
 
   return {
     summary: {
       totalUsers,
       verifiedUsers,
+      verificationRate,
       adminUsers,
       pendingInvites,
       activeCareAccess,
       openAlerts,
       failedJobs,
       activeMobileSessions,
-      deactivatedUsers,
+      riskItems,
     },
     recentUsers,
     userRoster,
