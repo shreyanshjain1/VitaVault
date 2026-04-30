@@ -49,6 +49,12 @@ export const primaryRoutes: AppRouteItem[] = [
     icon: Inbox,
   },
   {
+    title: "Care Plan",
+    href: "/care-plan",
+    description: "Prioritized next steps across records, alerts, reminders, and visits",
+    icon: ClipboardCheck,
+  },
+  {
     title: "Emergency Card",
     href: "/emergency-card",
     description: "Printable critical care card",
