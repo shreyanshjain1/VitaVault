@@ -3,6 +3,7 @@ import {
   Activity,
   BellRing,
   CalendarClock,
+  Inbox,
   ClipboardList,
   FileBarChart2,
   FileHeart,
@@ -40,6 +41,12 @@ export const primaryRoutes: AppRouteItem[] = [
     href: "/onboarding",
     description: "Guided first-run health setup",
     icon: ClipboardCheck,
+  },
+  {
+    title: "Notification Center",
+    href: "/notifications",
+    description: "Unified inbox for alerts, reminders, records, and care updates",
+    icon: Inbox,
   },
   {
     title: "Emergency Card",
