@@ -26,7 +26,10 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "seed:demo": "tsx prisma/demo-seed.ts"
+    "seed:demo": "tsx prisma/demo-seed.ts",
+    "env:check": "node scripts/validate-env.cjs",
+    "deploy:check": "npm run db:validate:ci && npm run typecheck && npm run lint && npm run test:run",
+    "health:local": "node scripts/check-health-endpoint.cjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",
