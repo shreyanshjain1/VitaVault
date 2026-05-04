@@ -67,10 +67,11 @@ export async function authenticateMobileCredentials(params: {
       email: true,
       name: true,
       passwordHash: true,
+      deactivatedAt: true,
     },
   });
 
-  if (!user?.passwordHash) {
+  if (!user?.passwordHash || user.deactivatedAt) {
     return null;
   }
 
@@ -102,6 +103,7 @@ export async function requireMobileUser(request: Request) {
           id: true,
           email: true,
           name: true,
+          deactivatedAt: true,
         },
       },
     },
@@ -116,6 +118,10 @@ export async function requireMobileUser(request: Request) {
   }
 
   if (session.expiresAt <= new Date()) {
+    return null;
+  }
+
+  if (session.user.deactivatedAt) {
     return null;
   }
 
