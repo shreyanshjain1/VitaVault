@@ -1,9 +1,8 @@
-import { readFile } from "fs/promises";
 import path from "path";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { resolveStoredDocumentPath } from "@/lib/document-storage";
+import { readDocumentObject, resolveDocumentObject } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
@@ -43,21 +42,22 @@ export async function GET(
     return NextResponse.json({ error: "Document not found." }, { status: 404 });
   }
 
-  const resolved = resolveStoredDocumentPath(document.filePath);
-
-  if (!resolved) {
+  if (!resolveDocumentObject(document.filePath)) {
     return NextResponse.json({ error: "Document storage path is invalid." }, { status: 400 });
   }
 
   try {
-    const bytes = await readFile(resolved.absolutePath);
-    const response = new NextResponse(bytes);
+    const { bytes } = await readDocumentObject(document.filePath);
+    const arrayBuffer = new ArrayBuffer(bytes.byteLength);
+    new Uint8Array(arrayBuffer).set(bytes);
+    const response = new NextResponse(arrayBuffer);
     response.headers.set("Content-Type", document.mimeType || "application/octet-stream");
     response.headers.set(
       "Content-Disposition",
       contentDisposition(document.fileName || `${document.title}.bin`, document.mimeType || "application/octet-stream")
     );
     response.headers.set("Cache-Control", "private, no-store, max-age=0");
+    response.headers.set("X-Document-Storage", "local");
     return response;
   } catch {
     return NextResponse.json({ error: "Document file is unavailable." }, { status: 404 });

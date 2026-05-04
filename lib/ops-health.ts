@@ -11,6 +11,7 @@ import {
 } from "@prisma/client";
 import { db } from "@/lib/db";
 import { APP_ROLES } from "@/lib/domain/enums";
+import { getDocumentStorageHealth } from "@/lib/storage";
 
 type SupportedRole = string | null | undefined;
 
@@ -245,6 +246,8 @@ export async function getOpsHealthData(userId: string, role: SupportedRole): Pro
     }),
   ]);
 
+  const documentStorage = getDocumentStorageHealth();
+
   const envReadiness: OpsEnvItem[] = [
     {
       label: "Database",
@@ -298,6 +301,13 @@ export async function getOpsHealthData(userId: string, role: SupportedRole): Pro
       available: Boolean(process.env.OPENAI_API_KEY),
       tone: envTone(Boolean(process.env.OPENAI_API_KEY), true),
       detail: process.env.OPENAI_API_KEY ? "AI insight generation is enabled." : "Optional. AI features stay disabled without it.",
+    },
+    {
+      label: "Document storage",
+      key: "DOCUMENT_STORAGE_MODE",
+      available: documentStorage.ready,
+      tone: documentStorage.productionReady ? "success" : "warning",
+      detail: documentStorage.detail,
     },
   ];
 

@@ -1,32 +1,22 @@
-import { mkdir, rm, writeFile } from "fs/promises";
-import { buildStoredDocumentPath, getPublicUploadsDir, getPrivateUploadsDir, resolveStoredDocumentPath } from "@/lib/document-storage";
+import { deleteDocumentObject, saveDocumentObject } from "@/lib/storage";
 
 const allowed = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
 export async function saveUpload(file: File) {
   if (!allowed.includes(file.type)) throw new Error("Unsupported file type.");
-  if (file.size > 5 * 1024 * 1024) throw new Error("File must be 5MB or smaller.");
+  if (file.size > MAX_UPLOAD_BYTES) throw new Error("File must be 5MB or smaller.");
 
-  const bytes = await file.arrayBuffer();
-  const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
-  const stored = buildStoredDocumentPath(safeName);
-  const dir = stored.storage === "public" ? getPublicUploadsDir() : getPrivateUploadsDir();
-  await mkdir(dir, { recursive: true });
-  await writeFile(stored.absolutePath, Buffer.from(bytes));
+  const saved = await saveDocumentObject(file);
 
   return {
-    filePath: stored.filePath,
-    fileName: stored.fileName,
-    mimeType: file.type,
-    sizeBytes: file.size,
+    filePath: saved.filePath,
+    fileName: saved.fileName,
+    mimeType: saved.mimeType,
+    sizeBytes: saved.sizeBytes,
   };
 }
 
 export async function deleteUpload(filePath: string | null | undefined) {
-  if (!filePath) return;
-
-  const resolved = resolveStoredDocumentPath(filePath);
-  if (!resolved) return;
-
-  await rm(resolved.absolutePath, { force: true });
+  await deleteDocumentObject(filePath);
 }
