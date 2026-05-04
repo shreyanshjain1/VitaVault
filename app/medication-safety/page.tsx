@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, BellRing, CalendarClock, CheckCircle2, Pill, ShieldCheck, Stethoscope } from "lucide-react";
+import { AlertTriangle, CalendarClock, CheckCircle2, Pill, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { EmptyState, PageHeader, StatusPill } from "@/components/common";
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";

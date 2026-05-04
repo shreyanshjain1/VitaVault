@@ -7,7 +7,6 @@ import {
   DatabaseZap,
   KeyRound,
   LockKeyhole,
-  LogOut,
   ServerCog,
   ShieldCheck,
   Smartphone,
