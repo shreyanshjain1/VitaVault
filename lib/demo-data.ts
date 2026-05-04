@@ -20,29 +20,29 @@ export const demoPatient = {
 export const demoNav: DemoNavItem[] = [
   { href: "/demo", label: "Overview", description: "Public product walkthrough" },
   { href: "/demo/walkthrough", label: "Guided Walkthrough", description: "Recommended reviewer path" },
-  { href: "/demo/dashboard", label: "Dashboard" },
-  { href: "/demo/health-profile", label: "Health Profile" },
-  { href: "/demo/medications", label: "Medications" },
-  { href: "/demo/appointments", label: "Appointments" },
-  { href: "/demo/labs", label: "Labs" },
-  { href: "/demo/vitals", label: "Vitals" },
-  { href: "/demo/symptoms", label: "Symptoms" },
-  { href: "/demo/vaccinations", label: "Vaccinations" },
-  { href: "/demo/doctors", label: "Doctors" },
-  { href: "/demo/documents", label: "Documents" },
-  { href: "/demo/care-team", label: "Care Team" },
-  { href: "/demo/ai-insights", label: "AI Insights" },
-  { href: "/demo/alerts", label: "Alerts" },
-  { href: "/demo/timeline", label: "Timeline" },
-  { href: "/demo/reminders", label: "Reminders" },
-  { href: "/demo/review-queue", label: "Review Queue" },
-  { href: "/demo/summary", label: "Summary" },
-  { href: "/demo/exports", label: "Exports" },
-  { href: "/demo/device-connection", label: "Device Connections" },
-  { href: "/demo/jobs", label: "Jobs" },
-  { href: "/demo/ops", label: "Ops" },
-  { href: "/demo/security", label: "Security" },
-  { href: "/demo/admin", label: "Admin" },
+  { href: "/demo/dashboard", label: "Dashboard", description: "Health command center" },
+  { href: "/demo/health-profile", label: "Health Profile", description: "Patient baseline" },
+  { href: "/demo/medications", label: "Medications", description: "Medication list and adherence" },
+  { href: "/demo/appointments", label: "Appointments", description: "Upcoming and completed visits" },
+  { href: "/demo/labs", label: "Labs", description: "Lab history and flags" },
+  { href: "/demo/vitals", label: "Vitals", description: "Recent vital readings" },
+  { href: "/demo/symptoms", label: "Symptoms", description: "Symptom journal" },
+  { href: "/demo/vaccinations", label: "Vaccinations", description: "Preventive care" },
+  { href: "/demo/doctors", label: "Doctors", description: "Care provider directory" },
+  { href: "/demo/documents", label: "Documents", description: "Protected file index" },
+  { href: "/demo/care-team", label: "Care Team", description: "Shared access preview" },
+  { href: "/demo/ai-insights", label: "AI Insights", description: "AI-assisted summaries" },
+  { href: "/demo/alerts", label: "Alerts", description: "Alert events and rules" },
+  { href: "/demo/timeline", label: "Timeline", description: "Merged patient activity" },
+  { href: "/demo/reminders", label: "Reminders", description: "Follow-up tasks" },
+  { href: "/demo/review-queue", label: "Review Queue", description: "Care review workload" },
+  { href: "/demo/summary", label: "Summary", description: "Patient handoff summary" },
+  { href: "/demo/exports", label: "Exports", description: "Portable reports" },
+  { href: "/demo/device-connection", label: "Device Connections", description: "Connected data readiness" },
+  { href: "/demo/jobs", label: "Jobs", description: "Worker activity" },
+  { href: "/demo/ops", label: "Ops", description: "System readiness" },
+  { href: "/demo/security", label: "Security", description: "Session and account posture" },
+  { href: "/demo/admin", label: "Admin", description: "Business control surface" },
 ];
 
 export const demoDashboardStats = [
@@ -240,24 +240,38 @@ export const demoTourSteps = [
   },
   {
     step: "02",
+    title: "Review the care workflow hubs",
+    route: "/notifications",
+    status: "Workflow hubs",
+    body: "Notification Center, Care Plan, Visit Prep, and Emergency Card show how VitaVault turns records into next actions.",
+  },
+  {
+    step: "03",
+    title: "Inspect clinical review depth",
+    route: "/trends",
+    status: "Clinical review",
+    body: "Health Trends, Medication Safety, Lab Review, Vitals Monitor, and Symptom Review show interpretation surfaces on top of records.",
+  },
+  {
+    step: "04",
     title: "Open the core health record modules",
     route: "/demo/health-profile",
     status: "Records",
     body: "Review the structured patient profile, medications, appointments, labs, vitals, symptoms, vaccinations, doctors, and documents.",
   },
   {
-    step: "03",
+    step: "05",
     title: "Inspect action workflows",
     route: "/demo/alerts",
-    status: "Workflow",
+    status: "Alerts and review",
     body: "Alert rules, reminder queues, AI insights, review queue, and summary exports show that VitaVault goes beyond storage.",
   },
   {
-    step: "04",
+    step: "06",
     title: "Review collaboration and operations",
     route: "/demo/care-team",
     status: "Business-ready",
-    body: "Care-team access, security controls, admin visibility, device connections, jobs, and ops pages show the operational product layer.",
+    body: "Care-team access, security controls, audit log, admin visibility, device connections, jobs, and ops pages show the operational product layer.",
   },
 ];
 
@@ -265,7 +279,7 @@ export const demoPersona = {
   patient: "Elena Cruz",
   profile: "34-year-old patient managing Type 2 Diabetes and Hypertension",
   reviewerGoal: "Evaluate the product surface without needing a configured database or login flow.",
-  recommendedPath: ["Dashboard", "Medications", "Labs", "Alerts", "Summary", "Security", "Admin"],
+  recommendedPath: ["Dashboard", "Notifications", "Care Plan", "Visit Prep", "Health Trends", "Summary", "Security", "Admin"],
   showcaseStrengths: [
     "Broad health-record coverage",
     "Care-team sharing foundations",
@@ -276,10 +290,10 @@ export const demoPersona = {
 };
 
 export const demoShowcaseMetrics = [
-  { label: "Demo modules", value: "24", note: "Public read-only pages mirroring the authenticated product surface" },
+  { label: "Demo modules", value: "25", note: "Public read-only pages plus a guided walkthrough for reviewers" },
   { label: "Clinical records", value: "9", note: "Profile, meds, labs, vitals, symptoms, vaccines, doctors, documents, timeline" },
-  { label: "Workflow layers", value: "7", note: "Alerts, reminders, AI insights, review queue, exports, device sync, jobs" },
-  { label: "Ops surfaces", value: "4", note: "Security, admin, ops, jobs, and reviewer-friendly controls" },
+  { label: "Workflow layers", value: "12+", note: "Notifications, care plan, visit prep, alerts, reminders, review, exports, device sync, jobs" },
+  { label: "Ops surfaces", value: "5", note: "Security, audit log, admin, ops, jobs, and reviewer-friendly controls" },
 ];
 
 export const demoReadinessChecklist = [
@@ -291,6 +305,31 @@ export const demoReadinessChecklist = [
 
 export const demoFeatureHighlights = [
   { title: "Health command center", body: "The dashboard brings together patient context, alerts, reminders, recent activity, and care tasks.", status: "Core" },
-  { title: "Patient handoff packet", body: "The summary and exports surfaces present the type of printable reports that can support doctor visits and care coordination.", status: "Business" },
-  { title: "Connected care foundation", body: "Care-team access, device sync, mobile tokens, alerting, jobs, and ops pages show how the app can grow into a real product.", status: "Architecture" },
+  { title: "Care workflow hubs", body: "Notification Center, Care Plan, Visit Prep, and Emergency Card show practical workflows for daily care management.", status: "Workflow" },
+  { title: "Clinical review layer", body: "Trends, Medication Safety, Lab Review, Vitals Monitor, and Symptom Review turn health records into review-ready signals.", status: "Review" },
+  { title: "Patient handoff packet", body: "The summary and exports surfaces present printable reports that can support doctor visits and care coordination.", status: "Business" },
+  { title: "Connected care foundation", body: "Care-team access, device sync, mobile tokens, alerting, jobs, audit, and ops pages show how the app can grow into a real product.", status: "Architecture" },
+];
+
+
+export const demoProductHubs = [
+  { label: "Notification Center", href: "/notifications", layer: "Care workflow", body: "Unified inbox for alerts, reminders, appointments, labs, documents, care invites, and device sync issues." },
+  { label: "Care Plan Hub", href: "/care-plan", layer: "Care workflow", body: "Readiness score, prioritized actions, upcoming care timeline, providers, active meds, and latest vitals." },
+  { label: "Visit Prep", href: "/visit-prep", layer: "Care workflow", body: "Provider-ready appointment prep with missing context, recent labs, symptoms, vitals, documents, and doctor packet handoff." },
+  { label: "Emergency Card", href: "/emergency-card", layer: "Reports", body: "Printable emergency profile with blood type, allergies, conditions, contacts, active medications, and latest vitals." },
+  { label: "Health Trends", href: "/trends", layer: "Clinical review", body: "Trend coverage, risk scoring, vital averages, lab flags, symptom severity, adherence, and merged clinical timeline." },
+  { label: "Medication Safety", href: "/medication-safety", layer: "Clinical review", body: "Dose board, adherence signal, missed/skipped rates, medication reminders, safety actions, and provider context." },
+  { label: "Lab Review", href: "/lab-review", layer: "Clinical review", body: "Lab readiness, abnormal/borderline action queue, trend cards, document coverage, and provider review guidance." },
+  { label: "Vitals Monitor", href: "/vitals-monitor", layer: "Clinical review", body: "Latest/previous readings, deltas, watch-zone detection, averages, timeline, and device connection signal." },
+  { label: "Symptom Review", href: "/symptom-review", layer: "Clinical review", body: "Severity breakdown, unresolved symptom metrics, body-area clusters, action queue, filters, and handoff signals." },
+  { label: "Audit Log", href: "/audit-log", layer: "Security/Ops", body: "Unified audit feed for care access, alerts, reminders, jobs, and mobile/API session events." },
+  { label: "Mobile API Docs", href: "/api-docs", layer: "Platform", body: "Product-facing documentation for mobile login, bearer sessions, device connections, and reading ingestion." },
+];
+
+export const demoFeatureMatrix = [
+  { layer: "Patient records", modules: "Profile, medications, appointments, doctors, labs, vitals, symptoms, vaccines, documents", value: "Broad structured health data coverage" },
+  { layer: "Care workflows", modules: "Notifications, care plan, visit prep, reminders, alerts, review queue", value: "Turns stored records into clear next actions" },
+  { layer: "Clinical review", modules: "Trends, medication safety, lab review, vitals monitor, symptom review", value: "Adds interpretation surfaces without requiring a new schema" },
+  { layer: "Reports", modules: "Summary packet, emergency card, exports, print views", value: "Supports doctor visits and portable handoffs" },
+  { layer: "Platform", modules: "Device sync APIs, jobs, ops, admin, audit, security", value: "Shows production-minded backend and operations work" },
 ];

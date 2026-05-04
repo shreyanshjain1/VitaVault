@@ -15,20 +15,33 @@ VitaVault/
 │  ├─ admin/page.tsx
 │  ├─ ai-insights/page.tsx
 │  ├─ alerts/
+│  ├─ api-docs/page.tsx
 │  ├─ appointments/page.tsx
+│  ├─ audit-log/page.tsx
+│  ├─ care-plan/page.tsx
 │  ├─ care-team/page.tsx
 │  ├─ dashboard/page.tsx
 │  ├─ demo/
+│  │  ├─ page.tsx
+│  │  ├─ walkthrough/page.tsx
+│  │  └─ module preview pages
 │  ├─ device-connection/page.tsx
 │  ├─ doctors/page.tsx
 │  ├─ documents/page.tsx
+│  ├─ emergency-card/
+│  │  ├─ page.tsx
+│  │  └─ print/page.tsx
 │  ├─ exports/
 │  ├─ health-profile/page.tsx
 │  ├─ invite/[token]/page.tsx
 │  ├─ jobs/page.tsx
+│  ├─ lab-review/page.tsx
 │  ├─ labs/page.tsx
 │  ├─ login/page.tsx
+│  ├─ medication-safety/page.tsx
 │  ├─ medications/page.tsx
+│  ├─ notifications/page.tsx
+│  ├─ onboarding/page.tsx
 │  ├─ ops/page.tsx
 │  ├─ patient/[ownerUserId]/page.tsx
 │  ├─ reminders/page.tsx
@@ -36,39 +49,62 @@ VitaVault/
 │  ├─ security/page.tsx
 │  ├─ signup/page.tsx
 │  ├─ summary/
+│  │  ├─ page.tsx
+│  │  └─ print/page.tsx
+│  ├─ symptom-review/page.tsx
 │  ├─ symptoms/page.tsx
 │  ├─ timeline/page.tsx
+│  ├─ trends/page.tsx
 │  ├─ vaccinations/page.tsx
-│  ├─ verify-email/page.tsx
-│  └─ vitals/page.tsx
+│  ├─ visit-prep/page.tsx
+│  ├─ vitals/page.tsx
+│  └─ vitals-monitor/page.tsx
 ├─ components/
 │  ├─ app-shell.tsx
 │  ├─ auth-form.tsx
 │  ├─ charts.tsx
 │  ├─ common.tsx
+│  ├─ demo-primitives.tsx
 │  ├─ demo-shell.tsx
+│  ├─ emergency-card-actions.tsx
 │  ├─ page-transition.tsx
 │  ├─ providers.tsx
+│  ├─ summary-export-actions.tsx
 │  ├─ ui.tsx
 │  └─ user-menu.tsx
 ├─ docs/
 │  ├─ ACTION_EXPORT_CONTRACT.md
+│  ├─ FEATURE_MATRIX.md
 │  ├─ KNOWN_LIMITATIONS.md
-│  ├─ PATCH_01_STABILIZATION.md
+│  ├─ MOBILE_DEVICE_API.md
+│  ├─ PATCH_*.md
 │  └─ phase and roadmap planning notes
 ├─ lib/
 │  ├─ actions/
+│  ├─ admin-dashboard.ts
+│  ├─ audit-log.ts
 │  ├─ auth.ts
+│  ├─ care-plan.ts
+│  ├─ caregiver-workspace.ts
 │  ├─ dashboard-data.ts
 │  ├─ db.ts
 │  ├─ demo-data.ts
-│  ├─ email.ts
+│  ├─ document-hub.ts
+│  ├─ emergency-card.ts
 │  ├─ export.ts
+│  ├─ health-trends.ts
 │  ├─ jobs.ts
+│  ├─ lab-review.ts
+│  ├─ medication-safety.ts
+│  ├─ notification-center.ts
+│  ├─ ops-health.ts
+│  ├─ patient-summary.ts
 │  ├─ security-actions.ts
 │  ├─ session.ts
+│  ├─ symptom-review.ts
 │  ├─ upload.ts
-│  ├─ utils.ts
+│  ├─ visit-prep.ts
+│  ├─ vitals-monitor.ts
 │  └─ validations.ts
 ├─ prisma/
 │  ├─ schema.prisma

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { DemoHeader, DemoSection, ProgressBar, StatCards, TimelineList } from "@/components/demo-primitives";
-import { demoFeatureHighlights, demoPersona, demoTourSteps } from "@/lib/demo-data";
+import { demoFeatureHighlights, demoPersona, demoProductHubs, demoTourSteps } from "@/lib/demo-data";
 
 const routeGroups = [
   {
@@ -14,7 +14,28 @@ const routeGroups = [
     ],
   },
   {
-    title: "2. Clinical record depth",
+    title: "2. Care workflow hubs",
+    body: "These authenticated app routes show how VitaVault turns health records into prioritized care actions.",
+    links: [
+      { label: "Notification Center", href: "/notifications" },
+      { label: "Care Plan", href: "/care-plan" },
+      { label: "Visit Prep", href: "/visit-prep" },
+      { label: "Emergency Card", href: "/emergency-card" },
+    ],
+  },
+  {
+    title: "3. Clinical review hubs",
+    body: "These review pages add signals, readiness scoring, and handoff context on top of structured records.",
+    links: [
+      { label: "Health Trends", href: "/trends" },
+      { label: "Medication Safety", href: "/medication-safety" },
+      { label: "Lab Review", href: "/lab-review" },
+      { label: "Vitals Monitor", href: "/vitals-monitor" },
+      { label: "Symptom Review", href: "/symptom-review" },
+    ],
+  },
+  {
+    title: "4. Clinical record depth",
     body: "Review the breadth of structured record modules that make the app more than a dashboard mockup.",
     links: [
       { label: "Medications", href: "/demo/medications" },
@@ -25,7 +46,7 @@ const routeGroups = [
     ],
   },
   {
-    title: "3. Action and care workflows",
+    title: "5. Action and care workflows",
     body: "These pages show reminders, alerts, review queues, AI insights, and patient handoff outputs.",
     links: [
       { label: "Alerts", href: "/demo/alerts" },
@@ -37,15 +58,17 @@ const routeGroups = [
     ],
   },
   {
-    title: "4. Business and operations layer",
+    title: "6. Business and operations layer",
     body: "Finish with the product surfaces that show security, team access, background jobs, device readiness, and admin control.",
     links: [
       { label: "Care Team", href: "/demo/care-team" },
       { label: "Device Connections", href: "/demo/device-connection" },
+      { label: "Audit Log", href: "/audit-log" },
       { label: "Security", href: "/demo/security" },
       { label: "Jobs", href: "/demo/jobs" },
       { label: "Ops", href: "/demo/ops" },
       { label: "Admin", href: "/demo/admin" },
+      { label: "API Docs", href: "/api-docs" },
     ],
   },
 ];
@@ -57,11 +80,16 @@ export default function DemoWalkthroughPage() {
         eyebrow="Guided reviewer path"
         title="VitaVault product walkthrough"
         description={`Follow this route to review VitaVault through ${demoPersona.patient}'s sample care-management story. The goal is to show product depth, workflow thinking, and operational readiness without requiring login.`}
-        actions={<><Link href="/demo/dashboard" className="rounded-2xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Begin with dashboard</Link><Link href="/login" className="rounded-2xl border border-border/60 px-4 py-2 text-sm font-medium hover:bg-muted/60">Open real app</Link></>}
+        actions={
+          <>
+            <Link href="/demo/dashboard" className="rounded-2xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Begin with dashboard</Link>
+            <Link href="/login" className="rounded-2xl border border-border/60 px-4 py-2 text-sm font-medium hover:bg-muted/60">Open real app</Link>
+          </>
+        }
       />
 
       <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
-        <DemoSection title="Walkthrough progress model" description="The demo shell now tracks progress as reviewers move across pages.">
+        <DemoSection title="Walkthrough progress model" description="The demo shell explains the recommended route across records, workflow hubs, review hubs, reports, and operations.">
           <div className="space-y-4">
             <ProgressBar value={100} label="Recommended route coverage" />
             <TimelineList items={demoTourSteps.map((step) => ({ title: `${step.step}. ${step.title}`, body: step.body, meta: step.route, status: step.status, href: step.route }))} />
@@ -71,6 +99,18 @@ export default function DemoWalkthroughPage() {
           <StatCards items={demoFeatureHighlights} />
         </DemoSection>
       </div>
+
+      <DemoSection title="Newest Patch 12–19 modules" description="These newer authenticated feature hubs are now represented in the showcase so reviewers can understand the expanded product layer.">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {demoProductHubs.map((hub) => (
+            <Link key={hub.href} href={hub.href} className="rounded-2xl border border-border/60 bg-background/60 p-4 transition hover:bg-muted/60">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{hub.layer}</p>
+              <p className="mt-2 font-semibold tracking-tight">{hub.label}</p>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">{hub.body}</p>
+            </Link>
+          ))}
+        </div>
+      </DemoSection>
 
       <div className="grid gap-6 md:grid-cols-2">
         {routeGroups.map((group) => (
