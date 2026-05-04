@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppRole } from "@prisma/client";
-import { AlertTriangle, Ban, CheckCircle2, Cpu, MailCheck, RotateCcw, Shield, UserCog, UserPlus, Users } from "lucide-react";
+import { AlertTriangle, Ban, CheckCircle2, Cpu, MailCheck, RotateCcw, Shield, UserPlus, Users } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { EmptyState, PageHeader, StatusPill } from "@/components/common";
