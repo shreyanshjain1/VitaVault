@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Activity, AlertTriangle, HeartPulse, Smartphone, TrendingUp } from "lucide-react";
+import { Activity, AlertTriangle, HeartPulse, Smartphone } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { EmptyState, PageHeader, StatusPill } from "@/components/common";
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
