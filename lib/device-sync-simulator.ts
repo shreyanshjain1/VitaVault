@@ -2,10 +2,7 @@ import {
   DeviceConnectionStatus,
   DevicePlatform,
   DeviceReadingType,
-  JobKind,
-  JobRunStatus,
   ReadingSource,
-  SyncJobStatus,
 } from "@prisma/client";
 import { db } from "@/lib/db";
 
