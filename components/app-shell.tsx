@@ -13,13 +13,13 @@ import {
   SunMedium,
   X,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import {
-  primaryRoutes,
-  utilityRoutes,
+  allAppRoutes,
+  navigationSections,
   type AppRouteItem,
 } from "@/lib/app-routes";
 
@@ -128,60 +128,21 @@ export function AppShell({ children }: AppShellProps) {
     } catch {}
   }, [desktopCollapsed, hasMounted]);
 
-  const activeTitle = useMemo(() => {
-    const all = [...primaryRoutes, ...utilityRoutes];
-    return (
-      all.find(
-        (item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
-      )?.title ?? "VitaVault"
+  const activeRoute = useMemo(() => {
+    return allAppRoutes.find(
+      (item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
     );
   }, [pathname]);
 
-  const routeMap = useMemo(() => {
-    const all = [...primaryRoutes, ...utilityRoutes];
-    return new Map(all.map((r) => [r.href, r]));
-  }, []);
+  const activeSection = useMemo(() => {
+    return navigationSections.find((section) =>
+      section.items.some(
+        (item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
+      )
+    );
+  }, [pathname]);
 
-  const groups = useMemo(() => {
-    const pick = (hrefs: string[]) =>
-      hrefs.map((h) => routeMap.get(h)).filter(Boolean) as AppRouteItem[];
-
-    const overview = pick(["/dashboard", "/onboarding", "/notifications", "/care-plan", "/trends"]);
-    const collaboration = pick([
-      "/ai-insights",
-      "/care-team",
-      "/alerts",
-      "/device-connection",
-    ]);
-
-    const records = primaryRoutes.filter(
-      (r) =>
-        ![
-          "/dashboard",
-          "/onboarding",
-          "/notifications",
-          "/care-plan",
-          "/trends",
-          "/ai-insights",
-          "/care-team",
-          "/alerts",
-          "/device-connection",
-          "/summary",
-        ].includes(r.href)
-    ) as AppRouteItem[];
-
-    const utilities = pick([
-      "/summary",
-      ...utilityRoutes.map((r) => r.href),
-    ]);
-
-    return [
-      { label: "Overview", items: overview },
-      { label: "Flagship", items: collaboration },
-      { label: "Records", items: records },
-      { label: "Utilities", items: utilities },
-    ];
-  }, [routeMap]);
+  const activeTitle = activeRoute?.title ?? "VitaVault";
 
   const Sidebar = ({
     collapsed = false,
@@ -223,7 +184,7 @@ export function AppShell({ children }: AppShellProps) {
                       VitaVault
                     </p>
                     <p className="truncate text-xs text-muted-foreground">
-                      Patient workspace
+                      Health command center
                     </p>
                   </motion.div>
                 ) : null}
@@ -241,8 +202,7 @@ export function AppShell({ children }: AppShellProps) {
                 transition={{ duration: 0.18 }}
                 className="mt-3 text-xs leading-relaxed text-muted-foreground"
               >
-                Secure records, care-team collaboration, and AI-backed
-                summaries.
+                Records, monitoring, care-team workflows, reports, and operations in one organized workspace.
               </motion.p>
             ) : null}
           </AnimatePresence>
@@ -250,27 +210,31 @@ export function AppShell({ children }: AppShellProps) {
       </div>
 
       <div className={cn("mt-6 flex-1 overflow-y-auto pb-6", collapsed ? "px-2" : "px-3")}>
-        {groups.map((group) => (
-          <div key={group.label} className="mb-5">
+        {navigationSections.map((section) => (
+          <div key={section.label} className="mb-5">
             <AnimatePresence initial={false}>
               {!collapsed ? (
-                <motion.p
-                  key={`${group.label}-title`}
+                <motion.div
+                  key={`${section.label}-title`}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.15 }}
-                  className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+                  className="px-2 pb-2"
                 >
-                  {group.label}
-                </motion.p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {section.label}
+                  </p>
+                  <p className="mt-0.5 truncate text-[11px] text-muted-foreground/80">
+                    {section.description}
+                  </p>
+                </motion.div>
               ) : null}
             </AnimatePresence>
 
             <div className="space-y-1">
-              {group.items.map((item) => {
-                const active =
-                  pathname === item.href || pathname.startsWith(`${item.href}/`);
+              {section.items.map((item) => {
+                const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
                 return (
                   <NavItem
@@ -335,17 +299,21 @@ export function AppShell({ children }: AppShellProps) {
 
         <AnimatePresence initial={false}>
           {!collapsed ? (
-            <motion.p
+            <motion.div
               key="security-note"
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.18 }}
-              className="mt-3 text-xs text-muted-foreground"
+              className="mt-3 rounded-2xl border border-border/60 bg-background/50 p-3"
             >
-              Your workspace is authenticated and protected by server-side
-              checks.
-            </motion.p>
+              <p className="text-xs font-medium text-foreground/90">
+                {activeSection?.label ?? "Protected workspace"}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                {activeSection?.description ?? "Authenticated and protected by server-side checks."}
+              </p>
+            </motion.div>
           ) : null}
         </AnimatePresence>
       </div>
@@ -356,7 +324,7 @@ export function AppShell({ children }: AppShellProps) {
     <div className="min-h-screen bg-background">
       <div className="hidden min-h-screen lg:flex">
         <motion.div
-          animate={{ width: desktopCollapsed ? 96 : 340 }}
+          animate={{ width: desktopCollapsed ? 96 : 360 }}
           transition={{ duration: 0.24, ease: "easeOut" }}
           className="border-r border-border/60 bg-background/70"
         >
@@ -373,9 +341,7 @@ export function AppShell({ children }: AppShellProps) {
                   type="button"
                   className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-border/60 bg-background/60 hover:bg-muted/50 transition-colors"
                   onClick={() => setDesktopCollapsed((prev) => !prev)}
-                  aria-label={
-                    desktopCollapsed ? "Expand sidebar" : "Collapse sidebar"
-                  }
+                  aria-label={desktopCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                   title={desktopCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                 >
                   {desktopCollapsed ? (
@@ -387,14 +353,14 @@ export function AppShell({ children }: AppShellProps) {
 
                 <div>
                   <p className="text-xs font-medium text-muted-foreground">
-                    Current section
+                    {activeSection?.label ?? "Current section"}
                   </p>
                   <p className="text-sm font-semibold">{activeTitle}</p>
                 </div>
               </div>
 
               <div className="text-xs text-muted-foreground">
-                Premium healthcare SaaS shell • Dark mode supported
+                Organized healthcare workspace • Navigation grouped by workflow
               </div>
             </div>
           </div>
@@ -423,7 +389,9 @@ export function AppShell({ children }: AppShellProps) {
 
             <div className="min-w-0 text-center">
               <p className="truncate text-sm font-semibold">{activeTitle}</p>
-              <p className="truncate text-xs text-muted-foreground">VitaVault</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {activeSection?.label ?? "VitaVault"}
+              </p>
             </div>
 
             <button
@@ -465,10 +433,13 @@ export function AppShell({ children }: AppShellProps) {
                 animate={{ x: 0 }}
                 exit={{ x: "-100%" }}
                 transition={{ duration: 0.22, ease: "easeOut" }}
-                className="absolute left-0 top-0 h-full w-[88%] max-w-[360px] border-r border-border/60 bg-background"
+                className="absolute left-0 top-0 h-full w-[88%] max-w-[380px] border-r border-border/60 bg-background"
               >
                 <div className="flex items-center justify-between px-4 py-4">
-                  <p className="text-sm font-semibold">Navigation</p>
+                  <div>
+                    <p className="text-sm font-semibold">Navigation</p>
+                    <p className="text-xs text-muted-foreground">Grouped by product workflow</p>
+                  </div>
                   <button
                     type="button"
                     className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-border/60 bg-background/60"
@@ -479,7 +450,7 @@ export function AppShell({ children }: AppShellProps) {
                   </button>
                 </div>
 
-                <div className="h-[calc(100%-64px)]">
+                <div className="h-[calc(100%-72px)]">
                   <Sidebar onNavigate={() => setMobileOpen(false)} />
                 </div>
               </motion.div>
