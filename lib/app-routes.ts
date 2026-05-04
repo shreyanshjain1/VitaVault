@@ -104,6 +104,12 @@ export const primaryRoutes: AppRouteItem[] = [
     icon: Pill,
   },
   {
+    title: "Medication Safety",
+    href: "/medication-safety",
+    description: "Adherence, dose coverage, refill risk, and medication safety review",
+    icon: ShieldCheck,
+  },
+  {
     title: "Appointments",
     href: "/appointments",
     description: "Visits, follow-ups, doctors, and notes",
