@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, BrainCircuit, CheckCircle2, ClipboardList, Database, FileText, HelpCircle, History, ShieldCheck, Sparkles } from "lucide-react";
+import { AlertTriangle, BrainCircuit, ClipboardList, Database, FileText, HelpCircle, History, ShieldCheck, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { EmptyState, PageHeader, StatusPill } from "@/components/common";
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
