@@ -25,7 +25,8 @@
     "lint:fix": "eslint . --fix",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "seed:demo": "tsx prisma/demo-seed.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",
