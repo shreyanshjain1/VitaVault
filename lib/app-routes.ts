@@ -190,6 +190,12 @@ export const monitoringRoutes: AppRouteItem[] = [
     description: "Integration roadmap for phone and health devices",
     icon: Smartphone,
   },
+  {
+    title: "Device Sync Simulator",
+    href: "/device-sync-simulator",
+    description: "Run sample device syncs into readings, jobs, and mirrored vitals",
+    icon: Workflow,
+  },
 ];
 
 export const sharingReportRoutes: AppRouteItem[] = [
