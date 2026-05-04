@@ -55,6 +55,13 @@ export const primaryRoutes: AppRouteItem[] = [
     description: "Prioritized next steps across records, alerts, reminders, and visits",
     icon: ClipboardCheck,
   },
+
+  {
+    title: "Visit Prep",
+    href: "/visit-prep",
+    description: "Provider-ready visit packet, prep tasks, and care context",
+    icon: ClipboardList,
+  },
   {
     title: "Health Trends",
     href: "/trends",
