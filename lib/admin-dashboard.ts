@@ -61,6 +61,8 @@ export async function getAdminWorkspaceData() {
         email: true,
         role: true,
         emailVerified: true,
+        deactivatedAt: true,
+        deactivatedReason: true,
         createdAt: true,
       },
     }),
@@ -74,6 +76,8 @@ export async function getAdminWorkspaceData() {
         role: true,
         createdAt: true,
         emailVerified: true,
+        deactivatedAt: true,
+        deactivatedReason: true,
         _count: {
           select: {
             reminders: true,
@@ -191,7 +195,8 @@ export async function getAdminWorkspaceData() {
     .slice(0, 16);
 
   const verificationRate = totalUsers > 0 ? Math.round((verifiedUsers / totalUsers) * 100) : 0;
-  const riskItems = openAlerts + failedJobs + pendingInvites;
+  const deactivatedUsers = userRoster.filter((item) => Boolean(item.deactivatedAt)).length;
+  const riskItems = openAlerts + failedJobs + pendingInvites + deactivatedUsers;
 
   return {
     summary: {
@@ -204,6 +209,7 @@ export async function getAdminWorkspaceData() {
       openAlerts,
       failedJobs,
       activeMobileSessions,
+      deactivatedUsers,
       riskItems,
     },
     recentUsers,

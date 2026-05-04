@@ -2,16 +2,16 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppRole } from "@prisma/client";
-import { AlertTriangle, CheckCircle2, Cpu, MailCheck, Shield, UserCog, UserPlus, Users } from "lucide-react";
+import { AlertTriangle, Ban, CheckCircle2, Cpu, MailCheck, RotateCcw, Shield, UserCog, UserPlus, Users } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { EmptyState, PageHeader, StatusPill } from "@/components/common";
-import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TBody, TD, TH, THead, TR } from "@/components/ui";
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TBody, TD, Textarea, TH, THead, TR } from "@/components/ui";
 import { isEmailDeliveryConfigured } from "@/lib/account-email";
 import { getAdminWorkspaceData } from "@/lib/admin-dashboard";
 import { APP_ROLES } from "@/lib/domain/enums";
 import { requireUser } from "@/lib/session";
-import { resendVerificationForUserAction, revokeUserMobileSessionsAction } from "./actions";
+import { deactivateUserAction, reactivateUserAction, resendVerificationForUserAction, revokeUserMobileSessionsAction } from "./actions";
 
 type AdminWorkspaceData = Awaited<ReturnType<typeof getAdminWorkspaceData>>;
 type UserRosterItem = AdminWorkspaceData["userRoster"][number];
@@ -34,7 +34,7 @@ function statusTone(status: string) {
   if (["FAILED", "REVOKED", "DECLINED", "EXPIRED", "DEACTIVATED"].includes(status)) return "danger" as const;
   if (["PENDING", "RETRYING", "ERROR"].includes(status)) return "warning" as const;
   if (["OPEN", "ACTIVE"].includes(status)) return "info" as const;
-  if (["COMPLETED", "RESOLVED", "VERIFIED", "SENT"].includes(status)) return "success" as const;
+  if (["COMPLETED", "RESOLVED", "VERIFIED", "SENT", "REACTIVATED"].includes(status)) return "success" as const;
   return "neutral" as const;
 }
 
@@ -72,18 +72,45 @@ function ProgressBar({ value }: { value: number }) {
   );
 }
 
-function UserActions({ item, emailEnabled }: { item: UserRosterItem; emailEnabled: boolean }) {
+function UserActions({ item, emailEnabled, currentUserId }: { item: UserRosterItem; emailEnabled: boolean; currentUserId: string }) {
+  const isDeactivated = Boolean(item.deactivatedAt);
+  const isSelf = item.id === currentUserId;
+
   return (
-    <div className="space-y-2">
+    <div className="min-w-[230px] space-y-2">
+      {isDeactivated ? (
+        <form action={reactivateUserAction}>
+          <input type="hidden" name="userId" value={item.id} />
+          <Button type="submit" size="sm" className="w-full">
+            <RotateCcw className="h-4 w-4" />
+            Reactivate account
+          </Button>
+        </form>
+      ) : (
+        <form action={deactivateUserAction} className="space-y-2">
+          <input type="hidden" name="userId" value={item.id} />
+          <Textarea
+            name="reason"
+            rows={2}
+            placeholder={isSelf ? "You cannot deactivate yourself" : "Reason for deactivation"}
+            disabled={isSelf}
+          />
+          <Button type="submit" size="sm" variant="destructive" className="w-full" disabled={isSelf}>
+            <Ban className="h-4 w-4" />
+            Deactivate account
+          </Button>
+        </form>
+      )}
+
       <form action={revokeUserMobileSessionsAction}>
         <input type="hidden" name="userId" value={item.id} />
-        <Button type="submit" size="sm" variant="outline">Revoke sessions</Button>
+        <Button type="submit" size="sm" variant="outline" className="w-full">Revoke sessions</Button>
       </form>
 
-      {!item.emailVerified ? (
+      {!item.emailVerified && !isDeactivated ? (
         <form action={resendVerificationForUserAction}>
           <input type="hidden" name="userId" value={item.id} />
-          <Button type="submit" size="sm" variant="secondary" disabled={!emailEnabled}>Resend verification</Button>
+          <Button type="submit" size="sm" variant="secondary" className="w-full" disabled={!emailEnabled}>Resend verification</Button>
         </form>
       ) : null}
     </div>
@@ -139,7 +166,7 @@ export default async function AdminPage() {
       <div className="mx-auto max-w-7xl space-y-6 p-6">
         <PageHeader
           title="Admin Command Center"
-          description="Review user growth, account verification, care-team activity, audit signals, and operational risks from one business-facing admin workspace."
+          description="Review user growth, account verification, account lifecycle state, care-team activity, audit signals, and operational risks from one business-facing admin workspace."
           action={(
             <div className="flex flex-wrap gap-2">
               <Link href="/ops" className="inline-flex h-10 items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium transition-all hover:border-border hover:bg-muted/60">Operations</Link>
@@ -153,8 +180,8 @@ export default async function AdminPage() {
           <StatCard title="Total users" value={data.summary.totalUsers} description="All accounts currently provisioned inside VitaVault." icon={<Users className="h-5 w-5 text-primary" />} />
           <StatCard title="Verified users" value={data.summary.verifiedUsers} description={`${data.summary.verificationRate}% of users have completed email verification.`} icon={<MailCheck className="h-5 w-5 text-emerald-500" />} />
           <StatCard title="Pending invites" value={data.summary.pendingInvites} description="Outstanding care-team invitations awaiting action." icon={<UserPlus className="h-5 w-5 text-violet-500" />} />
-          <StatCard title="Admin accounts" value={data.summary.adminUsers} description="Accounts with full administrative visibility." icon={<UserCog className="h-5 w-5 text-rose-500" />} />
-          <StatCard title="Risk items" value={data.summary.riskItems} description="Open alerts, failed jobs, and pending invites needing review." icon={<AlertTriangle className="h-5 w-5 text-amber-500" />} />
+          <StatCard title="Deactivated users" value={data.summary.deactivatedUsers} description="Recently visible accounts blocked from sign-in and mobile/API use." icon={<Ban className="h-5 w-5 text-rose-500" />} />
+          <StatCard title="Risk items" value={data.summary.riskItems} description="Open alerts, failed jobs, pending invites, and deactivated accounts needing review." icon={<AlertTriangle className="h-5 w-5 text-amber-500" />} />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -168,7 +195,7 @@ export default async function AdminPage() {
           <Card>
             <CardHeader>
               <CardTitle>User roster snapshot</CardTitle>
-              <CardDescription>Recent accounts with role, verification, footprint, and safe admin controls.</CardDescription>
+              <CardDescription>Recent accounts with role, verification, lifecycle status, footprint, and admin controls.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -177,35 +204,44 @@ export default async function AdminPage() {
                     <TR>
                       <TH>User</TH>
                       <TH>Role</TH>
-                      <TH>Verification</TH>
+                      <TH>Status</TH>
                       <TH>Footprint</TH>
                       <TH>Created</TH>
                       <TH>Actions</TH>
                     </TR>
                   </THead>
                   <TBody>
-                    {data.userRoster.map((item: UserRosterItem) => (
-                      <TR key={item.id}>
-                        <TD>
-                          <div className="space-y-1">
-                            <div className="font-medium">{item.name || "Unnamed user"}</div>
-                            <div className="text-xs text-muted-foreground">{item.email}</div>
-                          </div>
-                        </TD>
-                        <TD><StatusPill tone={roleTone(item.role)}>{item.role}</StatusPill></TD>
-                        <TD><StatusPill tone={item.emailVerified ? "success" : "warning"}>{item.emailVerified ? "Verified" : "Pending"}</StatusPill></TD>
-                        <TD>
-                          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                            <Badge>{item._count.reminders} reminders</Badge>
-                            <Badge>{item._count.alertEvents} alerts</Badge>
-                            <Badge>{item._count.documents} docs</Badge>
-                            <Badge>{item._count.mobileSessionTokens} sessions</Badge>
-                          </div>
-                        </TD>
-                        <TD>{formatDateTime(item.createdAt)}</TD>
-                        <TD><UserActions item={item} emailEnabled={emailEnabled} /></TD>
-                      </TR>
-                    ))}
+                    {data.userRoster.map((item: UserRosterItem) => {
+                      const isDeactivated = Boolean(item.deactivatedAt);
+                      return (
+                        <TR key={item.id}>
+                          <TD>
+                            <div className="space-y-1">
+                              <div className="font-medium">{item.name || "Unnamed user"}</div>
+                              <div className="text-xs text-muted-foreground">{item.email}</div>
+                              {item.deactivatedReason ? <div className="text-xs text-destructive">{item.deactivatedReason}</div> : null}
+                            </div>
+                          </TD>
+                          <TD><StatusPill tone={roleTone(item.role)}>{item.role}</StatusPill></TD>
+                          <TD>
+                            <div className="flex flex-col gap-2">
+                              <StatusPill tone={item.emailVerified ? "success" : "warning"}>{item.emailVerified ? "Verified" : "Pending email"}</StatusPill>
+                              <StatusPill tone={isDeactivated ? "danger" : "success"}>{isDeactivated ? "Deactivated" : "Active"}</StatusPill>
+                            </div>
+                          </TD>
+                          <TD>
+                            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                              <Badge>{item._count.reminders} reminders</Badge>
+                              <Badge>{item._count.alertEvents} alerts</Badge>
+                              <Badge>{item._count.documents} docs</Badge>
+                              <Badge>{item._count.mobileSessionTokens} sessions</Badge>
+                            </div>
+                          </TD>
+                          <TD>{formatDateTime(item.createdAt)}</TD>
+                          <TD><UserActions item={item} emailEnabled={emailEnabled} currentUserId={user.id} /></TD>
+                        </TR>
+                      );
+                    })}
                   </TBody>
                 </Table>
               </div>
@@ -236,6 +272,18 @@ export default async function AdminPage() {
 
             <Card>
               <CardHeader>
+                <CardTitle>Lifecycle controls</CardTitle>
+                <CardDescription>Admin account suspension now uses the schema-backed deactivation fields.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
+                <p className="rounded-2xl border border-border/60 bg-background/60 p-4">Deactivated users are blocked by the existing auth/session guards and cannot continue protected app workflows.</p>
+                <p className="rounded-2xl border border-border/60 bg-background/60 p-4">Deactivation revokes mobile/API sessions and writes an admin audit log entry for traceability.</p>
+                <p className="rounded-2xl border border-border/60 bg-background/60 p-4">Admins cannot deactivate their own account from this panel.</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                 <CardTitle>Recent users</CardTitle>
                 <CardDescription>Newest accounts created in the workspace.</CardDescription>
               </CardHeader>
@@ -246,7 +294,10 @@ export default async function AdminPage() {
                       <p className="font-medium">{item.name || "Unnamed user"}</p>
                       <p className="text-xs text-muted-foreground">{item.email} • {formatDateTime(item.createdAt)}</p>
                     </div>
-                    <StatusPill tone={roleTone(item.role)}>{item.role}</StatusPill>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <StatusPill tone={roleTone(item.role)}>{item.role}</StatusPill>
+                      <StatusPill tone={item.deactivatedAt ? "danger" : "success"}>{item.deactivatedAt ? "Deactivated" : "Active"}</StatusPill>
+                    </div>
                   </div>
                 ))}
                 {data.recentUsers.length === 0 ? <EmptyState title="No recent users" description="Account creation events will appear here." /> : null}
@@ -293,7 +344,7 @@ export default async function AdminPage() {
         <Card>
           <CardHeader>
             <CardTitle>Merged audit feed</CardTitle>
-            <CardDescription>Care access, alert, and reminder audit entries merged into a single admin timeline.</CardDescription>
+            <CardDescription>Care access, alert, reminder, and admin lifecycle audit entries merged into a single admin timeline.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
             {data.auditFeed.map((item) => <AuditCard key={item.id} item={item} />)}
