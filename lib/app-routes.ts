@@ -129,6 +129,12 @@ export const primaryRoutes: AppRouteItem[] = [
     icon: ClipboardList,
   },
   {
+    title: "Lab Review",
+    href: "/lab-review",
+    description: "Abnormal results, lab trends, documents, and follow-up readiness",
+    icon: ClipboardList,
+  },
+  {
     title: "Vitals",
     href: "/vitals",
     description: "BP, sugar, oxygen, weight, and trends",
