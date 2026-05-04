@@ -153,6 +153,12 @@ export const primaryRoutes: AppRouteItem[] = [
     icon: Activity,
   },
   {
+    title: "Symptom Review",
+    href: "/symptom-review",
+    description: "Unresolved symptoms, body-area clusters, alerts, and care handoff notes",
+    icon: Activity,
+  },
+  {
     title: "Vaccinations",
     href: "/vaccinations",
     description: "Dose history and next due tracking",
