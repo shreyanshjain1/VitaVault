@@ -141,6 +141,12 @@ export const primaryRoutes: AppRouteItem[] = [
     icon: HeartPulse,
   },
   {
+    title: "Vitals Monitor",
+    href: "/vitals-monitor",
+    description: "Focused vital signs, device coverage, and urgent reading review",
+    icon: HeartPulse,
+  },
+  {
     title: "Symptoms",
     href: "/symptoms",
     description: "Symptom journal and severity history",
