@@ -52,6 +52,32 @@ export type SharedAiPatient = {
   href: string;
 };
 
+export type AiSourceCitationCard = {
+  id: string;
+  label: string;
+  recordType: string;
+  title: string;
+  detail: string;
+  capturedAt: Date | null;
+  href: string;
+  tone: "neutral" | "info" | "success" | "warning" | "danger";
+};
+
+export type AiConfidenceMetric = {
+  label: string;
+  value: string;
+  detail: string;
+  tone: "neutral" | "info" | "success" | "warning" | "danger";
+};
+
+export type AiSourceGap = {
+  id: string;
+  title: string;
+  detail: string;
+  href: string;
+  priority: "low" | "medium" | "high";
+};
+
 function parseJsonArray<T>(value: string | null): T[] {
   if (!value) return [];
   try {
@@ -124,6 +150,26 @@ function parseInsight(item: {
     disclaimer: item.disclaimer,
     createdAt: item.createdAt,
   };
+}
+
+
+function formatVitalDetail(vital: { systolic: number | null; diastolic: number | null; heartRate: number | null; oxygenSaturation: number | null; bloodSugar: number | null; temperatureC: number | null; weightKg: number | null }) {
+  const parts = [
+    vital.systolic && vital.diastolic ? `${vital.systolic}/${vital.diastolic} BP` : null,
+    vital.heartRate ? `${vital.heartRate} bpm` : null,
+    vital.oxygenSaturation ? `${vital.oxygenSaturation}% SpO2` : null,
+    vital.bloodSugar ? `${vital.bloodSugar} glucose` : null,
+    vital.temperatureC ? `${vital.temperatureC}°C` : null,
+    vital.weightKg ? `${vital.weightKg} kg` : null,
+  ].filter(Boolean);
+
+  return parts.join(" • ") || "Vitals captured";
+}
+
+function priorityTone(priority: "low" | "medium" | "high") {
+  if (priority === "high") return "danger" as const;
+  if (priority === "medium") return "warning" as const;
+  return "info" as const;
 }
 
 export async function getAiInsightsWorkspaceData(userId: string) {
@@ -386,6 +432,160 @@ export async function getAiInsightsWorkspaceData(userId: string) {
     insightCount: insights.length,
   });
 
+  const sourceCitationCards: AiSourceCitationCard[] = [
+    ...activeMedications.slice(0, 3).map((item) => ({
+      id: `medication-${item.id}`,
+      label: "Medication",
+      recordType: "Medication",
+      title: item.name,
+      detail: [item.dosage, item.frequency, item.doctor?.name ? `Provider: ${item.doctor.name}` : null].filter(Boolean).join(" • "),
+      capturedAt: item.updatedAt ?? item.startDate,
+      href: `/medications?focus=${item.id}`,
+      tone: item.logs.some((log) => log.status === MedicationLogStatus.MISSED) ? "warning" as const : "success" as const,
+    })),
+    ...labs.slice(0, 4).map((item) => ({
+      id: `lab-${item.id}`,
+      label: "Lab",
+      recordType: "Lab result",
+      title: item.testName,
+      detail: `${item.flag} • ${item.resultSummary}`,
+      capturedAt: item.dateTaken,
+      href: `/lab-review?q=${encodeURIComponent(item.testName)}`,
+      tone: item.flag === LabFlag.NORMAL ? "success" as const : "warning" as const,
+    })),
+    ...vitals.slice(0, 4).map((item) => ({
+      id: `vital-${item.id}`,
+      label: "Vital",
+      recordType: "Vital reading",
+      title: "Recent vital reading",
+      detail: formatVitalDetail(item),
+      capturedAt: item.recordedAt,
+      href: "/vitals-monitor",
+      tone: elevatedVitals.some((vital) => vital.id === item.id) ? "warning" as const : "info" as const,
+    })),
+    ...symptoms.slice(0, 4).map((item) => ({
+      id: `symptom-${item.id}`,
+      label: "Symptom",
+      recordType: "Symptom entry",
+      title: item.title,
+      detail: `${item.severity}${item.resolved ? " • resolved" : " • unresolved"}${item.bodyArea ? ` • ${item.bodyArea}` : ""}`,
+      capturedAt: item.startedAt,
+      href: `/symptom-review?q=${encodeURIComponent(item.title)}`,
+      tone: item.severity === SymptomSeverity.SEVERE && !item.resolved ? "danger" as const : "info" as const,
+    })),
+    ...documents.slice(0, 3).map((item) => ({
+      id: `document-${item.id}`,
+      label: "Document",
+      recordType: "Medical document",
+      title: item.title,
+      detail: `${item.type} • ${item.linkedRecordType ? `Linked to ${item.linkedRecordType}` : "Not linked"}`,
+      capturedAt: item.createdAt,
+      href: "/documents",
+      tone: item.linkedRecordType ? "success" as const : "warning" as const,
+    })),
+    ...upcomingAppointments.slice(0, 2).map((item) => ({
+      id: `appointment-${item.id}`,
+      label: "Appointment",
+      recordType: "Appointment",
+      title: item.purpose,
+      detail: `${item.doctorName} • ${item.clinic}`,
+      capturedAt: item.scheduledAt,
+      href: "/visit-prep",
+      tone: "info" as const,
+    })),
+    ...alerts.slice(0, 3).map((item) => ({
+      id: `alert-${item.id}`,
+      label: "Alert",
+      recordType: "Alert event",
+      title: item.title,
+      detail: item.message,
+      capturedAt: item.createdAt,
+      href: `/alerts/${item.id}`,
+      tone: item.severity === AlertSeverity.CRITICAL || item.severity === AlertSeverity.HIGH ? "danger" as const : "warning" as const,
+    })),
+  ]
+    .sort((a, b) => (b.capturedAt?.getTime() ?? 0) - (a.capturedAt?.getTime() ?? 0))
+    .slice(0, 12);
+
+  const sourceGaps: AiSourceGap[] = [];
+
+  if (!user?.healthProfile) {
+    sourceGaps.push({
+      id: "profile-gap",
+      title: "Complete the health profile",
+      detail: "AI summaries are stronger when baseline details, allergies, emergency contact, and care context are available.",
+      href: "/onboarding",
+      priority: "high",
+    });
+  }
+
+  if (labs.length === 0) {
+    sourceGaps.push({
+      id: "lab-gap",
+      title: "Add recent lab results",
+      detail: "Lab data gives AI better evidence for trend flags and provider questions.",
+      href: "/labs",
+      priority: "medium",
+    });
+  }
+
+  if (vitals.length < 3) {
+    sourceGaps.push({
+      id: "vitals-gap",
+      title: "Capture more vital readings",
+      detail: "At least three recent readings help reduce noisy AI trend summaries.",
+      href: "/vitals",
+      priority: "medium",
+    });
+  }
+
+  if (documents.length > 0 && documents.every((item) => !item.linkedRecordType)) {
+    sourceGaps.push({
+      id: "document-link-gap",
+      title: "Link documents to records",
+      detail: "Linked documents give reports and AI summaries better traceability.",
+      href: "/documents?link=UNLINKED",
+      priority: "low",
+    });
+  }
+
+  if (activeMedications.length > 0 && activeMedications.every((item) => item.logs.length === 0)) {
+    sourceGaps.push({
+      id: "adherence-gap",
+      title: "Log medication adherence",
+      detail: "Dose logs help AI separate medication schedule context from actual adherence behavior.",
+      href: "/medication-safety",
+      priority: "medium",
+    });
+  }
+
+  const confidenceMetrics: AiConfidenceMetric[] = [
+    {
+      label: "Source coverage",
+      value: `${evidenceCards.filter((item) => item.status === "Ready").length}/${evidenceCards.length}`,
+      detail: "Modules with enough structured records for a stronger summary.",
+      tone: evidenceCards.filter((item) => item.status === "Ready").length >= 4 ? "success" : "warning",
+    },
+    {
+      label: "Citation pool",
+      value: String(sourceCitationCards.length),
+      detail: "Recent records available to show as visible evidence cards.",
+      tone: sourceCitationCards.length >= 6 ? "success" : "warning",
+    },
+    {
+      label: "Open risk context",
+      value: String(riskSignals.length),
+      detail: "Alert, lab, symptom, medication, and vital signals available for risk review.",
+      tone: riskSignals.some((item) => item.severity === "urgent") ? "danger" : riskSignals.length > 0 ? "warning" : "success",
+    },
+    {
+      label: "Data gaps",
+      value: String(sourceGaps.length),
+      detail: "Known missing context that may reduce insight quality.",
+      tone: sourceGaps.some((item) => item.priority === "high") ? "danger" : sourceGaps.length > 0 ? "warning" : "success",
+    },
+  ];
+
   const sourceSummary = {
     totalRecords: medications.length + appointments.length + labs.length + vitals.length + symptoms.length + documents.length,
     openAlerts: alerts.length,
@@ -403,6 +603,9 @@ export async function getAiInsightsWorkspaceData(userId: string) {
     riskSignals: riskSignals.slice(0, 6),
     followUpItems,
     sharedPatients,
+    sourceCitationCards,
+    confidenceMetrics,
+    sourceGaps: sourceGaps.map((item) => ({ ...item, tone: priorityTone(item.priority) })),
     sourceSummary,
     suggestedQuestions: latestInsight?.suggestedQuestions ?? [],
     transparencyNotes: [
