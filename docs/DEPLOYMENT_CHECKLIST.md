@@ -20,8 +20,23 @@ This checklist is for preparing VitaVault for a production-style deployment on V
 | `RESEND_API_KEY` | Outbound email delivery for invites and verification. |
 | `RESEND_FROM_EMAIL` | Verified sender identity for outbound email workflows. |
 | `OPENAI_API_KEY` | AI insight generation. |
-| `DOCUMENT_STORAGE_MODE` | Document storage provider mode. Current default: `local`. |
+| `DOCUMENT_STORAGE_PROVIDER` | Document binary provider. Use `local`, `s3`, or `r2`. |
+| `DOCUMENT_STORAGE_MODE` | Local provider visibility mode: `private` or `public`. |
 | `PRIVATE_UPLOAD_DIR` | Private local document upload directory. |
+
+## Cloud document storage variables
+
+Use these when `DOCUMENT_STORAGE_PROVIDER=s3` or `DOCUMENT_STORAGE_PROVIDER=r2`.
+
+| Variable | Purpose |
+|---|---|
+| `S3_ENDPOINT` / `R2_ENDPOINT` | Object storage endpoint URL. |
+| `S3_REGION` / `R2_REGION` | Signing region. Use `auto` for Cloudflare R2. |
+| `S3_BUCKET` / `R2_BUCKET` | Bucket name for medical document binaries. |
+| `S3_ACCESS_KEY_ID` / `R2_ACCESS_KEY_ID` | Storage access key. |
+| `S3_SECRET_ACCESS_KEY` / `R2_SECRET_ACCESS_KEY` | Storage secret key. |
+| `S3_FORCE_PATH_STYLE` | Use path-style URLs. Usually `true` for S3-compatible providers. |
+| `DOCUMENT_STORAGE_PREFIX` | Folder/prefix for stored medical documents. |
 
 ## Local checks
 
@@ -48,7 +63,7 @@ Or run:
 npm run health:local
 ```
 
-The health endpoint checks deployment readiness, database connectivity, Redis config presence, email config presence, and AI config presence without exposing secrets.
+The health endpoint checks deployment readiness, database connectivity, Redis config presence, email config presence, AI config presence, and document storage configuration without exposing secrets.
 
 ## Vercel notes
 
@@ -58,7 +73,7 @@ The health endpoint checks deployment readiness, database connectivity, Redis co
 4. Use a hosted Redis provider for worker-backed flows.
 5. Deploy the worker separately if queue processing is required outside the web runtime.
 6. Configure email sender/domain verification before enabling email verification in production.
-7. Use production object storage before accepting real medical documents.
+7. Use `DOCUMENT_STORAGE_PROVIDER=s3` or `DOCUMENT_STORAGE_PROVIDER=r2` before accepting real medical documents in a hosted deployment.
 
 ## Worker deployment notes
 
@@ -74,4 +89,6 @@ For production, run this on a background-worker-capable host such as Railway, Re
 
 ## Document storage notes
 
-The local provider is useful for development and demos. Production deployments should eventually use durable object storage such as S3, Cloudflare R2, Supabase Storage, Azure Blob Storage, or Google Cloud Storage.
+The local provider is useful for development and demos. Production deployments should use durable object storage such as AWS S3, Cloudflare R2, Supabase Storage, Azure Blob Storage, or Google Cloud Storage.
+
+Patch 32 adds an S3-compatible provider, so Cloudflare R2 and most S3-compatible object stores can be used without adding another dependency.

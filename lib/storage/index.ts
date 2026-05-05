@@ -1,9 +1,23 @@
 import { localDocumentStorageProvider } from "@/lib/storage/local-storage";
-import type { DocumentStorageHealth, DocumentStorageProvider } from "@/lib/storage/storage-types";
+import { createS3CompatibleDocumentStorageProvider } from "@/lib/storage/s3-storage";
+import type { DocumentStorageHealth, DocumentStorageProvider, DocumentStorageProviderId } from "@/lib/storage/storage-types";
 
-export const DOCUMENT_STORAGE_PROVIDER = "local" as const;
+export function getConfiguredDocumentStorageProviderId(): DocumentStorageProviderId {
+  const provider = String(process.env.DOCUMENT_STORAGE_PROVIDER || "local").toLowerCase();
+
+  if (provider === "s3") return "s3";
+  if (provider === "r2") return "r2";
+
+  return "local";
+}
 
 export function getDocumentStorageProvider(): DocumentStorageProvider {
+  const provider = getConfiguredDocumentStorageProviderId();
+
+  if (provider === "s3" || provider === "r2") {
+    return createS3CompatibleDocumentStorageProvider(provider);
+  }
+
   return localDocumentStorageProvider;
 }
 

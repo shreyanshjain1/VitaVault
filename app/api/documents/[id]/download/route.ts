@@ -42,12 +42,14 @@ export async function GET(
     return NextResponse.json({ error: "Document not found." }, { status: 404 });
   }
 
-  if (!resolveDocumentObject(document.filePath)) {
+  const resolved = resolveDocumentObject(document.filePath);
+
+  if (!resolved) {
     return NextResponse.json({ error: "Document storage path is invalid." }, { status: 400 });
   }
 
   try {
-    const { bytes } = await readDocumentObject(document.filePath);
+    const { bytes, resolved: readResolved } = await readDocumentObject(document.filePath);
     const arrayBuffer = new ArrayBuffer(bytes.byteLength);
     new Uint8Array(arrayBuffer).set(bytes);
     const response = new NextResponse(arrayBuffer);
@@ -57,7 +59,7 @@ export async function GET(
       contentDisposition(document.fileName || `${document.title}.bin`, document.mimeType || "application/octet-stream")
     );
     response.headers.set("Cache-Control", "private, no-store, max-age=0");
-    response.headers.set("X-Document-Storage", "local");
+    response.headers.set("X-Document-Storage", readResolved.provider);
     return response;
   } catch {
     return NextResponse.json({ error: "Document file is unavailable." }, { status: 404 });
