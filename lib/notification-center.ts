@@ -32,6 +32,8 @@ export type NotificationItem = {
   dueAt?: Date | null;
   status: string;
   meta: string;
+  sourceId: string;
+  actionHint: string;
 };
 
 export type NotificationCenterFilters = {
@@ -226,6 +228,7 @@ export async function getNotificationCenterData(userId: string, filters: Notific
   const items: NotificationItem[] = [
     ...alerts.map((alert) => ({
       id: `alert-${alert.id}`,
+      sourceId: alert.id,
       source: "ALERT" as const,
       title: alert.title,
       description: alert.message,
@@ -235,9 +238,11 @@ export async function getNotificationCenterData(userId: string, filters: Notific
       createdAt: alert.createdAt,
       status: alert.status,
       meta: `${alert.category} • ${alert.severity}`,
+      actionHint: alert.status === AlertStatus.OPEN ? "Acknowledge or resolve this alert." : "Resolve this acknowledged alert.",
     })),
     ...reminders.map((reminder) => ({
       id: `reminder-${reminder.id}`,
+      sourceId: reminder.id,
       source: "REMINDER" as const,
       title: reminder.title,
       description: reminder.description || `${reminder.type} reminder due ${reminder.dueAt.toLocaleString()}`,
@@ -248,9 +253,11 @@ export async function getNotificationCenterData(userId: string, filters: Notific
       dueAt: reminder.dueAt,
       status: reminder.state,
       meta: reminder.type,
+      actionHint: "Complete, skip, or snooze this reminder.",
     })),
     ...appointments.map((appointment) => ({
       id: `appointment-${appointment.id}`,
+      sourceId: appointment.id,
       source: "APPOINTMENT" as const,
       title: appointment.purpose,
       description: `${appointment.doctorName} • ${appointment.clinic}`,
@@ -261,9 +268,11 @@ export async function getNotificationCenterData(userId: string, filters: Notific
       dueAt: appointment.scheduledAt,
       status: "UPCOMING",
       meta: "Upcoming visit",
+      actionHint: "Open the appointment or create a prep reminder.",
     })),
     ...labs.map((lab) => ({
       id: `lab-${lab.id}`,
+      sourceId: lab.id,
       source: "LAB" as const,
       title: lab.testName,
       description: lab.resultSummary,
@@ -274,12 +283,14 @@ export async function getNotificationCenterData(userId: string, filters: Notific
       dueAt: lab.dateTaken,
       status: lab.flag,
       meta: "Lab follow-up",
+      actionHint: "Open lab review or create a follow-up reminder.",
     })),
     ...documents.map((document) => {
       const needsLink = !document.linkedRecordType;
       const needsNotes = !document.notes;
       return {
         id: `document-${document.id}`,
+        sourceId: document.id,
         source: "DOCUMENT" as const,
         title: document.title,
         description: needsLink
@@ -291,10 +302,12 @@ export async function getNotificationCenterData(userId: string, filters: Notific
         createdAt: document.createdAt,
         status: needsLink ? "UNLINKED" : needsNotes ? "NEEDS_NOTES" : "READY",
         meta: document.type,
+        actionHint: needsLink ? "Open document hub and link this file." : "Open document hub and add notes.",
       };
     }),
     ...careInvites.map((invite) => ({
       id: `care-${invite.id}`,
+      sourceId: invite.id,
       source: "CARE" as const,
       title: `Pending invite for ${invite.email}`,
       description: `${invite.accessRole} access expires ${invite.expiresAt.toLocaleDateString()}`,
@@ -305,9 +318,11 @@ export async function getNotificationCenterData(userId: string, filters: Notific
       dueAt: invite.expiresAt,
       status: invite.status,
       meta: invite.accessRole,
+      actionHint: "Open care-team invite management.",
     })),
     ...deviceConnections.map((device) => ({
       id: `device-${device.id}`,
+      sourceId: device.id,
       source: "DEVICE" as const,
       title: device.deviceLabel || `${device.platform} ${device.source}`,
       description: device.lastError || `Last synced ${device.lastSyncedAt ? device.lastSyncedAt.toLocaleDateString() : "never"}`,
@@ -318,6 +333,7 @@ export async function getNotificationCenterData(userId: string, filters: Notific
       dueAt: device.lastSyncedAt,
       status: device.status,
       meta: `${device.source} • ${device.platform}`,
+      actionHint: "Open device connection review or create a sync follow-up reminder.",
     })),
   ];
 

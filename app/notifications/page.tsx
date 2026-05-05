@@ -9,10 +9,13 @@ import {
   Inbox,
   RadioTower,
   Users,
+  CheckCircle2,
+  Clock3,
+  RotateCcw,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { EmptyState, PageHeader, StatusPill } from "@/components/common";
-import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
 import { requireUser } from "@/lib/session";
 import {
   getNotificationCenterData,
@@ -21,6 +24,14 @@ import {
   type NotificationSource,
   type NotificationTone,
 } from "@/lib/notification-center";
+import {
+  acknowledgeNotificationAlertAction,
+  completeNotificationReminderAction,
+  createNotificationFollowUpReminderAction,
+  resolveNotificationAlertAction,
+  skipNotificationReminderAction,
+  snoozeNotificationReminderAction,
+} from "./actions";
 
 const sourceLabels: Record<NotificationSource, string> = {
   ALERT: "Alerts",
@@ -70,14 +81,79 @@ function filterHref(params: Record<string, string | undefined>) {
   return qs ? `/notifications?${qs}` : "/notifications";
 }
 
+function FollowUpForm({ item }: { item: NotificationItem }) {
+  return (
+    <form action={createNotificationFollowUpReminderAction}>
+      <input type="hidden" name="source" value={item.source} />
+      <input type="hidden" name="sourceId" value={item.sourceId} />
+      <input type="hidden" name="title" value={item.title} />
+      <input type="hidden" name="description" value={item.description} />
+      <Button type="submit" size="sm" variant="outline">
+        <Clock3 className="h-4 w-4" /> Follow up
+      </Button>
+    </form>
+  );
+}
+
+function NotificationActions({ item }: { item: NotificationItem }) {
+  if (item.source === "ALERT") {
+    return (
+      <div className="flex flex-wrap gap-2">
+        {item.status === "OPEN" ? (
+          <form action={acknowledgeNotificationAlertAction}>
+            <input type="hidden" name="alertId" value={item.sourceId} />
+            <Button type="submit" size="sm" variant="secondary">
+              <CheckCircle2 className="h-4 w-4" /> Acknowledge
+            </Button>
+          </form>
+        ) : null}
+        <form action={resolveNotificationAlertAction}>
+          <input type="hidden" name="alertId" value={item.sourceId} />
+          <Button type="submit" size="sm">
+            <CheckCircle2 className="h-4 w-4" /> Resolve
+          </Button>
+        </form>
+        <FollowUpForm item={item} />
+      </div>
+    );
+  }
+
+  if (item.source === "REMINDER") {
+    return (
+      <div className="flex flex-wrap gap-2">
+        <form action={completeNotificationReminderAction}>
+          <input type="hidden" name="reminderId" value={item.sourceId} />
+          <Button type="submit" size="sm">
+            <CheckCircle2 className="h-4 w-4" /> Complete
+          </Button>
+        </form>
+        <form action={snoozeNotificationReminderAction}>
+          <input type="hidden" name="reminderId" value={item.sourceId} />
+          <input type="hidden" name="minutes" value="60" />
+          <Button type="submit" size="sm" variant="outline">
+            <RotateCcw className="h-4 w-4" /> Snooze 1h
+          </Button>
+        </form>
+        <form action={skipNotificationReminderAction}>
+          <input type="hidden" name="reminderId" value={item.sourceId} />
+          <Button type="submit" size="sm" variant="ghost">Skip</Button>
+        </form>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      <FollowUpForm item={item} />
+    </div>
+  );
+}
+
 function NotificationCard({ item }: { item: NotificationItem }) {
   const Icon = sourceIcons[item.source];
 
   return (
-    <Link
-      href={item.href}
-      className="block rounded-3xl border border-border/60 bg-background/50 p-5 transition hover:border-border hover:bg-muted/30"
-    >
+    <div className="rounded-3xl border border-border/60 bg-background/50 p-5 transition hover:border-border hover:bg-muted/30">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="flex gap-4">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border/60 bg-background/70">
@@ -90,9 +166,13 @@ function NotificationCard({ item }: { item: NotificationItem }) {
               <Badge>{item.status}</Badge>
             </div>
             <div>
-              <h3 className="font-semibold tracking-tight">{item.title}</h3>
+              <Link href={item.href} className="font-semibold tracking-tight hover:underline">
+                {item.title}
+              </Link>
               <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.description}</p>
+              <p className="mt-2 text-xs text-muted-foreground">Recommended action: {item.actionHint}</p>
             </div>
+            <NotificationActions item={item} />
           </div>
         </div>
         <div className="shrink-0 text-left text-xs text-muted-foreground md:text-right">
@@ -100,7 +180,7 @@ function NotificationCard({ item }: { item: NotificationItem }) {
           <p className="mt-1">{formatDateTime(item.dueAt || item.createdAt)}</p>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
 
@@ -139,7 +219,7 @@ export default async function NotificationsPage({
       <div className="mx-auto max-w-7xl space-y-6 p-6">
         <PageHeader
           title="Notification Center"
-          description="A unified inbox for alerts, reminders, upcoming care tasks, abnormal results, document hygiene, care invites, and device sync issues."
+          description="A unified action inbox for alerts, reminders, follow-ups, abnormal results, document hygiene, care invites, and device sync issues."
           action={
             <div className="flex flex-wrap gap-2">
               <Link href="/alerts" className="inline-flex h-10 items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium hover:bg-muted/50">Alerts</Link>
@@ -192,7 +272,7 @@ export default async function NotificationsPage({
             <Card>
               <CardHeader>
                 <CardTitle>Recommended next actions</CardTitle>
-                <CardDescription>Generated from the current notification workload.</CardDescription>
+                <CardDescription>Generated from the current notification workload. Use item actions to resolve, complete, snooze, or create follow-up reminders.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {data.nextActions.map((action) => (
