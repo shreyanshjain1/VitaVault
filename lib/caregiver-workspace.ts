@@ -103,6 +103,7 @@ export async function getCaregiverWorkspaceData(params: {
   ownerUserId: string;
   access: {
     accessRole: CareAccessRole | "OWNER";
+    isOwner?: boolean;
     canViewRecords: boolean;
     canEditRecords: boolean;
     canAddNotes: boolean;
@@ -125,6 +126,7 @@ export async function getCaregiverWorkspaceData(params: {
     documents,
     latestInsight,
     careTeam,
+    careNotes,
   ] = await Promise.all([
     db.user.findUnique({
       where: { id: params.ownerUserId },
@@ -199,6 +201,18 @@ export async function getCaregiverWorkspaceData(params: {
       },
       orderBy: { updatedAt: "desc" },
       take: 10,
+    }),
+    db.careNote.findMany({
+      where: {
+        ownerUserId: params.ownerUserId,
+        archivedAt: null,
+        visibility: params.access.isOwner ? undefined : { in: ["CARE_TEAM", "PROVIDERS"] },
+      },
+      include: {
+        author: { select: { name: true, email: true, role: true } },
+      },
+      orderBy: [{ pinned: "desc" }, { priority: "desc" }, { createdAt: "desc" }],
+      take: 8,
     }),
   ]);
 
@@ -340,6 +354,7 @@ export async function getCaregiverWorkspaceData(params: {
       unresolvedSymptoms: unresolvedSymptoms.length,
       documents: documents.length,
       careMembers: careTeam.length,
+      careNotes: careNotes.length,
     },
     medications,
     appointments: upcomingAppointments.slice(0, 5),
@@ -350,6 +365,7 @@ export async function getCaregiverWorkspaceData(params: {
     alerts,
     documents,
     latestInsight,
+    careNotes,
     careTeam,
     attentionItems,
     timeline,

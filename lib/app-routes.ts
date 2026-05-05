@@ -12,6 +12,7 @@ import {
   HeartPulse,
   Inbox,
   LayoutDashboard,
+  MessageSquare,
   Pill,
   ScrollText,
   ServerCog,
@@ -207,6 +208,12 @@ export const sharingReportRoutes: AppRouteItem[] = [
     href: "/care-team",
     description: "Invite caregivers and manage shared access",
     icon: Users,
+  },
+  {
+    title: "Care Notes",
+    href: "/care-notes",
+    description: "Shared handoff notes, care context, and follow-up collaboration",
+    icon: MessageSquare,
   },
   {
     title: "AI Insights",
