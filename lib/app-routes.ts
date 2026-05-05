@@ -9,6 +9,7 @@ import {
   ClipboardList,
   FileBarChart2,
   FileHeart,
+  FileText,
   HeartPulse,
   Inbox,
   LayoutDashboard,
@@ -238,6 +239,12 @@ export const sharingReportRoutes: AppRouteItem[] = [
     href: "/exports",
     description: "Export records and reports",
     icon: FileBarChart2,
+  },
+  {
+    title: "Report Builder",
+    href: "/report-builder",
+    description: "Build custom patient, doctor, emergency, and care-team packets",
+    icon: FileText,
   },
 ];
 
