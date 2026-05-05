@@ -30,6 +30,8 @@ model User {
   ownedCareAccessGrants    CareAccess[]         @relation("CareAccessOwner")
   sentCareInvites          CareInvite[]         @relation("CareInviteGrantedBy")
   ownedCareInvites         CareInvite[]         @relation("CareInviteOwner")
+  authoredCareNotes        CareNote[]           @relation("CareNoteAuthor")
+  ownedCareNotes           CareNote[]           @relation("CareNoteOwner")
   deviceConnections        DeviceConnection[]
   deviceReadings           DeviceReading[]
   doctors                  Doctor[]
@@ -411,6 +413,27 @@ model CareInvite {
   @@index([email, status])
 }
 
+model CareNote {
+  id            String             @id @default(cuid())
+  ownerUserId   String
+  authorUserId  String
+  title         String
+  body          String
+  category      CareNoteCategory   @default(GENERAL)
+  priority      CareNotePriority   @default(NORMAL)
+  visibility    CareNoteVisibility @default(CARE_TEAM)
+  pinned        Boolean            @default(false)
+  archivedAt    DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  author        User               @relation("CareNoteAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
+  owner         User               @relation("CareNoteOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@index([ownerUserId, pinned, priority, createdAt])
+  @@index([ownerUserId, category, createdAt])
+  @@index([authorUserId, createdAt])
+}
+
 model AccessAuditLog {
   id           String   @id @default(cuid())
   ownerUserId  String
@@ -736,6 +759,30 @@ enum DocumentLinkType {
   APPOINTMENT
   LAB_RESULT
   DOCTOR
+}
+
+enum CareNoteCategory {
+  GENERAL
+  MEDICATION
+  LAB
+  SYMPTOM
+  APPOINTMENT
+  CARE_PLAN
+  FAMILY
+  ADMINISTRATIVE
+}
+
+enum CareNotePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum CareNoteVisibility {
+  PRIVATE
+  CARE_TEAM
+  PROVIDERS
 }
 
 enum CareAccessRole {

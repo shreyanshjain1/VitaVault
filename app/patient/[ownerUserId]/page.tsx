@@ -9,6 +9,7 @@ import {
   FileText,
   HeartPulse,
   LockKeyhole,
+  MessageSquare,
   Pill,
   ShieldCheck,
   Stethoscope,
@@ -22,6 +23,7 @@ import { requireOwnerAccess } from "@/lib/access";
 import { getCaregiverWorkspaceData, formatCareDate } from "@/lib/caregiver-workspace";
 import { requireUser } from "@/lib/session";
 import { generatePatientInsightAction } from "../actions";
+import { createCareNoteAction } from "@/app/care-notes/actions";
 
 function StatCard({
   title,
@@ -137,11 +139,12 @@ export default async function SharedPatientWorkspacePage({
           </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <StatCard title="Open alerts" value={data.metrics.openAlerts} description="Care-team visible alerts needing review." icon={<AlertTriangle className="h-5 w-5" />} />
           <StatCard title="Due reminders" value={data.metrics.dueReminders} description="Upcoming or overdue care actions." icon={<ClipboardList className="h-5 w-5" />} />
           <StatCard title="Active medications" value={data.metrics.activeMedications} description="Medication records marked active." icon={<Pill className="h-5 w-5" />} />
           <StatCard title="Recent documents" value={data.metrics.documents} description="Shared files available in this view." icon={<FileText className="h-5 w-5" />} />
+          <StatCard title="Care notes" value={data.metrics.careNotes} description="Pinned and recent collaboration notes." icon={<MessageSquare className="h-5 w-5" />} />
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
@@ -175,6 +178,59 @@ export default async function SharedPatientWorkspacePage({
                         </div>
                       </div>
                     </Link>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <CardTitle>Care notes</CardTitle>
+                    <CardDescription className="mt-1">Pinned handoff notes and recent collaboration context from the shared care team.</CardDescription>
+                  </div>
+                  <Badge>{data.careNotes.length} notes</Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {access.canAddNotes ? (
+                  <form action={createCareNoteAction} className="rounded-3xl border border-border/60 bg-background/40 p-4">
+                    <input type="hidden" name="ownerUserId" value={ownerUserId} />
+                    <input type="hidden" name="category" value="GENERAL" />
+                    <input type="hidden" name="priority" value="NORMAL" />
+                    <input type="hidden" name="visibility" value="CARE_TEAM" />
+                    <div className="grid gap-3 md:grid-cols-[0.8fr_1.2fr_auto] md:items-end">
+                      <label className="space-y-2 text-sm">
+                        <span className="font-medium">Title</span>
+                        <input name="title" className="h-10 w-full rounded-2xl border border-border bg-background px-3 text-sm" placeholder="Quick handoff note" required />
+                      </label>
+                      <label className="space-y-2 text-sm">
+                        <span className="font-medium">Note</span>
+                        <input name="body" className="h-10 w-full rounded-2xl border border-border bg-background px-3 text-sm" placeholder="Add context for the care team" required />
+                      </label>
+                      <Button type="submit">Add note</Button>
+                    </div>
+                  </form>
+                ) : null}
+
+                {data.careNotes.length === 0 ? (
+                  <EmptyState>No shared care notes yet.</EmptyState>
+                ) : (
+                  data.careNotes.map((note) => (
+                    <div key={note.id} className="rounded-3xl border border-border/60 bg-background/40 p-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {note.pinned ? <Badge>Pinned</Badge> : null}
+                        <StatusBadge value={note.priority} />
+                        <Badge>{note.category}</Badge>
+                        <Badge>{note.visibility}</Badge>
+                      </div>
+                      <p className="mt-3 font-medium">{note.title}</p>
+                      <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">{note.body}</p>
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        By {note.author.name || note.author.email || "Care team"} • {formatCareDate(note.createdAt, true)}
+                      </p>
+                    </div>
                   ))
                 )}
               </CardContent>

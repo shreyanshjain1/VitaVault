@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { headers } from "next/headers";
-import { Sparkles, UserRoundPlus } from "lucide-react";
+import { MessageSquare, Sparkles, UserRoundPlus } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { getSharedPatientCards } from "@/lib/access";
@@ -87,8 +87,15 @@ export default async function CareTeamPage() {
           action={
             <div className="flex flex-wrap gap-3">
               <Link
-                href="/ai-insights"
+                href="/care-notes"
                 className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-95"
+              >
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Care Notes
+              </Link>
+              <Link
+                href="/ai-insights"
+                className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"
               >
                 <Sparkles className="mr-2 h-4 w-4" />
                 Open AI Insights
