@@ -1,3 +1,4 @@
+import type { AppRole } from "@prisma/client";
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
@@ -31,12 +32,14 @@ export type AppRouteItem = {
   href: string;
   description: string;
   icon: LucideIcon;
+  allowedRoles?: readonly AppRole[];
 };
 
 export type AppRouteSection = {
   label: string;
   description: string;
   items: AppRouteItem[];
+  allowedRoles?: readonly AppRole[];
 };
 
 export const overviewRoutes: AppRouteItem[] = [
@@ -231,13 +234,16 @@ export const sharingReportRoutes: AppRouteItem[] = [
   },
 ];
 
-export const adminOpsRoutes: AppRouteItem[] = [
+export const accountRoutes: AppRouteItem[] = [
   {
     title: "Security",
     href: "/security",
     description: "Password rotation and mobile session visibility",
     icon: ShieldCheck,
   },
+];
+
+export const adminOpsRoutes: AppRouteItem[] = [
   {
     title: "Audit Log",
     href: "/audit-log",
@@ -292,9 +298,15 @@ export const navigationSections: AppRouteSection[] = [
     items: sharingReportRoutes,
   },
   {
+    label: "Account",
+    description: "Account security and personal session controls",
+    items: accountRoutes,
+  },
+  {
     label: "Admin & Ops",
-    description: "Security, audit, admin, jobs, ops, and API visibility",
+    description: "System audit, users, jobs, operations, and API visibility",
     items: adminOpsRoutes,
+    allowedRoles: ["ADMIN" as AppRole],
   },
 ];
 
@@ -305,6 +317,29 @@ export const primaryRoutes: AppRouteItem[] = [
   ...sharingReportRoutes,
 ];
 
-export const utilityRoutes: AppRouteItem[] = [...adminOpsRoutes];
+export const utilityRoutes: AppRouteItem[] = [...accountRoutes, ...adminOpsRoutes];
 
 export const allAppRoutes: AppRouteItem[] = navigationSections.flatMap((section) => section.items);
+
+export function canAccessRouteItem(item: AppRouteItem, role: AppRole) {
+  return !item.allowedRoles || item.allowedRoles.includes(role);
+}
+
+export function canAccessRouteSection(section: AppRouteSection, role: AppRole) {
+  return !section.allowedRoles || section.allowedRoles.includes(role);
+}
+
+export function getNavigationSectionsForRole(role: AppRole) {
+  return navigationSections
+    .filter((section) => canAccessRouteSection(section, role))
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => canAccessRouteItem(item, role)),
+    }))
+    .filter((section) => section.items.length > 0);
+}
+
+export function getAllAppRoutesForRole(role: AppRole) {
+  return getNavigationSectionsForRole(role).flatMap((section) => section.items);
+}
+

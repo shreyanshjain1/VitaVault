@@ -14,12 +14,13 @@ import {
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { signOut } from "next-auth/react";
+import type { AppRole } from "@prisma/client";
+import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import {
-  allAppRoutes,
-  navigationSections,
+  getAllAppRoutesForRole,
+  getNavigationSectionsForRole,
   type AppRouteItem,
 } from "@/lib/app-routes";
 
@@ -104,11 +105,24 @@ function NavItem({
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const { theme, setTheme } = useTheme();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
+
+  const currentRole = (session?.user?.role ?? "PATIENT") as AppRole;
+
+  const visibleNavigationSections = useMemo(
+    () => getNavigationSectionsForRole(currentRole),
+    [currentRole]
+  );
+
+  const visibleAppRoutes = useMemo(
+    () => getAllAppRoutesForRole(currentRole),
+    [currentRole]
+  );
 
   useEffect(() => {
     setHasMounted(true);
@@ -129,18 +143,18 @@ export function AppShell({ children }: AppShellProps) {
   }, [desktopCollapsed, hasMounted]);
 
   const activeRoute = useMemo(() => {
-    return allAppRoutes.find(
+    return visibleAppRoutes.find(
       (item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
     );
-  }, [pathname]);
+  }, [pathname, visibleAppRoutes]);
 
   const activeSection = useMemo(() => {
-    return navigationSections.find((section) =>
+    return visibleNavigationSections.find((section) =>
       section.items.some(
         (item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
       )
     );
-  }, [pathname]);
+  }, [pathname, visibleNavigationSections]);
 
   const activeTitle = activeRoute?.title ?? "VitaVault";
 
@@ -186,6 +200,9 @@ export function AppShell({ children }: AppShellProps) {
                     <p className="truncate text-xs text-muted-foreground">
                       Health command center
                     </p>
+                    <p className="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-primary/80">
+                      {currentRole.replace("_", " ")} workspace
+                    </p>
                   </motion.div>
                 ) : null}
               </AnimatePresence>
@@ -202,7 +219,7 @@ export function AppShell({ children }: AppShellProps) {
                 transition={{ duration: 0.18 }}
                 className="mt-3 text-xs leading-relaxed text-muted-foreground"
               >
-                Records, monitoring, care-team workflows, reports, and operations in one organized workspace.
+                Records, monitoring, care-team workflows, and reports in a role-aware workspace.
               </motion.p>
             ) : null}
           </AnimatePresence>
@@ -210,7 +227,7 @@ export function AppShell({ children }: AppShellProps) {
       </div>
 
       <div className={cn("mt-6 flex-1 overflow-y-auto pb-6", collapsed ? "px-2" : "px-3")}>
-        {navigationSections.map((section) => (
+        {visibleNavigationSections.map((section) => (
           <div key={section.label} className="mb-5">
             <AnimatePresence initial={false}>
               {!collapsed ? (
@@ -311,7 +328,7 @@ export function AppShell({ children }: AppShellProps) {
                 {activeSection?.label ?? "Protected workspace"}
               </p>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                {activeSection?.description ?? "Authenticated and protected by server-side checks."}
+                {activeSection?.description ?? "Authenticated, role-aware, and protected by server-side checks."}
               </p>
             </motion.div>
           ) : null}
@@ -360,7 +377,7 @@ export function AppShell({ children }: AppShellProps) {
               </div>
 
               <div className="text-xs text-muted-foreground">
-                Organized healthcare workspace • Navigation grouped by workflow
+                Organized healthcare workspace • Role-aware navigation
               </div>
             </div>
           </div>
@@ -438,7 +455,7 @@ export function AppShell({ children }: AppShellProps) {
                 <div className="flex items-center justify-between px-4 py-4">
                   <div>
                     <p className="text-sm font-semibold">Navigation</p>
-                    <p className="text-xs text-muted-foreground">Grouped by product workflow</p>
+                    <p className="text-xs text-muted-foreground">Grouped by role and workflow</p>
                   </div>
                   <button
                     type="button"
