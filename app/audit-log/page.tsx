@@ -28,6 +28,7 @@ import {
   TR,
 } from "@/components/ui";
 import { getSecurityAuditCenterData, parseAuditFilters, type SecurityAuditEvent } from "@/lib/audit-log";
+import { isAdminRole } from "@/lib/route-policy";
 import { requireUser } from "@/lib/session";
 
 function formatDateTime(value: Date) {
@@ -109,12 +110,14 @@ export default async function AuditLogPage({
               >
                 Security center
               </Link>
-              <Link
-                href="/jobs"
-                className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-95"
-              >
-                Job runs
-              </Link>
+              {isAdminRole(user.role) ? (
+                <Link
+                  href="/jobs"
+                  className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-95"
+                >
+                  Job runs
+                </Link>
+              ) : null}
             </div>
           }
         />

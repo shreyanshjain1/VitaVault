@@ -255,38 +255,41 @@ export const accountRoutes: AppRouteItem[] = [
     description: "Password rotation and mobile session visibility",
     icon: ShieldCheck,
   },
-];
-
-export const adminOpsRoutes: AppRouteItem[] = [
   {
     title: "Audit Log",
     href: "/audit-log",
-    description: "Unified audit trail across access, alerts, reminders, jobs, and sessions",
+    description: "Scoped security, access, jobs, reminders, and session audit trail",
     icon: ScrollText,
   },
+  {
+    title: "API Docs",
+    href: "/api-docs",
+    description: "Reviewer-facing mobile and device API reference",
+    icon: BookOpen,
+  },
+];
+
+export const adminOpsRoutes: AppRouteItem[] = [
   {
     title: "Admin",
     href: "/admin",
     description: "User oversight, audit review, and system visibility",
     icon: Users,
+    allowedRoles: ["ADMIN" as AppRole],
   },
   {
     title: "Jobs",
     href: "/jobs",
     description: "Inspect worker queues, retries, and job runs",
     icon: Workflow,
+    allowedRoles: ["ADMIN" as AppRole],
   },
   {
     title: "Operations",
     href: "/ops",
     description: "Deployment readiness, workload risk, and operational runbooks",
     icon: ServerCog,
-  },
-  {
-    title: "API Docs",
-    href: "/api-docs",
-    description: "Mobile and device API reference for reviewers and future clients",
-    icon: BookOpen,
+    allowedRoles: ["ADMIN" as AppRole],
   },
 ];
 
@@ -318,7 +321,7 @@ export const navigationSections: AppRouteSection[] = [
   },
   {
     label: "Admin & Ops",
-    description: "System audit, users, jobs, operations, and API visibility",
+    description: "Admin-only users, jobs, operations, and system controls",
     items: adminOpsRoutes,
     allowedRoles: ["ADMIN" as AppRole],
   },

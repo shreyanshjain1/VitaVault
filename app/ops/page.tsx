@@ -13,7 +13,7 @@ import { AppShell } from "@/components/app-shell";
 import { PageHeader, StatusPill } from "@/components/common";
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
 import { getOpsHealthData, type OpsTone } from "@/lib/ops-health";
-import { requireUser } from "@/lib/session";
+import { requireRoutePolicy } from "@/lib/route-policy";
 
 function formatDateTime(value: Date | null | undefined) {
   if (!value) return "—";
@@ -59,8 +59,8 @@ function StatCard({ title, value, description, icon }: { title: string; value: n
 }
 
 export default async function OpsPage() {
-  const user = await requireUser();
-  const data = await getOpsHealthData(user.id!, user.role);
+  const user = await requireRoutePolicy("ops");
+  const data = await getOpsHealthData(user.id, user.role);
 
   return (
     <AppShell>
