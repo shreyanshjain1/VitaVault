@@ -4,9 +4,8 @@ import { PageHeader, StatusPill } from "@/components/common";
 import { JobDispatchPanel } from "@/components/job-dispatch-panel";
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
 import { db } from "@/lib/db";
-import { APP_ROLES } from "@/lib/domain/enums";
 import { getJobsDashboardData } from "@/lib/jobs/dashboard";
-import { requireUser } from "@/lib/session";
+import { requireRoutePolicy } from "@/lib/route-policy";
 
 function formatDateTime(value: Date | null | undefined) {
   if (!value) return "—";
@@ -25,17 +24,11 @@ function runTone(status: string) {
 }
 
 export default async function JobsDashboardPage() {
-  const user = await requireUser();
+  await requireRoutePolicy("jobs");
 
   const [dashboard, deviceConnections] = await Promise.all([
     getJobsDashboardData(),
     db.deviceConnection.findMany({
-      where:
-        user.role === APP_ROLES.ADMIN
-          ? undefined
-          : {
-              userId: user.id,
-            },
       select: {
         id: true,
         deviceLabel: true,
@@ -74,21 +67,6 @@ export default async function JobsDashboardPage() {
           </Card>
         ) : null}
 
-        {user.role !== APP_ROLES.ADMIN ? (
-          <Card className="border border-border/60">
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-3">
-                <Cpu className="mt-0.5 h-5 w-5 text-primary" />
-                <div>
-                  <p className="font-medium">Scoped dashboard view</p>
-                  <p className="text-sm text-muted-foreground">
-                    This account is not an admin, so the operational view is best treated as a personal activity panel.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : null}
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {dashboard.queueCounts.map((queue) => (

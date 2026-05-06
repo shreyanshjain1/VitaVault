@@ -140,3 +140,8 @@ Recommended next action:
 6. Caregiver shared patient workspace
 7. Audit log and security center upgrade
 8. Printable emergency health card
+
+
+## Patch 40 route policy note
+
+Admin-only operational routes are now centrally described in `lib/route-policy.ts`. `/admin`, `/jobs`, and `/ops` are enforced as admin-only direct routes. `/audit-log` remains available to authenticated users with scoped visibility, while `/api-docs` remains an authenticated reviewer/developer reference surface.

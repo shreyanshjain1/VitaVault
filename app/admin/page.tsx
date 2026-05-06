@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { AppRole } from "@prisma/client";
 import { AlertTriangle, Ban, CheckCircle2, Cpu, MailCheck, RotateCcw, Shield, UserPlus, Users } from "lucide-react";
 
@@ -9,8 +8,7 @@ import { EmptyState, PageHeader, StatusPill } from "@/components/common";
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TBody, TD, Textarea, TH, THead, TR } from "@/components/ui";
 import { isEmailDeliveryConfigured } from "@/lib/account-email";
 import { getAdminWorkspaceData } from "@/lib/admin-dashboard";
-import { APP_ROLES } from "@/lib/domain/enums";
-import { requireUser } from "@/lib/session";
+import { requireRoutePolicy } from "@/lib/route-policy";
 import { deactivateUserAction, reactivateUserAction, resendVerificationForUserAction, revokeUserMobileSessionsAction } from "./actions";
 
 type AdminWorkspaceData = Awaited<ReturnType<typeof getAdminWorkspaceData>>;
@@ -155,8 +153,7 @@ function JobCard({ item }: { item: RecentJobRunItem }) {
 }
 
 export default async function AdminPage() {
-  const user = await requireUser();
-  if (user.role !== APP_ROLES.ADMIN) redirect("/dashboard");
+  const user = await requireRoutePolicy("admin");
 
   const data = await getAdminWorkspaceData();
   const emailEnabled = isEmailDeliveryConfigured();
