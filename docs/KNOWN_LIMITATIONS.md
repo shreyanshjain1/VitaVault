@@ -85,18 +85,20 @@ Recommended next action:
 
 ---
 
-### 6. Mobile and device APIs need documentation
+### 6. Mobile and device APIs still need production hardening
 
-The mobile and device ingestion endpoints are one of the strongest backend foundations, but they need clearer product-facing documentation.
+The mobile and device API documentation now matches the implemented endpoints and schema-backed reading types. The remaining work is production hardening, not basic documentation.
 
 Impact:
 
-- reviewers may miss the depth of the API work
-- future mobile integration will be slower without request/response examples
+- mobile tokens and device sync are ready for demo/review flows
+- production use still needs stronger throttling, device management, and possibly OpenAPI/Postman exports
 
 Recommended next action:
 
-- add an API documentation page with authentication, endpoint examples, payload shapes, and error responses
+- add rate limiting around mobile login and device reading ingestion
+- add a Postman/OpenAPI export for QA handoff
+- add device revoke/rename controls in the Security or Device Connection workspace
 
 ---
 
@@ -151,3 +153,17 @@ Remaining database caution:
 - do not reset production databases unless data loss is intended
 - if a local migration attempt already failed, inspect `_prisma_migrations` before retrying
 - keep future Prisma migrations small and focused when changing required columns
+
+---
+
+## Patch 42 update: mobile API v2 consistency
+
+The mobile/device API docs, demo data, and validation contract now use the same current routes:
+
+- `/api/mobile/auth/login`
+- `/api/mobile/auth/me`
+- `/api/mobile/auth/logout`
+- `/api/mobile/connections`
+- `/api/mobile/device-readings`
+
+`SLEEP_MINUTES` is intentionally documented as unsupported until a Prisma enum migration adds it. The current API accepts only schema-backed `DeviceReadingType` values.
