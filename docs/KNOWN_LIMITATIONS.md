@@ -167,3 +167,15 @@ The mobile/device API docs, demo data, and validation contract now use the same 
 - `/api/mobile/device-readings`
 
 `SLEEP_MINUTES` is intentionally documented as unsupported until a Prisma enum migration adds it. The current API accepts only schema-backed `DeviceReadingType` values.
+
+---
+
+## Patch 43 update: report builder presets and generated history
+
+The Report Builder now supports scenario-based presets and a generated packet history panel. This improves the portfolio/demo experience without introducing a new database table.
+
+Remaining reporting limitation:
+
+- report history is generated from current records and query parameters, not persisted as saved report records
+- real saved report history, share links, and export audit retention should be added later with a dedicated Prisma model
+- preset templates are intentionally code-defined for safety and simple review

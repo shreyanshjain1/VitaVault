@@ -7,24 +7,22 @@ import {
   SymptomSeverity,
 } from "@prisma/client";
 import { db } from "@/lib/db";
+import {
+  buildReportPrintHref,
+  getReportBuilderPreset,
+  reportBuilderPresets,
+  resolveReportBuilderControls,
+  sectionQuery,
+  type ReportSectionKey,
+  type ReportType,
+} from "@/lib/report-builder-presets";
 import { requireUser } from "@/lib/session";
 
-export type ReportSectionKey =
-  | "profile"
-  | "medications"
-  | "vitals"
-  | "labs"
-  | "symptoms"
-  | "appointments"
-  | "documents"
-  | "alerts"
-  | "careTeam"
-  | "aiInsights"
-  | "timeline";
-
-export type ReportType = "patient" | "doctor" | "emergency" | "care" | "custom";
+export { buildReportBuilderHref, buildReportPrintHref, reportBuilderPresets, sectionQuery } from "@/lib/report-builder-presets";
+export type { ReportPresetDefinition, ReportPresetId, ReportSectionKey, ReportType } from "@/lib/report-builder-presets";
 
 export type ReportBuilderOptions = {
+  preset?: string;
   reportType?: string;
   sections?: string;
   from?: string;
@@ -54,6 +52,16 @@ export type ReportTimelineItem = {
   risk: "urgent" | "watch" | "routine";
 };
 
+export type ReportHistoryItem = {
+  id: string;
+  title: string;
+  description: string;
+  href: string;
+  generatedAt: Date;
+  status: "ready" | "review" | "attention";
+  recordCount: number;
+};
+
 export const reportSections: ReportSectionDefinition[] = [
   { key: "profile", label: "Profile", description: "Identity, emergency contact, allergies, and baseline context.", recommendedFor: ["patient", "doctor", "emergency", "care", "custom"] },
   { key: "medications", label: "Medications", description: "Active medications, provider links, schedules, and recent adherence.", recommendedFor: ["patient", "doctor", "emergency", "care", "custom"] },
@@ -75,11 +83,6 @@ const reportTypeLabels: Record<ReportType, string> = {
   care: "Care-team review packet",
   custom: "Custom report packet",
 };
-
-function asReportType(value: string | undefined): ReportType {
-  if (value === "patient" || value === "doctor" || value === "emergency" || value === "care" || value === "custom") return value;
-  return "patient";
-}
 
 function parseDate(value: string | undefined) {
   if (!value) return undefined;
@@ -150,11 +153,16 @@ function vitalSummary(vital: {
 
 export async function getReportBuilderData(options: ReportBuilderOptions = {}) {
   const user = await requireUser();
-  const reportType = asReportType(options.reportType);
-  const selectedSections = parseSections(options.sections, reportType);
-  const from = parseDate(options.from);
-  const to = parseDate(options.to);
   const now = new Date();
+  const controls = resolveReportBuilderControls(
+    { preset: options.preset, reportType: options.reportType, sections: options.sections, from: options.from, to: options.to },
+    now,
+  );
+  const reportType = controls.reportType;
+  const selectedSections = parseSections(controls.sections, reportType);
+  const from = parseDate(controls.from);
+  const to = parseDate(controls.to);
+  const selectedPreset = getReportBuilderPreset(controls.presetId);
   const thirtyDaysAgo = new Date(now);
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -286,14 +294,49 @@ export async function getReportBuilderData(options: ReportBuilderOptions = {}) {
     ...documents.map((item) => ({ id: `document-${item.id}`, type: "Document", title: item.title, detail: `${item.type} • ${item.fileName}`, occurredAt: item.createdAt, risk: item.linkedRecordId ? "routine" as const : "watch" as const })),
   ].sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime()).slice(0, 20);
 
+  const printHref = buildReportPrintHref({ reportType, sections: sectionQuery(selectedSections), from: controls.from, to: controls.to, preset: controls.presetId });
+  const reportHistory: ReportHistoryItem[] = [
+    {
+      id: "current-draft",
+      title: selectedPreset ? `${selectedPreset.label} draft` : `${reportTypeLabels[reportType]} draft`,
+      description: `${selectedSections.length} sections • ${medications.length + appointments.length + labs.length + vitals.length + symptoms.length + documents.length + alerts.length} source records • ${controls.from || controls.to ? "date-filtered" : "all records"}`,
+      href: printHref,
+      generatedAt: now,
+      status: readinessScore >= 75 ? "ready" : readinessScore >= 50 ? "review" : "attention",
+      recordCount: medications.length + appointments.length + labs.length + vitals.length + symptoms.length + documents.length + alerts.length,
+    },
+    ...(timeline[0]
+      ? [{
+          id: "latest-event",
+          title: `Latest packet event: ${timeline[0].title}`,
+          description: `${timeline[0].type} • ${timeline[0].detail}`,
+          href: `/timeline`,
+          generatedAt: timeline[0].occurredAt,
+          status: timeline[0].risk === "urgent" ? "attention" as const : timeline[0].risk === "watch" ? "review" as const : "ready" as const,
+          recordCount: timeline.length,
+        }]
+      : []),
+    {
+      id: "pre-share-checks",
+      title: "Pre-share review queue",
+      description: actionItems.map((item) => item.title).slice(0, 2).join(" • "),
+      href: actionItems[0]?.href || printHref,
+      generatedAt: now,
+      status: actionItems.some((item) => item.priority === "high") ? "attention" : actionItems.some((item) => item.priority === "medium") ? "review" : "ready",
+      recordCount: actionItems.length,
+    },
+  ];
+
   return {
     reportType,
     reportTitle: reportTypeLabels[reportType],
+    selectedPreset,
+    presets: reportBuilderPresets,
     selectedSections,
     sectionDefinitions: reportSections,
     range: {
-      from: options.from || "",
-      to: options.to || "",
+      from: controls.from,
+      to: controls.to,
       label: from || to ? `${from ? formatDate(from) : "Beginning"} to ${to ? formatDate(to) : "Today"}` : "All available records",
     },
     summary: {
@@ -319,11 +362,8 @@ export async function getReportBuilderData(options: ReportBuilderOptions = {}) {
     aiInsight,
     actionItems,
     timeline,
+    reportHistory,
   };
-}
-
-export function sectionQuery(sections: ReportSectionKey[]) {
-  return sections.join(",");
 }
 
 export function isSectionSelected(sections: ReportSectionKey[], key: ReportSectionKey) {
