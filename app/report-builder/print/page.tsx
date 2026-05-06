@@ -41,12 +41,13 @@ function PrintTimelineItem({ item }: { item: ReportTimelineItem }) {
 
 export default async function ReportBuilderPrintPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const params = (await searchParams) ?? {};
+  const preset = typeof params.preset === "string" ? params.preset : undefined;
   const reportType = typeof params.type === "string" ? params.type : "patient";
   const sections = Array.isArray(params.sections) ? params.sections.join(",") : typeof params.sections === "string" ? params.sections : undefined;
   const from = typeof params.from === "string" ? params.from : "";
   const to = typeof params.to === "string" ? params.to : "";
   const autoprint = params.autoprint === "1";
-  const data = await getReportBuilderData({ reportType, sections, from, to });
+  const data = await getReportBuilderData({ preset, reportType, sections, from, to });
 
   return (
     <main className="min-h-screen bg-white p-8 text-slate-950 print:p-0">
@@ -58,6 +59,7 @@ export default async function ReportBuilderPrintPage({ searchParams }: { searchP
             <div>
               <h1 className="text-3xl font-bold tracking-tight">{data.reportTitle}</h1>
               <p className="mt-2 text-sm text-slate-600">Generated {formatDateTime(new Date())} • {data.range.label}</p>
+              {data.selectedPreset ? <p className="mt-1 text-xs font-medium uppercase tracking-wide text-slate-500">Preset: {data.selectedPreset.label}</p> : null}
             </div>
             <div className="text-right text-sm text-slate-600">
               <p>{data.summary.selectedSectionCount} sections selected</p>

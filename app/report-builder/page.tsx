@@ -3,9 +3,18 @@ import { ArrowRight, CalendarDays, CheckCircle2, FileText, Printer, SlidersHoriz
 import { AppShell } from "@/components/app-shell";
 import { EmptyState, PageHeader, StatusPill } from "@/components/common";
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, Select } from "@/components/ui";
-import { ModuleHero, DataCard } from "@/components/module-sections";
+import { DataCard, ModuleHero } from "@/components/module-sections";
 import { PageTransition, StaggerItem } from "@/components/page-transition";
-import { getReportBuilderData, isSectionSelected, sectionQuery, type ReportActionItem, type ReportType } from "@/lib/report-builder";
+import {
+  buildReportBuilderHref,
+  buildReportPrintHref,
+  getReportBuilderData,
+  isSectionSelected,
+  sectionQuery,
+  type ReportActionItem,
+  type ReportHistoryItem,
+  type ReportType,
+} from "@/lib/report-builder";
 
 const reportTypeOptions: Array<{ value: ReportType; label: string; description: string }> = [
   { value: "patient", label: "Patient summary", description: "Broad personal record packet" },
@@ -19,6 +28,16 @@ function priorityTone(priority: ReportActionItem["priority"]) {
   if (priority === "high") return "danger" as const;
   if (priority === "medium") return "warning" as const;
   return "success" as const;
+}
+
+function historyTone(status: ReportHistoryItem["status"]) {
+  if (status === "attention") return "danger" as const;
+  if (status === "review") return "warning" as const;
+  return "success" as const;
+}
+
+function formatDateTime(value: Date) {
+  return new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeStyle: "short" }).format(value);
 }
 
 function ProgressBar({ value }: { value: number }) {
@@ -46,12 +65,14 @@ function ActionCard({ item }: { item: ReportActionItem }) {
 
 export default async function ReportBuilderPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const params = (await searchParams) ?? {};
+  const preset = typeof params.preset === "string" ? params.preset : undefined;
   const reportType = typeof params.type === "string" ? params.type : "patient";
   const sections = Array.isArray(params.sections) ? params.sections.join(",") : typeof params.sections === "string" ? params.sections : undefined;
   const from = typeof params.from === "string" ? params.from : "";
   const to = typeof params.to === "string" ? params.to : "";
-  const data = await getReportBuilderData({ reportType, sections, from, to });
-  const printHref = `/report-builder/print?type=${data.reportType}&sections=${encodeURIComponent(sectionQuery(data.selectedSections))}${from ? `&from=${from}` : ""}${to ? `&to=${to}` : ""}`;
+  const data = await getReportBuilderData({ preset, reportType, sections, from, to });
+  const selectedSectionsQuery = sectionQuery(data.selectedSections);
+  const printHref = buildReportPrintHref({ preset: data.selectedPreset?.id, reportType: data.reportType, sections: selectedSectionsQuery, from: data.range.from, to: data.range.to });
 
   return (
     <AppShell>
@@ -59,7 +80,7 @@ export default async function ReportBuilderPage({ searchParams }: { searchParams
         <PageTransition>
           <PageHeader
             title="Report Builder"
-            description="Assemble custom patient, doctor, emergency, and care-team report packets with section controls, date ranges, and readiness checks."
+            description="Assemble custom patient, doctor, emergency, and care-team report packets with presets, section controls, date ranges, readiness checks, and print previews."
             action={
               <div className="flex flex-wrap gap-2">
                 <Link href={printHref} className="inline-flex h-10 items-center justify-center rounded-2xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-95">
@@ -75,15 +96,42 @@ export default async function ReportBuilderPage({ searchParams }: { searchParams
           <ModuleHero
             eyebrow="Custom reporting"
             title="Build a report packet from the records that matter for the situation"
-            description="Pick the packet type, choose sections, narrow the date range, and open a print-ready preview before sharing with a provider, caregiver, or emergency contact."
+            description="Start from a provider, emergency, care-team, medication, or lab preset, then fine-tune the sections and date range before opening a print-ready packet."
             stats={[
               { label: "Readiness", value: `${data.summary.readinessScore}%`, hint: "Section coverage, data coverage, documents, and adherence" },
-              { label: "Sections", value: `${data.summary.selectedSectionCount}/${data.summary.availableSectionCount}`, hint: "Selected for this packet" },
+              { label: "Sections", value: `${data.summary.selectedSectionCount}/${data.summary.availableSectionCount}`, hint: data.selectedPreset ? `${data.selectedPreset.label} preset` : "Selected for this packet" },
               { label: "Records", value: data.summary.totalRecords, hint: data.range.label },
               { label: "Document links", value: `${data.summary.documentLinkRate}%`, hint: "Linked to source records" },
             ]}
           />
         </PageTransition>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Packet presets</CardTitle>
+            <CardDescription className="mt-1">Use scenario-based shortcuts for common healthcare handoffs, then adjust the controls below.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            {data.presets.map((presetItem) => {
+              const href = buildReportBuilderHref({ preset: presetItem.id });
+              const isActive = data.selectedPreset?.id === presetItem.id;
+              return (
+                <Link
+                  key={presetItem.id}
+                  href={href}
+                  className={`rounded-2xl border p-4 transition hover:border-border hover:bg-muted/40 ${isActive ? "border-primary/50 bg-primary/5" : "border-border/60 bg-background/50"}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <Badge>{presetItem.badge}</Badge>
+                    {isActive ? <CheckCircle2 className="h-4 w-4 text-primary" /> : null}
+                  </div>
+                  <p className="mt-3 font-medium">{presetItem.label}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{presetItem.description}</p>
+                </Link>
+              );
+            })}
+          </CardContent>
+        </Card>
 
         <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
           <Card>
@@ -103,17 +151,17 @@ export default async function ReportBuilderPage({ searchParams }: { searchParams
                     <Label htmlFor="type">Report type</Label>
                     <Select id="type" name="type" defaultValue={data.reportType}>
                       {reportTypeOptions.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
+                        <option key={option.value} value={option.value}>{option.label} — {option.description}</option>
                       ))}
                     </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="from">From</Label>
-                    <Input id="from" name="from" type="date" defaultValue={from} />
+                    <Input id="from" name="from" type="date" defaultValue={data.range.from} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="to">To</Label>
-                    <Input id="to" name="to" type="date" defaultValue={to} />
+                    <Input id="to" name="to" type="date" defaultValue={data.range.to} />
                   </div>
                 </div>
 
@@ -234,6 +282,26 @@ export default async function ReportBuilderPage({ searchParams }: { searchParams
             </Card>
           </StaggerItem>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent packet history</CardTitle>
+            <CardDescription className="mt-1">A lightweight generated history of the current draft, latest source event, and pre-share checks.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-3">
+            {data.reportHistory.map((item) => (
+              <Link key={item.id} href={item.href} className="rounded-2xl border border-border/60 bg-background/50 p-4 transition hover:border-border hover:bg-muted/40">
+                <div className="flex items-start justify-between gap-3">
+                  <StatusPill tone={historyTone(item.status)}>{item.status}</StatusPill>
+                  <Badge>{item.recordCount} item{item.recordCount === 1 ? "" : "s"}</Badge>
+                </div>
+                <p className="mt-3 font-medium">{item.title}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{item.description || "No additional checks required."}</p>
+                <p className="mt-3 text-xs text-muted-foreground">{formatDateTime(item.generatedAt)}</p>
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
 
         <Card className="bg-background/40">
           <CardContent className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
