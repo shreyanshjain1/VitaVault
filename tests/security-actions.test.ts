@@ -7,6 +7,7 @@ const revalidatePathMock = vi.fn();
 const findUniqueMock = vi.fn();
 const userUpdateMock = vi.fn();
 const mobileUpdateManyMock = vi.fn();
+const accessAuditCreateMock = vi.fn();
 
 vi.mock("@/lib/session", () => ({
   requireUser: requireUserMock,
@@ -32,6 +33,9 @@ vi.mock("@/lib/db", () => ({
     mobileSessionToken: {
       updateMany: mobileUpdateManyMock,
     },
+    accessAuditLog: {
+      create: accessAuditCreateMock,
+    },
   },
 }));
 
@@ -45,6 +49,7 @@ describe("security actions", () => {
     findUniqueMock.mockReset();
     userUpdateMock.mockReset();
     mobileUpdateManyMock.mockReset();
+    accessAuditCreateMock.mockReset();
     requireUserMock.mockResolvedValue({ id: "user_1" });
   });
 
@@ -68,8 +73,8 @@ describe("security actions", () => {
     const { changePasswordAction } = await import("@/app/security/actions");
     const formData = new FormData();
     formData.set("currentPassword", "old-password");
-    formData.set("newPassword", "new-password-123");
-    formData.set("confirmPassword", "new-password-123");
+    formData.set("newPassword", "New-password-123");
+    formData.set("confirmPassword", "New-password-123");
 
     await changePasswordAction(formData);
 
@@ -82,6 +87,8 @@ describe("security actions", () => {
 
   it("revokes all active mobile sessions for the current user", async () => {
     const { revokeAllMobileSessionsAction } = await import("@/app/security/actions");
+
+    mobileUpdateManyMock.mockResolvedValue({ count: 2 });
 
     await revokeAllMobileSessionsAction();
 

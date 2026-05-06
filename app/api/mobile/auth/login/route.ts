@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { authenticateMobileCredentials, createMobileSessionToken } from "@/lib/mobile-auth";
+import { consumeRateLimit, getClientRateLimitKey } from "@/lib/security/rate-limit";
 
 const loginSchema = z.object({
   email: z.string().trim().email(),
@@ -12,6 +13,30 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const parsed = loginSchema.safeParse(body);
+    const emailScope = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "unknown";
+    const rateLimit = consumeRateLimit({
+      key: getClientRateLimitKey(request, `mobile-login:${emailScope}`),
+      limit: 10,
+      windowMs: 15 * 60 * 1000,
+    });
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: "Too many mobile login attempts. Try again later.",
+          retryAfterSeconds: rateLimit.retryAfterSeconds,
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(rateLimit.retryAfterSeconds),
+            "X-RateLimit-Limit": String(rateLimit.limit),
+            "X-RateLimit-Remaining": String(rateLimit.remaining),
+            "X-RateLimit-Reset": rateLimit.resetAt.toISOString(),
+          },
+        }
+      );
+    }
 
     if (!parsed.success) {
       return NextResponse.json(
