@@ -501,11 +501,11 @@ export const demoAuditLogHub = [
 
 export const demoApiDocsHub = {
   endpoints: [
-    { method: "POST", path: "/api/mobile/login", purpose: "Create bearer-token mobile session" },
-    { method: "GET", path: "/api/mobile/me", purpose: "Validate current mobile user" },
-    { method: "POST", path: "/api/mobile/logout", purpose: "Revoke mobile token" },
-    { method: "GET", path: "/api/device-connections", purpose: "List connected providers" },
-    { method: "POST", path: "/api/device-readings", purpose: "Ingest device reading payloads" },
+    { method: "POST", path: "/api/mobile/auth/login", purpose: "Create bearer-token mobile session" },
+    { method: "GET", path: "/api/mobile/auth/me", purpose: "Validate current mobile user" },
+    { method: "POST", path: "/api/mobile/auth/logout", purpose: "Revoke mobile token" },
+    { method: "GET", path: "/api/mobile/connections", purpose: "List connected providers" },
+    { method: "POST", path: "/api/mobile/device-readings", purpose: "Ingest device reading payloads" },
   ],
   security: [
     "Bearer tokens are scoped to mobile sessions and can be revoked from the Security or Admin workspace.",

@@ -91,7 +91,6 @@ const supportedReadings = [
   ["BLOOD_GLUCOSE", "valueFloat", "Mirrors into bloodSugar"],
   ["TEMPERATURE", "valueFloat", "Mirrors into temperatureC"],
   ["STEPS", "valueInt", "Stored as device reading only"],
-  ["SLEEP_MINUTES", "valueInt or metadata", "Stored as device reading only"],
 ];
 
 const loginRequest = `POST ${baseUrl}/api/mobile/auth/login
@@ -264,7 +263,7 @@ export default function ApiDocsPage() {
               <p className="text-xs text-muted-foreground">documented endpoints</p>
             </div>
             <div className="rounded-3xl border border-border/60 bg-background/60 p-4">
-              <p className="text-2xl font-semibold">8</p>
+              <p className="text-2xl font-semibold">7</p>
               <p className="text-xs text-muted-foreground">reading types</p>
             </div>
             <div className="rounded-3xl border border-border/60 bg-background/60 p-4">
@@ -481,7 +480,7 @@ export default function ApiDocsPage() {
               Supported reading types
             </CardTitle>
             <CardDescription>
-              The current API accepts these device reading types. Several are mirrored into normal vitals.
+              The current API accepts these schema-backed device reading types. Several are mirrored into normal vitals.
             </CardDescription>
           </CardHeader>
           <CardContent>

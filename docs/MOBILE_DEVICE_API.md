@@ -1,6 +1,6 @@
 # VitaVault Mobile and Device API
 
-This document summarizes the current VitaVault mobile/device API foundation for Android, mobile sync, QA, and future Postman/OpenAPI work.
+This document summarizes the current VitaVault mobile/device API foundation for Android, mobile sync, QA, and future Postman/OpenAPI work. It intentionally lists only reading types currently backed by the Prisma `DeviceReadingType` enum.
 
 The same information is also available as a product-facing page at:
 
@@ -207,7 +207,10 @@ Content-Type: application/json
 | `BLOOD_GLUCOSE` | `valueFloat` | Mirrors into `bloodSugar` |
 | `TEMPERATURE` | `valueFloat` | Mirrors into `temperatureC` |
 | `STEPS` | `valueInt` | Stored as device reading only |
-| `SLEEP_MINUTES` | `valueInt` or metadata | Stored as device reading only |
+
+### Unsupported or future reading types
+
+`SLEEP_MINUTES` is intentionally not listed as a supported request value yet because it is not present in the current Prisma `DeviceReadingType` enum. Add a dedicated schema migration before exposing sleep tracking to mobile clients.
 
 ## Error responses
 
