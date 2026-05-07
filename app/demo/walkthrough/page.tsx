@@ -47,7 +47,7 @@ const routeGroups = [
   },
   {
     title: "5. Action and care workflows",
-    body: "These pages show reminders, alerts, review queues, AI insights, and patient handoff outputs.",
+    body: "These pages show reminders, alerts, review queues, AI insights, report packets, exports, and patient handoff outputs.",
     links: [
       { label: "Alerts", href: "/demo/alerts" },
       { label: "Reminders", href: "/demo/reminders" },
@@ -100,7 +100,7 @@ export default function DemoWalkthroughPage() {
         </DemoSection>
       </div>
 
-      <DemoSection title="Newest Patch 12–19 modules" description="These newer authenticated feature hubs are now represented in the showcase so reviewers can understand the expanded product layer.">
+      <DemoSection title="Workflow and review hubs" description="These feature hubs are represented in the showcase so reviewers can understand the current product layer across care workflows, clinical review, reports, and operations.">
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {demoProductHubs.map((hub) => (
             <Link key={hub.href} href={hub.href} className="rounded-2xl border border-border/60 bg-background/60 p-4 transition hover:bg-muted/60">

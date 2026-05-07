@@ -8,7 +8,7 @@ export default function DemoOverviewPage() {
       <DemoHeader
         eyebrow="No login required"
         title="Explore VitaVault Demo"
-        description="Walk through the main VitaVault modules with sample patient data. Everything here is read-only, but the layouts and workflows reflect the real product direction closely."
+        description="Walk through the main VitaVault modules with sample patient data. Everything here is read-only, but the routes show the current product story across records, care workflows, reports, device readiness, security, and operations."
         actions={
           <>
             <Link href="/demo/walkthrough" className="rounded-2xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Start guided walkthrough</Link>
@@ -19,11 +19,11 @@ export default function DemoOverviewPage() {
 
       <MetricGrid items={demoDashboardStats} />
 
-      <DemoSection title="What this demo covers" description="The goal here is parity with the real VitaVault product surface, not just a landing-page teaser.">
+      <DemoSection title="What this demo covers" description="The goal here is to give reviewers a reliable map of the real VitaVault product surface, not just a landing-page teaser.">
         <SimpleTable headers={["Area", "What you can inspect in demo"]} rows={demoNav.slice(1).map((item) => [item.label, item.description ?? `Read-only mirror of the ${item.label.toLowerCase()} module`])} />
       </DemoSection>
 
-      <DemoSection title="Newest product hubs" description="Patch 12–19 added authenticated workflow and clinical-review hubs. These cards explain the current product surface even when the public demo route is read-only.">
+      <DemoSection title="Newest product hubs" description="These cards highlight the current workflow and clinical-review hubs so reviewers can understand the expanded product layer even when the public demo route is read-only.">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {demoProductHubs.map((hub) => (
             <Link key={hub.href} href={hub.href} className="rounded-[24px] border border-border/60 bg-background/70 p-5 shadow-sm transition hover:bg-muted/50">
@@ -56,7 +56,7 @@ export default function DemoOverviewPage() {
           <StatCards items={[
             { title: "Clinical summary", body: demoSummary.snapshot, status: "Healthy" },
             { title: "Ops readiness", body: demoOps.readiness.map((item) => `${item.label}: ${item.status}`).join(" • "), status: "Configured" },
-            { title: "Best route through the demo", body: "Dashboard → Notifications → Care Plan → Visit Prep → Trends → Summary → Security → Admin", status: "Recommended" },
+            { title: "Best route through the demo", body: "Dashboard → Notifications → Care Plan → Visit Prep → Trends → Exports → Security → Admin", status: "Recommended" },
           ]} />
         </DemoSection>
       </div>

@@ -1,53 +1,62 @@
 # VitaVault Feature Matrix
 
-This matrix summarizes the current VitaVault product surface after the Patch 1-20 upgrade series. It is meant for reviewers, recruiters, and maintainers who want a fast view of what the app demonstrates.
+This matrix summarizes the current VitaVault product surface after the latest portfolio-polish pass. It is meant for recruiters, reviewers, and maintainers who want a fast view of what the app demonstrates.
 
 ## Product layers
 
 | Layer | Modules | Main value |
 |---|---|---|
-| Core workspace | Dashboard, onboarding, health profile, timeline | Gives users a central command center and a structured first-run setup flow |
-| Patient records | Medications, appointments, doctors, labs, vitals, symptoms, vaccinations, documents | Covers the major personal health record modules expected in a serious PHR platform |
-| Care workflow | Notifications, care plan, visit prep, reminders, review queue, alerts | Turns raw health records into next-action workflows |
-| Clinical review | Health trends, medication safety, lab review, vitals monitor, symptom review | Adds interpretation, readiness scoring, and follow-up prioritization on top of records |
-| Collaboration | Care team, shared patient workspace, invites | Supports patient-controlled sharing and caregiver/provider visibility |
-| Reports and handoff | Summary, summary print, emergency card, exports | Supports doctor visits, emergency situations, and portable record handoffs |
-| Mobile/device | Mobile auth APIs, device connections, device readings, API docs | Shows backend readiness for mobile and connected-device ingestion |
+| Core workspace | Dashboard, onboarding, health profile, timeline | Central command center and structured first-run setup |
+| Patient records | Medications, appointments, doctors, labs, vitals, symptoms, vaccinations, documents | Broad personal health record coverage |
+| Care workflow | Notifications, care plan, visit prep, reminders, review queue, alerts | Converts records into next actions |
+| Clinical review | Health trends, medication safety, lab review, vitals monitor, symptom review | Adds readiness scoring and follow-up prioritization |
+| Collaboration | Care team, care notes, shared patient workspace, invites | Supports patient-controlled sharing and caregiver/provider visibility |
+| Reports and handoff | Summary, report builder, emergency card, exports, print pages | Supports doctor visits, emergency handoffs, and portable record packets |
+| Mobile/device | Mobile auth APIs, mobile sessions, device connections, device readings, API docs | Shows backend readiness for mobile and connected-device ingestion |
 | Security/admin/ops | Security center, audit log, admin, ops, jobs | Shows production-minded operating surfaces beyond normal CRUD |
-| Public demo | `/demo`, `/demo/walkthrough`, demo module pages | Lets reviewers inspect the product surface without needing login or a configured database |
+| Public demo | `/demo`, `/demo/walkthrough`, demo module pages | Lets reviewers inspect the product surface without needing login |
 
 ## Authenticated route matrix
 
-| Route | Purpose | Notes |
+| Route | Purpose | Access/story note |
 |---|---|---|
-| `/dashboard` | Health command center | Aggregates profile, alerts, reminders, activity, and readiness context |
-| `/onboarding` | First-time health setup | Saves profile context using existing health profile structure |
+| `/dashboard` | Health command center | Authenticated user workspace |
+| `/onboarding` | First-time health setup | Authenticated setup flow |
+| `/health-profile` | Baseline patient context | Authenticated user data |
+| `/timeline` | Longitudinal activity timeline | Includes health records and care-note events |
 | `/notifications` | Unified notification inbox | Combines alerts, reminders, appointments, labs, documents, invites, and devices |
-| `/care-plan` | Care plan hub | Readiness score, prioritized actions, upcoming care timeline, and care context |
-| `/visit-prep` | Doctor visit preparation | Provider-ready prep task queue and doctor packet handoff context |
+| `/care-plan` | Care plan hub | Readiness score, prioritized actions, timeline, and care context |
+| `/visit-prep` | Doctor visit preparation | Provider-ready prep queue and packet handoff context |
 | `/emergency-card` | Emergency health card | Printable emergency profile and critical health context |
 | `/trends` | Health trends analytics | Trend coverage, risk scoring, vitals/labs/symptoms/adherence signals |
 | `/medication-safety` | Medication safety hub | Dose board, adherence, safety actions, reminders, and medication alerts |
 | `/lab-review` | Lab review hub | Lab flags, trend cards, document coverage, and follow-up reminders |
 | `/vitals-monitor` | Vitals monitor | Vital-sign status, deltas, watch zones, averages, timeline, and device signals |
-| `/symptom-review` | Symptom review hub | Severity breakdown, unresolved symptoms, clusters, filters, and handoff signals |
-| `/documents` | Document intelligence hub | Document readiness, linking coverage, filters, notes, and suggested next steps |
-| `/summary` | Patient summary | Handoff dashboard for patient context and report generation |
-| `/summary/print` | Printable packet | Standard, compact, and doctor-visit packet modes |
+| `/symptom-review` | Symptom review hub | Severity breakdown, unresolved symptoms, filters, and handoff signals |
+| `/documents` | Document intelligence hub | Document readiness, filters, notes, and suggested next steps |
 | `/care-team` | Care-team management | Invites, access control, and shared-care foundations |
+| `/care-notes` | Collaboration notes | Patient-level notes connected to timeline, reports, print, and exports |
 | `/patient/[ownerUserId]` | Shared patient workspace | Caregiver/provider view for granted access |
-| `/audit-log` | Audit log viewer | Unified access, alert, reminder, job, and session activity view |
+| `/ai-insights` | AI insight workspace | Stored insights and source-aware summary foundations |
+| `/summary` | Patient summary | Handoff dashboard for patient context and report generation |
+| `/summary/print` | Printable summary packet | Standard, compact, and doctor-visit print modes |
+| `/report-builder` | Report builder | Preset-driven report packets and generated recent-packet context |
+| `/report-builder/print` | Printable report builder packet | Preserves selected preset and section context |
+| `/exports` | Export center | Export readiness, packet options, and pre-export warnings |
+| `/device-connection` | Device connection hub | Mobile/device readiness and sync context |
+| `/api-docs` | Mobile/device API docs | Product-facing API contract reference |
+| `/audit-log` | Audit log viewer | Scoped for regular users; broader activity for admin roles |
 | `/security` | Security center | Account and mobile/API session security context |
-| `/admin` | Admin command center | Users, verification, care access, jobs, invites, and audit activity |
-| `/ops` | Operations command center | Environment readiness, workload risks, jobs, sync, alerts, and reminders |
-| `/api-docs` | Mobile/device API docs | Public reference for mobile auth, sessions, device connections, and readings |
+| `/admin` | Admin command center | Admin-only route |
+| `/ops` | Operations command center | Admin-only route |
+| `/jobs` | Background job dashboard | Admin-only route |
 
 ## Public demo matrix
 
 | Demo route | Shows |
 |---|---|
-| `/demo` | Showcase landing page, feature matrix, newest product hubs, and recommended review path |
-| `/demo/walkthrough` | Guided reviewer path across records, workflows, review hubs, and operations |
+| `/demo` | Showcase landing page, feature map, newest product surfaces, and recommended review path |
+| `/demo/walkthrough` | Guided reviewer path across records, workflows, review hubs, reports, and operations |
 | `/demo/dashboard` | Demo health command center |
 | `/demo/health-profile` | Patient baseline and profile context |
 | `/demo/medications` | Medication list, schedules, providers, and adherence |
@@ -62,9 +71,11 @@ This matrix summarizes the current VitaVault product surface after the Patch 1-2
 | `/demo/summary` | Patient summary sample data |
 | `/demo/exports` | Export capability preview |
 | `/demo/device-connection` | Connected-device readiness preview |
+| `/demo/api-docs` | Mobile/device API reference preview |
 | `/demo/jobs` | Background job sample data |
 | `/demo/ops` | Operational readiness sample data |
 | `/demo/security` | Security posture and mobile session sample data |
+| `/demo/audit-log` | Audit trail preview |
 | `/demo/admin` | Admin/ops sample data |
 
 ## Current strongest signals
@@ -72,18 +83,34 @@ This matrix summarizes the current VitaVault product surface after the Patch 1-2
 - Broad domain modeling using Prisma and PostgreSQL
 - Authenticated app structure with protected workflows
 - Care-team sharing and shared patient workspace foundations
+- Care notes connected across timeline, reports, print packets, and exports
 - Alerts, reminders, notifications, and care-plan workflows
 - Clinical review pages that turn records into action signals
-- Print/report surfaces for patient summary and emergency handoff
-- Mobile and device API foundations
+- Report builder presets and print-ready handoff packets
+- Mobile and device API foundations with schema-backed validation
 - Admin, ops, audit, jobs, and security surfaces
+- Route policy helper for admin-only surfaces
 - No-login demo routes for reviewers
+- Targeted test coverage for business logic and regression-prone helpers
+
+## Best reviewer path
+
+1. `/demo/walkthrough`
+2. `/demo/dashboard`
+3. `/demo/notifications`
+4. `/demo/care-plan`
+5. `/demo/visit-prep`
+6. `/demo/trends`
+7. `/demo/exports`
+8. `/demo/security`
+9. `/demo/admin`
+10. `docs/PORTFOLIO_REVIEW_GUIDE.md`
 
 ## Recommended next improvements
 
-1. Sidebar grouping and navigation UX cleanup
-2. AI Insights v2 with source-linked summaries
-3. Export Center v2 with polished report packets
-4. Device sync simulator / health-data import demo
-5. Production document storage abstraction
-6. Expanded tests for the new review hubs
+1. Persistent report-builder history stored in the database
+2. Optional care-note links to a specific lab, appointment, medication, symptom, document, or alert
+3. Production document storage provider hardening
+4. Background jobs v2 with admin retry and rerun tools
+5. Data quality center for missing/old/contradictory health records
+6. Expanded tests around route access, report printing, and shared patient permissions

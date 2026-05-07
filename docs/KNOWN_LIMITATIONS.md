@@ -1,186 +1,77 @@
 # VitaVault Known Limitations
 
-This document tracks the honest current-state gaps that should guide future patches. The goal is not to downplay the project, but to keep upgrades practical, focused, and business-useful.
-
-## Current production limitations
-
-### 1. Public deployment still needs complete environment configuration
-
-The app is structured for a real database-backed deployment, but the public Vercel demo depends on production values for database, auth, Redis, and optional AI settings.
-
-Impact:
-
-- live authenticated flows may not behave like the local/full environment until production variables are configured
-- public demo routes remain the safest showcase surface while production database setup is incomplete
-
-Recommended next action:
-
-- keep demo routes polished for recruiters/reviewers
-- configure production `DATABASE_URL`, `AUTH_SECRET`, `AUTH_TRUST_HOST`, `NEXTAUTH_URL`, and `REDIS_URL` when moving to a live product deployment
-
----
-
-### 2. Document storage is local-first
-
-The current document workflow is useful for development and demo purposes, but production healthcare-style uploads should not depend only on local disk storage.
-
-Impact:
-
-- file persistence can be fragile on serverless hosting
-- production privacy, retention, and backup controls are limited
-
-Recommended next action:
-
-- move uploaded documents to object storage such as S3, Cloudflare R2, Supabase Storage, or UploadThing
-- keep database metadata in Prisma while storing the file object externally
-
----
-
-### 3. Redis and worker features require separate production planning
-
-The project includes BullMQ and Redis foundations for alerts, reminders, and jobs. That is strong architecture, but the worker runtime should be treated as a separate production service.
-
-Impact:
-
-- Vercel alone is not always enough for long-running workers
-- missing `REDIS_URL` can block job-connected features
-
-Recommended next action:
-
-- document worker deployment separately
-- add graceful fallbacks for demo environments where Redis is unavailable
-- consider a hosted Redis provider and a small worker host such as Railway, Render, Fly.io, or a VPS
-
----
-
-### 4. AI insight workflow is still a foundation
-
-The AI feature exists, but it should be improved before being presented as a mature medical assistant.
-
-Impact:
-
-- insights should be treated as supportive summaries, not medical advice
-- source-linked explanations and better review states would make this much stronger
-
-Recommended next action:
-
-- add clearer disclaimers
-- link insights to underlying records
-- add reviewed/dismissed/saved insight states
-
----
-
-### 5. Care-team sharing needs a richer caregiver workspace
-
-The care access models and shared patient route exist, but the caregiver experience can be more impressive.
-
-Impact:
-
-- the backend capability is stronger than the current visible UX
-- reviewers may not immediately see the value of the sharing model
-
-Recommended next action:
-
-- add a caregiver dashboard with latest alerts, recent records, active medications, upcoming appointments, and permission summary
-
----
-
-### 6. Mobile and device APIs still need production hardening
-
-The mobile and device API documentation now matches the implemented endpoints and schema-backed reading types. The remaining work is production hardening, not basic documentation.
-
-Impact:
-
-- mobile tokens and device sync are ready for demo/review flows
-- production use still needs stronger throttling, device management, and possibly OpenAPI/Postman exports
-
-Recommended next action:
-
-- add rate limiting around mobile login and device reading ingestion
-- add a Postman/OpenAPI export for QA handoff
-- add device revoke/rename controls in the Security or Device Connection workspace
-
----
-
-### 7. Dashboard needs stronger product storytelling
-
-The app has many modules, but the dashboard should do more to summarize health status and guide the user.
-
-Impact:
-
-- users may not immediately understand what needs attention
-- the first logged-in screen could look more like a command center
-
-Recommended next action:
-
-- add profile completeness, needs-attention cards, upcoming care timeline, recent activity, and quick actions
-
----
-
-### 8. Reports and printable outputs can be much stronger
-
-The app already has exports and print routes, but a branded patient summary report would create a major business-value upgrade.
-
-Impact:
-
-- current exports are useful, but not yet a signature showcase feature
-- doctors, caregivers, and emergency use cases would benefit from better printable reports
-
-Recommended next action:
-
-- add a branded patient summary report and emergency card in future patches
-
----
-
-## Near-term patch order
-
-1. Stabilization and documentation accuracy
-2. Dashboard command center upgrade
-3. First-time onboarding wizard
-4. Branded patient summary report
-5. Mobile/device API documentation
-6. Caregiver shared patient workspace
-7. Audit log and security center upgrade
-8. Printable emergency health card
----
-
-## Patch 41 update: migration safety
-
-The reminder lifecycle migration has been hardened so `Reminder.updatedAt` is added with `DEFAULT CURRENT_TIMESTAMP` instead of being introduced as a required column with no default. A migration safety test now checks this behavior.
-
-Remaining database caution:
-
-- do not reset production databases unless data loss is intended
-- if a local migration attempt already failed, inspect `_prisma_migrations` before retrying
-- keep future Prisma migrations small and focused when changing required columns
-
----
-
-## Patch 42 update: mobile API v2 consistency
-
-The mobile/device API docs, demo data, and validation contract now use the same current routes:
-
-- `/api/mobile/auth/login`
-- `/api/mobile/auth/me`
-- `/api/mobile/auth/logout`
-- `/api/mobile/connections`
-- `/api/mobile/device-readings`
-
-`SLEEP_MINUTES` is intentionally documented as unsupported until a Prisma enum migration adds it. The current API accepts only schema-backed `DeviceReadingType` values.
-
----
-
-## Patch 43 update: report builder presets and generated history
-
-The Report Builder now supports scenario-based presets and a generated packet history panel. This improves the portfolio/demo experience without introducing a new database table.
-
-Remaining reporting limitation:
-
-- report history is generated from current records and query parameters, not persisted as saved report records
-- real saved report history, share links, and export audit retention should be added later with a dedicated Prisma model
-- preset templates are intentionally code-defined for safety and simple review
-
-
-## Patch 44 note: care notes are now cross-workflow, but not record-attached yet
-
-Care notes are now visible in timeline review, report builder packets, print previews, and export readiness checks. They are still patient-level collaboration notes, not record-attached comments. A future patch can add optional links from a care note to a specific lab result, appointment, medication, symptom, document, or alert.
+VitaVault is a strong full-stack portfolio and product-foundation project, but it is not a regulated medical device, not a clinical decision support system, and not production-ready for real protected health information without additional compliance work.
+
+This document keeps the current limitations honest so reviewers can understand what is implemented, what is simulated, and what should be hardened next.
+
+## Production and compliance limitations
+
+| Area | Current state | Recommended next step |
+|---|---|---|
+| Clinical safety | The app provides organization, summaries, and workflow signals, but it does not provide medical advice. | Add explicit patient/clinician disclaimers across AI, review hubs, reports, and emergency views. |
+| HIPAA/PHI readiness | The architecture has protected routes and document delivery, but it has not completed regulatory compliance controls. | Add formal access policies, retention rules, audit review procedures, DPA/vendor review, and production security documentation. |
+| Deployment security | Environment validation exists, but production hardening depends on real hosting and secret configuration. | Add deployment runbooks, secret rotation docs, backup/restore drills, and incident-response docs. |
+| Document storage | The app has storage abstraction foundations, but real production file storage needs provider-specific security configuration. | Use S3/R2/Azure/GCS-style storage with signed URLs, encryption, malware scanning, and retention rules. |
+
+## Data and workflow limitations
+
+| Area | Current state | Recommended next step |
+|---|---|---|
+| Report history | Report Builder shows generated recent packet context, but report history is not persisted as a database model yet. | Add a `ReportPacket` or `GeneratedReport` model with saved parameters, creator, timestamps, and audit events. |
+| Care notes | Care notes now appear across timeline, report builder, print packets, and export readiness, but they are still patient-level notes. | Add optional links from notes to specific labs, appointments, medications, symptoms, documents, alerts, or reports. |
+| AI insights | AI insight foundations exist, including source-aware direction, but production AI review workflows need stricter controls. | Add source review UI, prompt/version logging, patient disclaimers, moderation, and confidence labels. |
+| Data quality | Many pages show readiness and follow-up signals, but there is no dedicated data quality center yet. | Add a central data quality page for missing, stale, duplicate, contradictory, or incomplete records. |
+| Shared care | Shared patient access exists, but granular field-level permissions are not complete. | Add per-module sharing scopes and reviewable permission presets. |
+
+## Mobile and device limitations
+
+| Area | Current state | Recommended next step |
+|---|---|---|
+| Mobile API | Mobile auth, sessions, connections, and device readings have schema-backed foundations. | Add OpenAPI output, SDK examples, rate limits, and request signing for production use. |
+| Sleep readings | Sleep tracking is not currently part of the Prisma `DeviceReadingType` enum. | Add sleep support only through a deliberate Prisma enum migration and matching docs/tests. |
+| Device ingestion | Device readings can be validated and ingested, but device-provider integrations are simulated/foundational. | Add provider-specific connectors and reconciliation logic for Apple Health, Health Connect, Fitbit, and smart devices. |
+| Background sync | BullMQ/Redis foundations exist, but production worker deployment depends on environment setup. | Add queue dashboards, retry/rerun controls, dead-letter handling, and alerting. |
+
+## Demo limitations
+
+| Area | Current state | Recommended next step |
+|---|---|---|
+| Public demo | `/demo` routes are read-only and use sample data for portfolio review. | Keep demo pages aligned whenever authenticated features change. |
+| Live deployment | The Vercel demo may not have the database and secrets required for all authenticated flows. | Use the no-login demo for review and configure production env vars for full app testing. |
+| Screenshots | README screenshots may lag behind fast-moving UI patches. | Refresh screenshots after major visual updates and keep filenames stable. |
+
+## Testing limitations
+
+The project includes useful targeted tests, but it is not full end-to-end coverage yet.
+
+Current coverage focuses on:
+
+- action export/import hygiene
+- route policy helpers
+- migration safety checks
+- mobile API validation
+- export center readiness
+- document storage and protected download behavior
+- invite/outbound email helpers
+- notification and care-note workflow helpers
+- report builder presets
+- security helper behavior
+
+Recommended future coverage:
+
+1. Playwright flows for demo and authenticated route smoke tests
+2. route-level RBAC tests for admin-only pages
+3. report-builder print snapshot tests
+4. shared patient permission tests
+5. mobile API route integration tests
+6. export packet generation tests
+7. background job retry/rerun tests
+
+## Patch status notes
+
+- Role-based navigation and admin-only route policy were polished in Patch 40.
+- Migration safety was improved in Patch 41.
+- Mobile API docs and schema-backed reading types were aligned in Patch 42.
+- Report Builder presets and generated packet context were added in Patch 43.
+- Care Notes were connected across timeline, report, print, and export workflows in Patch 44.
+- Portfolio-facing README, feature matrix, known limitations, metadata, and demo wording were refreshed in Patch 45.
