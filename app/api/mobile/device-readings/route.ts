@@ -1,5 +1,15 @@
 import { NextResponse } from "next/server";
 import { requireMobileUser } from "@/lib/mobile-auth";
+import {
+  consumeMobileApiRateLimit,
+  getMobileNoStoreHeaders,
+  getMobilePayloadTooLargeBody,
+  getMobileRateLimitErrorBody,
+  getMobileRateLimitHeaders,
+  getMobileSecurityPolicy,
+  getRetryAfterHeaders,
+  isMobileRequestTooLarge,
+} from "@/lib/mobile-api-security";
 import { mobileDeviceSyncSchema } from "@/lib/mobile-device-api";
 import {
   ingestDeviceReadings,
@@ -8,12 +18,30 @@ import {
 } from "@/lib/mobile-readings";
 
 export async function POST(request: Request) {
+  const endpoint = "readings:sync" as const;
+  const policy = getMobileSecurityPolicy(endpoint);
+  const rateLimit = consumeMobileApiRateLimit({ request, endpoint });
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(getMobileRateLimitErrorBody(rateLimit, policy.label.toLowerCase()), {
+      status: 429,
+      headers: getMobileNoStoreHeaders(getRetryAfterHeaders(rateLimit)),
+    });
+  }
+
+  if (isMobileRequestTooLarge(request, endpoint)) {
+    return NextResponse.json(getMobilePayloadTooLargeBody(endpoint), {
+      status: 413,
+      headers: getMobileNoStoreHeaders(getMobileRateLimitHeaders(rateLimit)),
+    });
+  }
+
   const user = await requireMobileUser(request);
 
   if (!user) {
     return NextResponse.json(
       { error: "Unauthorized mobile session." },
-      { status: 401 }
+      { status: 401, headers: getMobileNoStoreHeaders(getMobileRateLimitHeaders(rateLimit)) }
     );
   }
 
@@ -27,7 +55,7 @@ export async function POST(request: Request) {
           error: "Invalid device reading payload.",
           details: parsed.error.flatten(),
         },
-        { status: 400 }
+        { status: 400, headers: getMobileNoStoreHeaders(getMobileRateLimitHeaders(rateLimit)) }
       );
     }
 
@@ -75,22 +103,28 @@ export async function POST(request: Request) {
       syncMetadata,
     });
 
-    return NextResponse.json({
-      success: true,
-      connection: {
-        id: connection.id,
-        source: connection.source,
-        platform: connection.platform,
-        clientDeviceId: connection.clientDeviceId,
-        deviceLabel: connection.deviceLabel,
-        status: connection.status,
+    return NextResponse.json(
+      {
+        success: true,
+        connection: {
+          id: connection.id,
+          source: connection.source,
+          platform: connection.platform,
+          clientDeviceId: connection.clientDeviceId,
+          deviceLabel: connection.deviceLabel,
+          status: connection.status,
+        },
+        sync: result,
       },
-      sync: result,
-    });
+      { headers: getMobileNoStoreHeaders(getMobileRateLimitHeaders(rateLimit)) }
+    );
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to ingest device readings.";
 
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: message },
+      { status: 500, headers: getMobileNoStoreHeaders(getMobileRateLimitHeaders(rateLimit)) }
+    );
   }
 }

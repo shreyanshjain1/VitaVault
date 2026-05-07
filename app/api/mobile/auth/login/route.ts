@@ -1,7 +1,18 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { logAccessAudit } from "@/lib/access";
 import { authenticateMobileCredentials, createMobileSessionToken } from "@/lib/mobile-auth";
-import { consumeRateLimit, getClientRateLimitKey } from "@/lib/security/rate-limit";
+import {
+  consumeMobileApiRateLimit,
+  getMobileAuditMetadata,
+  getMobileNoStoreHeaders,
+  getMobilePayloadTooLargeBody,
+  getMobileRateLimitErrorBody,
+  getMobileRateLimitHeaders,
+  getMobileSecurityPolicy,
+  getRetryAfterHeaders,
+  isMobileRequestTooLarge,
+} from "@/lib/mobile-api-security";
 
 const loginSchema = z.object({
   email: z.string().trim().email(),
@@ -10,32 +21,31 @@ const loginSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const endpoint = "auth:login" as const;
+  const policy = getMobileSecurityPolicy(endpoint);
+
+  if (isMobileRequestTooLarge(request, endpoint)) {
+    return NextResponse.json(getMobilePayloadTooLargeBody(endpoint), {
+      status: 413,
+      headers: getMobileNoStoreHeaders(),
+    });
+  }
+
   try {
     const body = await request.json();
     const parsed = loginSchema.safeParse(body);
     const emailScope = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "unknown";
-    const rateLimit = consumeRateLimit({
-      key: getClientRateLimitKey(request, `mobile-login:${emailScope}`),
-      limit: 10,
-      windowMs: 15 * 60 * 1000,
+    const rateLimit = consumeMobileApiRateLimit({
+      request,
+      endpoint,
+      discriminator: emailScope,
     });
 
     if (!rateLimit.allowed) {
-      return NextResponse.json(
-        {
-          error: "Too many mobile login attempts. Try again later.",
-          retryAfterSeconds: rateLimit.retryAfterSeconds,
-        },
-        {
-          status: 429,
-          headers: {
-            "Retry-After": String(rateLimit.retryAfterSeconds),
-            "X-RateLimit-Limit": String(rateLimit.limit),
-            "X-RateLimit-Remaining": String(rateLimit.remaining),
-            "X-RateLimit-Reset": rateLimit.resetAt.toISOString(),
-          },
-        }
-      );
+      return NextResponse.json(getMobileRateLimitErrorBody(rateLimit, policy.label.toLowerCase()), {
+        status: 429,
+        headers: getMobileNoStoreHeaders(getRetryAfterHeaders(rateLimit)),
+      });
     }
 
     if (!parsed.success) {
@@ -44,7 +54,7 @@ export async function POST(request: Request) {
           error: "Invalid login payload.",
           details: parsed.error.flatten(),
         },
-        { status: 400 }
+        { status: 400, headers: getMobileNoStoreHeaders(getMobileRateLimitHeaders(rateLimit)) }
       );
     }
 
@@ -56,7 +66,7 @@ export async function POST(request: Request) {
     if (!user) {
       return NextResponse.json(
         { error: "Invalid email or password." },
-        { status: 401 }
+        { status: 401, headers: getMobileNoStoreHeaders(getMobileRateLimitHeaders(rateLimit)) }
       );
     }
 
@@ -65,19 +75,33 @@ export async function POST(request: Request) {
       name: parsed.data.deviceName ?? "Android device",
     });
 
-    return NextResponse.json({
-      token: sessionToken.token,
-      expiresAt: sessionToken.expiresAt.toISOString(),
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-      },
+    await logAccessAudit({
+      ownerUserId: user.id,
+      actorUserId: user.id,
+      action: "mobile_session.created",
+      targetType: "MOBILE_SESSION",
+      metadata: getMobileAuditMetadata(request, {
+        deviceName: parsed.data.deviceName ?? "Android device",
+        expiresAt: sessionToken.expiresAt.toISOString(),
+      }),
     });
+
+    return NextResponse.json(
+      {
+        token: sessionToken.token,
+        expiresAt: sessionToken.expiresAt.toISOString(),
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        },
+      },
+      { headers: getMobileNoStoreHeaders(getMobileRateLimitHeaders(rateLimit)) }
+    );
   } catch {
     return NextResponse.json(
       { error: "Unable to complete mobile login." },
-      { status: 500 }
+      { status: 500, headers: getMobileNoStoreHeaders() }
     );
   }
 }

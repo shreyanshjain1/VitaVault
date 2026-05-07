@@ -81,3 +81,8 @@ Recommended future coverage:
 ## Patch 48 note: Data Quality Center
 
 The Data Quality Center computes quality and readiness at request time from existing VitaVault records. It does not yet persist historical data-quality snapshots, so trend-over-time cleanup analytics remain a future enhancement.
+
+## Mobile API security scale
+
+Patch 49 adds endpoint-specific in-memory rate limits, no-store headers, oversized payload checks, and audit events for mobile session creation/revocation. This is suitable for local demo and portfolio review. For production-scale multi-instance hosting, move rate-limit buckets to Redis, database-backed counters, or an edge rate-limit provider so limits are shared across deployments.
+

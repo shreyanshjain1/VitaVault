@@ -26,6 +26,7 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import { getMobileSecurityChecklist } from "@/lib/mobile-api-security";
 
 const baseUrl = "https://your-vitavault-domain.com";
 
@@ -533,7 +534,7 @@ export default function ApiDocsPage() {
                 "Treat mobile tokens separately from browser sessions.",
                 "Rotate/revoke tokens from the security center when a device is lost.",
                 "Keep reading payloads minimal and avoid sending unnecessary PHI.",
-                "Add rate limiting before exposing the endpoints publicly at scale.",
+                ...getMobileSecurityChecklist(),
               ].map((note) => (
                 <div key={note} className="rounded-3xl border border-border/60 bg-background/55 p-4 text-sm leading-6">
                   {note}
