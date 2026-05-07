@@ -54,6 +54,12 @@ export default async function CareNotesPage() {
               <Link href="/care-team" className="inline-flex h-10 items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium hover:bg-muted/60">
                 Care Team
               </Link>
+              <Link href="/timeline?type=CARE_NOTE" className="inline-flex h-10 items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium hover:bg-muted/60">
+                Timeline notes
+              </Link>
+              <Link href="/report-builder?preset=care-team-weekly" className="inline-flex h-10 items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium hover:bg-muted/60">
+                Care report
+              </Link>
               <Link href="/notifications" className="inline-flex h-10 items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium hover:bg-muted/60">
                 Notifications
               </Link>

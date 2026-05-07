@@ -1,6 +1,7 @@
 import { AppointmentStatus, LabFlag, ReminderState, SymptomSeverity } from "@prisma/client";
 import { db } from "@/lib/db";
 import { buildRecordHref } from "@/lib/record-focus";
+import { careNoteWorkflowTone, summarizeCareNoteForWorkflow } from "@/lib/care-note-workflows";
 
 export type TimelineTone = "info" | "neutral" | "success" | "warning" | "danger";
 
@@ -12,7 +13,8 @@ export type TimelineItemType =
   | "VACCINATION"
   | "DOCUMENT"
   | "REMINDER"
-  | "ALERT";
+  | "ALERT"
+  | "CARE_NOTE";
 
 export type TimelineRiskLevel = "routine" | "watch" | "urgent";
 
@@ -193,7 +195,7 @@ function groupTimelineItems(items: TimelineItem[]): TimelineMonthGroup[] {
 }
 
 export async function getTimelineItems(userId: string, limit = 160, filters?: TimelineFilters): Promise<TimelineItem[]> {
-  const [appointments, labs, vitals, symptoms, vaccinations, documents, reminders, alerts] = await Promise.all([
+  const [appointments, labs, vitals, symptoms, vaccinations, documents, reminders, alerts, careNotes] = await Promise.all([
     db.appointment.findMany({
       where: { userId },
       orderBy: { scheduledAt: "desc" },
@@ -232,6 +234,12 @@ export async function getTimelineItems(userId: string, limit = 160, filters?: Ti
     db.alertEvent.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
+      take: limit,
+    }),
+    db.careNote.findMany({
+      where: { ownerUserId: userId, archivedAt: null },
+      include: { author: { select: { name: true, email: true } } },
+      orderBy: [{ pinned: "desc" }, { priority: "desc" }, { createdAt: "desc" }],
       take: limit,
     }),
   ]);
@@ -334,6 +342,24 @@ export async function getTimelineItems(userId: string, limit = 160, filters?: Ti
               ? "success"
               : "info",
       source: "Alert",
+    })),
+    ...careNotes.map((item): TimelineItem => withTimelineMeta({
+      id: item.id,
+      type: "CARE_NOTE",
+      title: item.title,
+      description: summarizeCareNoteForWorkflow({
+        title: item.title,
+        body: item.body,
+        category: item.category,
+        priority: item.priority,
+        visibility: item.visibility,
+        pinned: item.pinned,
+        authorName: item.author.name || item.author.email,
+      }),
+      occurredAt: item.createdAt,
+      href: "/care-notes",
+      tone: careNoteWorkflowTone(item.priority),
+      source: "Care note",
     })),
   ];
 

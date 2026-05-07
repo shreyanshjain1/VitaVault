@@ -121,6 +121,28 @@ export default async function ReportBuilderPrintPage({ searchParams }: { searchP
           </section>
         ) : null}
 
+
+        {isSectionSelected(data.selectedSections, "careNotes") ? (
+          <section className="break-inside-avoid space-y-3">
+            <h2 className="border-b border-slate-200 pb-2 text-xl font-semibold">Care notes</h2>
+            <div className="space-y-3">
+              {data.careNotes.map((item) => (
+                <div key={item.id} className="rounded-2xl border border-slate-200 p-4">
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    <StatusPill tone={item.priority === "URGENT" ? "danger" : item.priority === "HIGH" ? "warning" : item.priority === "LOW" ? "neutral" : "info"}>{item.priority}</StatusPill>
+                    <span className="rounded-full border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600">{item.category.replaceAll("_", " ")}</span>
+                    {item.pinned ? <StatusPill tone="warning">Pinned</StatusPill> : null}
+                  </div>
+                  <p className="font-semibold">{item.title}</p>
+                  <p className="mt-1 whitespace-pre-line text-sm text-slate-600">{item.body}</p>
+                  <p className="mt-2 text-xs text-slate-500">{item.visibility} • {formatDateTime(item.createdAt)} • {item.author.name || item.author.email || "Care team"}</p>
+                </div>
+              ))}
+              {!data.careNotes.length ? <p className="text-sm text-slate-500">No care notes found for this range.</p> : null}
+            </div>
+          </section>
+        ) : null}
+
         {isSectionSelected(data.selectedSections, "timeline") ? (
           <section className="break-inside-avoid space-y-3">
             <h2 className="border-b border-slate-200 pb-2 text-xl font-semibold">Timeline preview</h2>

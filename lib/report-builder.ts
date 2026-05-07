@@ -7,6 +7,7 @@ import {
   SymptomSeverity,
 } from "@prisma/client";
 import { db } from "@/lib/db";
+import { careNotePreShareStatus, careNoteWorkflowRisk, summarizeCareNoteForWorkflow } from "@/lib/care-note-workflows";
 import {
   buildReportPrintHref,
   getReportBuilderPreset,
@@ -72,6 +73,7 @@ export const reportSections: ReportSectionDefinition[] = [
   { key: "documents", label: "Documents", description: "Medical files, linking coverage, and document hygiene.", recommendedFor: ["patient", "doctor", "care", "custom"] },
   { key: "alerts", label: "Alerts", description: "Open alerts, high-risk signals, and follow-up context.", recommendedFor: ["patient", "doctor", "care", "custom"] },
   { key: "careTeam", label: "Care Team", description: "Shared access, caregivers, and active care relationships.", recommendedFor: ["patient", "care", "custom"] },
+  { key: "careNotes", label: "Care Notes", description: "Pinned, high-priority, and recent collaboration notes for handoffs.", recommendedFor: ["patient", "doctor", "care", "custom"] },
   { key: "aiInsights", label: "AI Insights", description: "Latest AI summary and source-linked interpretation support.", recommendedFor: ["patient", "doctor", "care", "custom"] },
   { key: "timeline", label: "Timeline", description: "Longitudinal record and care event history.", recommendedFor: ["patient", "doctor", "care", "custom"] },
 ];
@@ -101,9 +103,9 @@ function clampScore(value: number) {
 
 function defaultSectionsForType(reportType: ReportType): ReportSectionKey[] {
   if (reportType === "emergency") return ["profile", "medications", "vitals", "alerts"];
-  if (reportType === "doctor") return ["profile", "medications", "vitals", "labs", "symptoms", "appointments", "documents", "alerts", "aiInsights", "timeline"];
-  if (reportType === "care") return ["profile", "medications", "vitals", "labs", "symptoms", "appointments", "documents", "alerts", "careTeam", "aiInsights", "timeline"];
-  return ["profile", "medications", "vitals", "labs", "symptoms", "appointments", "documents", "alerts", "timeline"];
+  if (reportType === "doctor") return ["profile", "medications", "vitals", "labs", "symptoms", "appointments", "documents", "alerts", "careNotes", "aiInsights", "timeline"];
+  if (reportType === "care") return ["profile", "medications", "vitals", "labs", "symptoms", "appointments", "documents", "alerts", "careTeam", "careNotes", "aiInsights", "timeline"];
+  return ["profile", "medications", "vitals", "labs", "symptoms", "appointments", "documents", "alerts", "careNotes", "timeline"];
 }
 
 function parseSections(value: string | undefined, reportType: ReportType): ReportSectionKey[] {
@@ -180,6 +182,7 @@ export async function getReportBuilderData(options: ReportBuilderOptions = {}) {
     alerts,
     highRiskAlerts,
     careAccess,
+    careNotes,
     aiInsight,
   ] = await Promise.all([
     db.healthProfile.findUnique({ where: { userId: user.id } }),
@@ -245,6 +248,12 @@ export async function getReportBuilderData(options: ReportBuilderOptions = {}) {
       take: 8,
       select: { id: true, accessRole: true, canViewRecords: true, canAddNotes: true, canExport: true, member: { select: { name: true, email: true } } },
     }),
+    db.careNote.findMany({
+      where: { ownerUserId: user.id, archivedAt: null, ...dateWhere("createdAt", from, to) },
+      orderBy: [{ pinned: "desc" }, { priority: "desc" }, { createdAt: "desc" }],
+      take: 8,
+      include: { author: { select: { name: true, email: true, role: true } } },
+    }),
     db.aiInsight.findFirst({
       where: { ownerUserId: user.id },
       orderBy: { createdAt: "desc" },
@@ -260,8 +269,8 @@ export async function getReportBuilderData(options: ReportBuilderOptions = {}) {
   const profileReady = Boolean(profile?.fullName && profile?.dateOfBirth && profile?.emergencyContactName && profile?.emergencyContactPhone);
   const sectionsScore = pct(selectedSections.length, reportSections.length);
   const dataScore = pct(
-    [profileReady, medications.length > 0, vitals.length > 0, labs.length > 0, symptoms.length > 0, documents.length > 0, appointments.length > 0].filter(Boolean).length,
-    7,
+    [profileReady, medications.length > 0, vitals.length > 0, labs.length > 0, symptoms.length > 0, documents.length > 0, appointments.length > 0, careNotes.length > 0].filter(Boolean).length,
+    8,
   );
   const readinessScore = clampScore((sectionsScore * 0.35) + (dataScore * 0.45) + (documentLinkRate * 0.1) + (medicationAdherenceRate * 0.1));
 
@@ -281,6 +290,16 @@ export async function getReportBuilderData(options: ReportBuilderOptions = {}) {
   if (documents.length > 0 && documentLinkRate < 60) {
     actionItems.push({ title: "Improve document linking", description: `${documentLinkRate}% of recent documents are linked to source records. Link key files before exporting.`, href: "/documents?link=UNLINKED", priority: "medium" });
   }
+
+  const careNoteStatus = careNotePreShareStatus(careNotes);
+  if (careNotes.length > 0 && careNoteStatus.priority !== "low") {
+    actionItems.push({
+      title: careNoteStatus.title,
+      description: careNoteStatus.description,
+      href: "/care-notes",
+      priority: careNoteStatus.priority,
+    });
+  }
   if (actionItems.length === 0) {
     actionItems.push({ title: "Report packet is ready for review", description: "Core data, source records, and handoff context look ready for a preview or print packet.", href: "/report-builder/print", priority: "low" });
   }
@@ -292,6 +311,22 @@ export async function getReportBuilderData(options: ReportBuilderOptions = {}) {
     ...symptoms.map((item) => ({ id: `symptom-${item.id}`, type: "Symptom", title: item.title, detail: `${item.severity}${item.bodyArea ? ` • ${item.bodyArea}` : ""}${item.resolved ? " • resolved" : " • unresolved"}`, occurredAt: item.startedAt, risk: item.severity === SymptomSeverity.SEVERE && !item.resolved ? "urgent" as const : !item.resolved ? "watch" as const : "routine" as const })),
     ...alerts.map((item) => ({ id: `alert-${item.id}`, type: "Alert", title: item.title, detail: `${item.severity} • ${item.message}`, occurredAt: item.createdAt, risk: item.severity === AlertSeverity.CRITICAL || item.severity === AlertSeverity.HIGH ? "urgent" as const : "watch" as const })),
     ...documents.map((item) => ({ id: `document-${item.id}`, type: "Document", title: item.title, detail: `${item.type} • ${item.fileName}`, occurredAt: item.createdAt, risk: item.linkedRecordId ? "routine" as const : "watch" as const })),
+    ...careNotes.map((item) => ({
+      id: `care-note-${item.id}`,
+      type: "Care note",
+      title: item.title,
+      detail: summarizeCareNoteForWorkflow({
+        title: item.title,
+        body: item.body,
+        category: item.category,
+        priority: item.priority,
+        visibility: item.visibility,
+        pinned: item.pinned,
+        authorName: item.author.name || item.author.email,
+      }),
+      occurredAt: item.createdAt,
+      risk: careNoteWorkflowRisk(item.priority),
+    })),
   ].sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime()).slice(0, 20);
 
   const printHref = buildReportPrintHref({ reportType, sections: sectionQuery(selectedSections), from: controls.from, to: controls.to, preset: controls.presetId });
@@ -299,11 +334,11 @@ export async function getReportBuilderData(options: ReportBuilderOptions = {}) {
     {
       id: "current-draft",
       title: selectedPreset ? `${selectedPreset.label} draft` : `${reportTypeLabels[reportType]} draft`,
-      description: `${selectedSections.length} sections • ${medications.length + appointments.length + labs.length + vitals.length + symptoms.length + documents.length + alerts.length} source records • ${controls.from || controls.to ? "date-filtered" : "all records"}`,
+      description: `${selectedSections.length} sections • ${medications.length + appointments.length + labs.length + vitals.length + symptoms.length + documents.length + alerts.length + careNotes.length} source records • ${controls.from || controls.to ? "date-filtered" : "all records"}`,
       href: printHref,
       generatedAt: now,
       status: readinessScore >= 75 ? "ready" : readinessScore >= 50 ? "review" : "attention",
-      recordCount: medications.length + appointments.length + labs.length + vitals.length + symptoms.length + documents.length + alerts.length,
+      recordCount: medications.length + appointments.length + labs.length + vitals.length + symptoms.length + documents.length + alerts.length + careNotes.length,
     },
     ...(timeline[0]
       ? [{
@@ -343,10 +378,13 @@ export async function getReportBuilderData(options: ReportBuilderOptions = {}) {
       readinessScore,
       selectedSectionCount: selectedSections.length,
       availableSectionCount: reportSections.length,
-      totalRecords: medications.length + appointments.length + labs.length + vitals.length + symptoms.length + documents.length + alerts.length,
+      totalRecords: medications.length + appointments.length + labs.length + vitals.length + symptoms.length + documents.length + alerts.length + careNotes.length,
       highRiskAlerts,
       abnormalLabs,
       unresolvedSymptoms,
+      careNotes: careNotes.length,
+      urgentCareNotes: careNotes.filter((note) => note.priority === "URGENT").length,
+      pinnedCareNotes: careNotes.filter((note) => note.pinned).length,
       documentLinkRate,
       medicationAdherenceRate,
     },
@@ -359,6 +397,7 @@ export async function getReportBuilderData(options: ReportBuilderOptions = {}) {
     documents,
     alerts,
     careAccess,
+    careNotes,
     aiInsight,
     actionItems,
     timeline,

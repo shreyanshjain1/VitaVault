@@ -179,3 +179,8 @@ Remaining reporting limitation:
 - report history is generated from current records and query parameters, not persisted as saved report records
 - real saved report history, share links, and export audit retention should be added later with a dedicated Prisma model
 - preset templates are intentionally code-defined for safety and simple review
+
+
+## Patch 44 note: care notes are now cross-workflow, but not record-attached yet
+
+Care notes are now visible in timeline review, report builder packets, print previews, and export readiness checks. They are still patient-level collaboration notes, not record-attached comments. A future patch can add optional links from a care note to a specific lab result, appointment, medication, symptom, document, or alert.

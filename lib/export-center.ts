@@ -1,4 +1,4 @@
-import { AlertSeverity, AlertStatus, LabFlag, MedicationLogStatus, ReminderState } from "@prisma/client";
+import { AlertSeverity, AlertStatus, CareNotePriority, LabFlag, MedicationLogStatus, ReminderState } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { exportDefinitions } from "@/lib/export-definitions";
@@ -27,6 +27,14 @@ function pct(value: number, total: number) {
 function scoreFromChecks(checks: boolean[]) {
   if (!checks.length) return 0;
   return pct(checks.filter(Boolean).length, checks.length);
+}
+
+type CareNoteCountDelegate = {
+  count: (args: { where: Record<string, unknown> }) => Promise<number>;
+};
+
+function getOptionalCareNoteDelegate() {
+  return (db as typeof db & { careNote?: CareNoteCountDelegate }).careNote;
 }
 
 export async function getExportCenterData() {
@@ -77,6 +85,14 @@ export async function getExportCenterData() {
     db.doctor.count({ where: { userId: user.id } }),
   ]);
 
+  const careNoteDelegate = getOptionalCareNoteDelegate();
+  const [careNotes, urgentCareNotes] = careNoteDelegate
+    ? await Promise.all([
+        careNoteDelegate.count({ where: { ownerUserId: user.id, archivedAt: null } }),
+        careNoteDelegate.count({ where: { ownerUserId: user.id, archivedAt: null, priority: { in: [CareNotePriority.HIGH, CareNotePriority.URGENT] } } }),
+      ])
+    : [0, 0];
+
   const profileReady = Boolean(profile?.fullName && profile?.dateOfBirth && profile?.emergencyContactName && profile?.emergencyContactPhone);
   const medicationReady = medications > 0;
   const clinicalReady = labs > 0 || vitals > 0 || symptoms > 0;
@@ -89,7 +105,7 @@ export async function getExportCenterData() {
   const csvCoverage = [
     { label: "Core records", value: appointments + medications + labs + vaccinations, description: "Appointments, medications, lab results, and vaccination records." },
     { label: "Monitoring data", value: vitals + symptoms, description: "Vitals and symptom history for trends and review." },
-    { label: "Coordination", value: reminders + documents + openAlerts, description: "Reminders, documents, and alert snapshots." },
+    { label: "Coordination", value: reminders + documents + openAlerts + careNotes, description: "Reminders, documents, alert snapshots, and care notes." },
   ];
 
   const packets: ExportPacket[] = [
@@ -126,6 +142,17 @@ export async function getExportCenterData() {
       reason: `${readinessScore}% export readiness across profile, records, documents, and provider context.`,
     },
   ];
+
+  if (careNoteDelegate) {
+    packets.push({
+      title: "Care-team notes packet",
+      description: "A collaboration-focused report builder preset that includes care notes, timeline context, and shared access details.",
+      href: "/report-builder?preset=care-team-weekly",
+      format: "Workspace",
+      readiness: careNotes > 0 ? "Ready" : "Setup needed",
+      reason: careNotes > 0 ? `${careNotes} active care note${careNotes === 1 ? "" : "s"} available for handoff context.` : "Add a care note before preparing a collaboration packet.",
+    });
+  }
 
   const actionItems: ExportActionItem[] = [];
 
@@ -165,6 +192,15 @@ export async function getExportCenterData() {
     });
   }
 
+  if (urgentCareNotes > 0) {
+    actionItems.push({
+      title: "Review care-team notes",
+      description: `${urgentCareNotes} high-priority care note${urgentCareNotes === 1 ? "" : "s"} should be reviewed before exporting a handoff packet.`,
+      href: "/care-notes",
+      priority: "medium",
+    });
+  }
+
   if (severeOpenSymptoms > 0) {
     actionItems.push({
       title: "Review severe unresolved symptoms",
@@ -188,12 +224,14 @@ export async function getExportCenterData() {
       readinessScore,
       csvExportTypes: exportDefinitions.length,
       reportPackets: packets.length,
-      totalRecords: medications + appointments + labs + vitals + symptoms + vaccinations + documents + reminders + openAlerts,
+      totalRecords: medications + appointments + labs + vitals + symptoms + vaccinations + documents + reminders + openAlerts + careNotes,
       documentLinkRate,
       medicationAdherenceRate,
       activeReminders,
       openAlerts,
       highRiskAlerts,
+      careNotes,
+      urgentCareNotes,
     },
     csvCoverage,
     packets,
