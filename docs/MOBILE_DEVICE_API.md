@@ -258,12 +258,18 @@ Lifecycle actions are user-owned and audited. Revoking a connection does not del
 
 ## Security notes
 
+Patch 49 hardens the mobile API surface without changing the Prisma schema or mobile contract.
+
 - Use HTTPS only in production.
 - Store the mobile token in secure device storage, not plaintext storage.
 - Treat mobile API tokens separately from browser sessions.
 - Revoke mobile tokens from the Security page when a device is lost.
 - Keep reading payloads minimal and avoid sending unnecessary PHI.
-- Add rate limiting before exposing these endpoints publicly at scale.
+- Credential login is rate limited by email and client IP.
+- Bearer-token endpoints are rate limited by endpoint and client IP.
+- Device reading sync rejects oversized payloads before JSON parsing when `Content-Length` is available.
+- Mobile API responses use `Cache-Control: no-store` and `X-Content-Type-Options: nosniff`.
+- Mobile session creation and revocation are written to the access audit timeline.
 
 ## Implementation notes
 

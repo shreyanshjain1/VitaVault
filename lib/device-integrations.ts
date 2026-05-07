@@ -6,6 +6,7 @@ import {
   SyncJobStatus,
 } from "@prisma/client";
 import { db } from "@/lib/db";
+import { getMobileSecurityChecklist } from "@/lib/mobile-api-security";
 import { SUPPORTED_DEVICE_READINGS } from "@/lib/mobile-device-api";
 
 export type DeviceConnectionHealthTone = "neutral" | "info" | "success" | "warning" | "danger";
@@ -110,6 +111,7 @@ export function buildDeviceQaChecklist() {
     "Confirm a DeviceConnection appears as ACTIVE.",
     "Confirm a SyncJob records requested, accepted, and mirrored counts.",
     "Confirm supported readings mirror into Vitals Monitor and Trends.",
+    ...getMobileSecurityChecklist().slice(0, 4),
   ];
 }
 
