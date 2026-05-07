@@ -27,8 +27,10 @@ import {
   TR,
 } from "@/components/ui";
 import { getMobileSecurityChecklist } from "@/lib/mobile-api-security";
+import { getMobileApiContractSummary } from "@/lib/mobile-api-contract-export";
 
 const baseUrl = "https://your-vitavault-domain.com";
+const contractSummary = getMobileApiContractSummary();
 
 const endpointGroups = [
   {
@@ -274,6 +276,65 @@ export default function ApiDocsPage() {
           </div>
         </header>
 
+        <section className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+          <Card className="border-primary/20 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Workflow className="h-5 w-5 text-primary" />
+                Download OpenAPI contract
+              </CardTitle>
+              <CardDescription>
+                Machine-readable OpenAPI 3.1 JSON for Swagger UI, Insomnia, API gateways, and reviewer inspection.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-3xl border border-border/60 bg-background/70 p-4">
+                  <p className="text-2xl font-semibold">{contractSummary.endpointCount}</p>
+                  <p className="text-xs text-muted-foreground">endpoints</p>
+                </div>
+                <div className="rounded-3xl border border-border/60 bg-background/70 p-4">
+                  <p className="text-2xl font-semibold">{contractSummary.readingTypeCount}</p>
+                  <p className="text-xs text-muted-foreground">reading types</p>
+                </div>
+                <div className="rounded-3xl border border-border/60 bg-background/70 p-4">
+                  <p className="text-2xl font-semibold">3.1</p>
+                  <p className="text-xs text-muted-foreground">OpenAPI</p>
+                </div>
+              </div>
+              <Link
+                href="/api/mobile/openapi"
+                className="inline-flex h-11 items-center justify-center rounded-2xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-95"
+              >
+                Download vitavault-mobile-openapi.json
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card className="border-primary/20 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DatabaseZap className="h-5 w-5 text-primary" />
+                Download Postman collection
+              </CardTitle>
+              <CardDescription>
+                Import-ready Postman Collection 2.1 JSON with base URL and mobile token variables.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-3xl border border-border/60 bg-background/70 p-4 text-sm leading-6 text-muted-foreground">
+                Includes grouped requests for mobile login, session validation, logout, device connections, and device reading sync with schema-backed sample payloads.
+              </div>
+              <Link
+                href="/api/mobile/postman"
+                className="inline-flex h-11 items-center justify-center rounded-2xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-95"
+              >
+                Download vitavault-mobile-postman-collection.json
+              </Link>
+            </CardContent>
+          </Card>
+        </section>
+
         <section className="grid gap-6 lg:grid-cols-3">
           {endpointGroups.map((group) => {
             const Icon = group.icon;
@@ -342,7 +403,7 @@ export default function ApiDocsPage() {
             <CardHeader>
               <CardTitle>Endpoint matrix</CardTitle>
               <CardDescription>
-                Quick implementation map for mobile, QA, and future Postman collection work.
+                Quick implementation map for mobile, QA, and downloadable OpenAPI/Postman contract work.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -546,7 +607,7 @@ export default function ApiDocsPage() {
 
         <footer className="rounded-[2rem] border border-border/60 bg-card/80 p-6 text-sm leading-7 text-muted-foreground">
           <p>
-            This page documents the current VitaVault API foundation. It is meant for product review, mobile planning, QA, and future Postman/OpenAPI expansion. The API surface is intentionally small today, but it already supports credential login, revocable mobile sessions, connected-device visibility, and structured reading ingestion.
+            This page documents the current VitaVault API foundation. It is meant for product review, mobile planning, QA, and downloadable OpenAPI/Postman contract review. The API surface is intentionally small today, but it already supports credential login, revocable mobile sessions, connected-device visibility, and structured reading ingestion.
           </p>
         </footer>
       </div>

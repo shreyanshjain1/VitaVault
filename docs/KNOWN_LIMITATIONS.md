@@ -86,3 +86,6 @@ The Data Quality Center computes quality and readiness at request time from exis
 
 Patch 49 adds endpoint-specific in-memory rate limits, no-store headers, oversized payload checks, and audit events for mobile session creation/revocation. This is suitable for local demo and portfolio review. For production-scale multi-instance hosting, move rate-limit buckets to Redis, database-backed counters, or an edge rate-limit provider so limits are shared across deployments.
 
+## API contract exports
+
+Patch 50 adds generated OpenAPI and Postman JSON exports for the mobile/device API. These are intentionally scoped to the existing mobile endpoints only. The exports do not yet cover the full web app/server-action surface because most authenticated web workflows are rendered through App Router pages and server actions rather than public REST endpoints.

@@ -1,6 +1,6 @@
 # VitaVault Mobile and Device API
 
-This document summarizes the current VitaVault mobile/device API foundation for Android, mobile sync, QA, and future Postman/OpenAPI work. It intentionally lists only reading types currently backed by the Prisma `DeviceReadingType` enum.
+This document summarizes the current VitaVault mobile/device API foundation for Android, mobile sync, QA, OpenAPI import, and Postman testing. It intentionally lists only reading types currently backed by the Prisma `DeviceReadingType` enum.
 
 The same information is also available as a product-facing page at:
 
@@ -255,6 +255,25 @@ Patch 46 adds authenticated device integration surfaces on top of the mobile API
 | `/device-sync-simulator` | Safe demo sync runner that creates connections, readings, sync jobs, job runs, and mirrored vitals |
 
 Lifecycle actions are user-owned and audited. Revoking a connection does not delete historical readings; it marks the connection as no longer active while keeping traceability intact.
+
+
+## Machine-readable exports
+
+Patch 50 adds generated API contract downloads for reviewers, QA, and future mobile client work.
+
+| Export | Route | Use |
+|---|---|---|
+| OpenAPI 3.1 JSON | `/api/mobile/openapi` | Import into Swagger UI, Insomnia, API gateways, or client generators. |
+| Postman Collection 2.1 JSON | `/api/mobile/postman` | Import into Postman and set `baseUrl` plus `mobileToken` variables. |
+
+Both exports are generated from VitaVault's existing mobile API contract helpers and include the five supported mobile endpoints, bearer-token security, schema-backed reading types, request examples, response schemas, and rate-limit/security context.
+
+Optional base URL override:
+
+```txt
+/api/mobile/openapi?baseUrl=https://vita-vault-demo.example.com
+/api/mobile/postman?baseUrl=https://vita-vault-demo.example.com
+```
 
 ## Security notes
 
