@@ -67,7 +67,7 @@ export default async function DeviceSyncSimulatorPage() {
           action={
             <div className="flex flex-wrap gap-2">
               <Link href="/device-connection" className="inline-flex h-10 items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium hover:bg-muted/50">
-                Device roadmap
+                Device integrations
               </Link>
               <Link href="/vitals-monitor" className="inline-flex h-10 items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium hover:bg-muted/50">
                 Vitals monitor
@@ -148,6 +148,7 @@ export default async function DeviceSyncSimulatorPage() {
                     <p>{connection._count.readings} readings</p>
                     <p>{connection._count.syncJobs} sync jobs</p>
                   </div>
+                  <Link href={`/device-connection/${connection.id}`} className="mt-3 inline-flex text-sm font-medium text-primary hover:underline">Open connection detail</Link>
                   {connection.lastError ? <p className="mt-3 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{connection.lastError}</p> : null}
                 </div>
               ))}
@@ -226,7 +227,7 @@ export default async function DeviceSyncSimulatorPage() {
         <Card>
           <CardHeader>
             <CardTitle>Why this matters for demos</CardTitle>
-            <CardDescription>Patch 25 turns the device/mobile foundation into something reviewers can see working without external vendor credentials.</CardDescription>
+            <CardDescription>Patch 46 connects the device/mobile foundation into a visible integration workspace with connection detail views, lifecycle actions, QA payloads, and traceable sync history.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-3">
             <div className="rounded-2xl border border-border/60 bg-background/50 p-4">

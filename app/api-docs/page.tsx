@@ -119,7 +119,7 @@ const connectionResponse = `{
   "connections": [
     {
       "id": "connection_123",
-      "source": "MOBILE_APP",
+      "source": "ANDROID_HEALTH_CONNECT",
       "platform": "ANDROID",
       "clientDeviceId": "android-pixel-8-pro",
       "deviceLabel": "Pixel 8 Pro",
@@ -138,7 +138,7 @@ Authorization: Bearer vvm_9f9f...mobile_token...
 Content-Type: application/json
 
 {
-  "source": "MOBILE_APP",
+  "source": "ANDROID_HEALTH_CONNECT",
   "platform": "ANDROID",
   "clientDeviceId": "android-pixel-8-pro",
   "deviceLabel": "Pixel 8 Pro",
@@ -178,7 +178,7 @@ const readingsResponse = `{
   "success": true,
   "connection": {
     "id": "connection_123",
-    "source": "MOBILE_APP",
+    "source": "ANDROID_HEALTH_CONNECT",
     "platform": "ANDROID",
     "clientDeviceId": "android-pixel-8-pro",
     "deviceLabel": "Pixel 8 Pro",

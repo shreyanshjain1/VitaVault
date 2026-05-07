@@ -29,7 +29,7 @@ This document keeps the current limitations honest so reviewers can understand w
 |---|---|---|
 | Mobile API | Mobile auth, sessions, connections, and device readings have schema-backed foundations. | Add OpenAPI output, SDK examples, rate limits, and request signing for production use. |
 | Sleep readings | Sleep tracking is not currently part of the Prisma `DeviceReadingType` enum. | Add sleep support only through a deliberate Prisma enum migration and matching docs/tests. |
-| Device ingestion | Device readings can be validated and ingested, but device-provider integrations are simulated/foundational. | Add provider-specific connectors and reconciliation logic for Apple Health, Health Connect, Fitbit, and smart devices. |
+| Device ingestion | Device readings can be validated, ingested, reviewed in the Device Integration dashboard, opened in per-device detail pages, and mirrored into vitals. Provider integrations are still simulated/foundational. | Add provider-specific connectors and reconciliation logic for Apple Health, Health Connect, Fitbit, and smart devices. |
 | Background sync | BullMQ/Redis foundations exist, but production worker deployment depends on environment setup. | Add queue dashboards, retry/rerun controls, dead-letter handling, and alerting. |
 
 ## Demo limitations
@@ -75,3 +75,4 @@ Recommended future coverage:
 - Report Builder presets and generated packet context were added in Patch 43.
 - Care Notes were connected across timeline, report, print, and export workflows in Patch 44.
 - Portfolio-facing README, feature matrix, known limitations, metadata, and demo wording were refreshed in Patch 45.
+- Device Integration v2 was added in Patch 46 with real connection management, detail pages, QA payloads, and traceable sync history.
