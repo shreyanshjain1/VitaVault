@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { AppRole } from "@prisma/client";
 import { requireUser } from "@/lib/session";
 import { hasRedisConfig, shouldSkipRedisDuringBuild } from "@/lib/jobs/connection";
 import {
@@ -65,6 +66,11 @@ export async function POST(request: Request) {
     }
 
     const currentUser = await requireUser();
+
+    if (currentUser.role !== AppRole.ADMIN) {
+      return NextResponse.json({ error: "Only admins can dispatch background jobs." }, { status: 403 });
+    }
+
     const body = (await request.json()) as DispatchBody;
 
     const userId = body.userId || currentUser.id!;
