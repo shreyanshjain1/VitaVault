@@ -213,10 +213,11 @@ export default async function ReportBuilderPage({ searchParams }: { searchParams
                 </StatusPill>
               </div>
               <ProgressBar value={data.summary.readinessScore} />
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-4">
                 <DataCard className="rounded-2xl p-4"><p className="text-xs text-muted-foreground">High-risk alerts</p><p className="mt-1 text-2xl font-semibold">{data.summary.highRiskAlerts}</p></DataCard>
                 <DataCard className="rounded-2xl p-4"><p className="text-xs text-muted-foreground">Abnormal labs</p><p className="mt-1 text-2xl font-semibold">{data.summary.abnormalLabs}</p></DataCard>
                 <DataCard className="rounded-2xl p-4"><p className="text-xs text-muted-foreground">Open symptoms</p><p className="mt-1 text-2xl font-semibold">{data.summary.unresolvedSymptoms}</p></DataCard>
+                <DataCard className="rounded-2xl p-4"><p className="text-xs text-muted-foreground">Care notes</p><p className="mt-1 text-2xl font-semibold">{data.summary.careNotes}</p></DataCard>
               </div>
               <div className="space-y-3">
                 {data.actionItems.map((item) => <ActionCard key={`${item.title}-${item.href}`} item={item} />)}

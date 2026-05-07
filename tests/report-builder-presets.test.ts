@@ -19,9 +19,20 @@ describe("report builder presets", () => {
     expect(resolved.presetId).toBe("doctor-visit");
     expect(resolved.reportType).toBe("doctor");
     expect(resolved.sections).toContain("medications");
+    expect(resolved.sections).toContain("careNotes");
     expect(resolved.sections).toContain("timeline");
     expect(resolved.from).toBe("2026-02-05");
     expect(resolved.to).toBe("2026-05-06");
+  });
+
+  it("includes care notes in collaboration-heavy presets", () => {
+    const carePreset = getReportBuilderPreset("care-team-weekly");
+    const medicationPreset = getReportBuilderPreset("medication-review");
+    const labPreset = getReportBuilderPreset("lab-follow-up");
+
+    expect(carePreset?.sections).toContain("careNotes");
+    expect(medicationPreset?.sections).toContain("careNotes");
+    expect(labPreset?.sections).toContain("careNotes");
   });
 
   it("allows explicit controls to override preset dates and report type", () => {

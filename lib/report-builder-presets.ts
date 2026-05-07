@@ -8,6 +8,7 @@ export type ReportSectionKey =
   | "documents"
   | "alerts"
   | "careTeam"
+  | "careNotes"
   | "aiInsights"
   | "timeline";
 
@@ -52,7 +53,7 @@ export const reportBuilderPresets: ReportPresetDefinition[] = [
     label: "Doctor visit packet",
     description: "Provider-ready summary with medications, vitals, labs, symptoms, appointments, documents, AI context, and timeline.",
     reportType: "doctor",
-    sections: ["profile", "medications", "vitals", "labs", "symptoms", "appointments", "documents", "alerts", "aiInsights", "timeline"],
+    sections: ["profile", "medications", "vitals", "labs", "symptoms", "appointments", "documents", "alerts", "careNotes", "aiInsights", "timeline"],
     rangeDays: 90,
     badge: "Provider handoff",
   },
@@ -69,7 +70,7 @@ export const reportBuilderPresets: ReportPresetDefinition[] = [
     label: "Care-team weekly review",
     description: "Collaboration packet for caregivers with alerts, care access, appointments, symptoms, documents, and recent timeline activity.",
     reportType: "care",
-    sections: ["profile", "medications", "vitals", "symptoms", "appointments", "documents", "alerts", "careTeam", "timeline"],
+    sections: ["profile", "medications", "vitals", "symptoms", "appointments", "documents", "alerts", "careTeam", "careNotes", "timeline"],
     rangeDays: 7,
     badge: "Care review",
   },
@@ -78,7 +79,7 @@ export const reportBuilderPresets: ReportPresetDefinition[] = [
     label: "Medication review",
     description: "Medication-focused packet for adherence checks, active prescriptions, safety alerts, and provider conversations.",
     reportType: "doctor",
-    sections: ["profile", "medications", "vitals", "alerts", "documents", "timeline"],
+    sections: ["profile", "medications", "vitals", "alerts", "documents", "careNotes", "timeline"],
     rangeDays: 30,
     badge: "Safety check",
   },
@@ -87,7 +88,7 @@ export const reportBuilderPresets: ReportPresetDefinition[] = [
     label: "Lab follow-up",
     description: "Lab-focused packet with abnormal results, related vitals, documents, AI questions, and follow-up timeline.",
     reportType: "doctor",
-    sections: ["profile", "labs", "vitals", "documents", "alerts", "aiInsights", "timeline"],
+    sections: ["profile", "labs", "vitals", "documents", "alerts", "careNotes", "aiInsights", "timeline"],
     rangeDays: 180,
     badge: "Results review",
   },
