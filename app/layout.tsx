@@ -7,8 +7,23 @@ import { Toaster } from "@/components/ui";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Personal Health Record Companion",
-  description: "A polished personal health management app."
+  title: {
+    default: "VitaVault | Personal Health Record Platform",
+    template: "%s | VitaVault",
+  },
+  description:
+    "VitaVault is a full-stack personal health record and care-coordination platform with records, care workflows, reports, device APIs, AI insight foundations, and admin operations.",
+  applicationName: "VitaVault",
+  keywords: [
+    "VitaVault",
+    "personal health record",
+    "health tech",
+    "Next.js",
+    "Prisma",
+    "PostgreSQL",
+    "care coordination",
+    "medical records",
+  ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
