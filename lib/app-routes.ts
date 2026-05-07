@@ -192,7 +192,7 @@ export const monitoringRoutes: AppRouteItem[] = [
   {
     title: "Device Connections",
     href: "/device-connection",
-    description: "Integration roadmap for phone and health devices",
+    description: "Manage mobile/device connections, sync health, readings, and API QA",
     icon: Smartphone,
   },
   {

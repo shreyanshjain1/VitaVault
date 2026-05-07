@@ -111,7 +111,7 @@ Authorization: Bearer vvm_9f9f...mobile_token...
   "connections": [
     {
       "id": "connection_123",
-      "source": "MOBILE_APP",
+      "source": "ANDROID_HEALTH_CONNECT",
       "platform": "ANDROID",
       "clientDeviceId": "android-pixel-8-pro",
       "deviceLabel": "Pixel 8 Pro",
@@ -136,7 +136,7 @@ Content-Type: application/json
 
 ```json
 {
-  "source": "MOBILE_APP",
+  "source": "ANDROID_HEALTH_CONNECT",
   "platform": "ANDROID",
   "clientDeviceId": "android-pixel-8-pro",
   "deviceLabel": "Pixel 8 Pro",
@@ -180,7 +180,7 @@ Content-Type: application/json
   "success": true,
   "connection": {
     "id": "connection_123",
-    "source": "MOBILE_APP",
+    "source": "ANDROID_HEALTH_CONNECT",
     "platform": "ANDROID",
     "clientDeviceId": "android-pixel-8-pro",
     "deviceLabel": "Pixel 8 Pro",
@@ -242,6 +242,19 @@ Content-Type: application/json
   "error": "Unable to ingest device readings."
 }
 ```
+
+
+## Device Integration v2 UI
+
+Patch 46 adds authenticated device integration surfaces on top of the mobile API foundation:
+
+| Route | Purpose |
+|---|---|
+| `/device-connection` | Connection dashboard, lifecycle actions, QA payload, supported reading contract, recent readings, and sync jobs |
+| `/device-connection/[id]` | Per-device detail page with readings, sync jobs, job runs, metadata, mirrored vitals, and lifecycle actions |
+| `/device-sync-simulator` | Safe demo sync runner that creates connections, readings, sync jobs, job runs, and mirrored vitals |
+
+Lifecycle actions are user-owned and audited. Revoking a connection does not delete historical readings; it marks the connection as no longer active while keeping traceability intact.
 
 ## Security notes
 

@@ -1,296 +1,72 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
-import {
-  Activity,
-  BellRing,
-  Bluetooth,
-  HeartPulse,
-  Lock,
-  Scale,
-  ShieldCheck,
-  Smartphone,
-  Watch,
-} from "lucide-react";
+import { Activity, AlertTriangle, ClipboardList, DatabaseZap, HeartPulse, Lock, RefreshCcw, ShieldCheck, Smartphone, Watch } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { PageHeader, StatusPill } from "@/components/common";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
+import { EmptyState, PageHeader, StatusPill } from "@/components/common";
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
+import { requireUser } from "@/lib/session";
+import { buildConnectionHealthSummary, connectionStatusTone, formatDateTime, getDeviceIntegrationDashboardData, parseScopes, readingDisplayValue, readingLabel, sourceLabel, syncJobStatusTone } from "@/lib/device-integrations";
+import { clearDeviceConnectionErrorAction, disconnectDeviceConnectionAction, reconnectDeviceConnectionAction, revokeDeviceConnectionAction } from "./actions";
 
-type IntegrationStatus = "planned" | "beta" | "sponsor" | "future";
-
-type IntegrationItem = {
-  title: string;
-  category: string;
-  description: string;
-  status: IntegrationStatus;
-  icon: React.ComponentType<{ className?: string }>;
-  bullets: string[];
-};
-
-const integrations: IntegrationItem[] = [
-  {
-    title: "Apple Health",
-    category: "iPhone / iOS",
-    description:
-      "Future import path for steps, heart rate, weight, blood pressure, and other HealthKit-backed readings.",
-    status: "sponsor",
-    icon: Smartphone,
-    bullets: [
-      "Would require iOS companion / approved integration work",
-      "Good sponsor-facing roadmap item",
-      "Designed as read-only ingestion first",
-    ],
-  },
-  {
-    title: "Android Health Connect",
-    category: "Android",
-    description:
-      "Future sync path for supported Android wellness and health records through Health Connect.",
-    status: "planned",
-    icon: Smartphone,
-    bullets: [
-      "Strong practical direction for Android users",
-      "Good first-party mobile-linked ingestion path",
-      "Could later map into alert rules",
-    ],
-  },
-  {
-    title: "Fitbit",
-    category: "Wearable cloud",
-    description:
-      "Future wearable sync for activity, heart rate, sleep-related indicators, and trend overlays.",
-    status: "future",
-    icon: Watch,
-    bullets: [
-      "Cloud vendor integration path",
-      "Useful for sponsor demos",
-      "Should be clearly labeled as optional",
-    ],
-  },
-  {
-    title: "Blood Pressure Monitor",
-    category: "Home device",
-    description:
-      "Planned support for imported or synced BP readings with source-aware provenance.",
-    status: "beta",
-    icon: HeartPulse,
-    bullets: [
-      "Can start with manual import UX",
-      "Later support bluetooth/cloud vendor bridges",
-      "Best candidate for threshold alerts",
-    ],
-  },
-  {
-    title: "Smart Scale",
-    category: "Home device",
-    description:
-      "Future weight sync with gradual trend monitoring and adherence context.",
-    status: "planned",
-    icon: Scale,
-    bullets: [
-      "Supports trend visualization well",
-      "Low-friction path for chronic care use cases",
-      "Pairs well with AI summaries",
-    ],
-  },
-  {
-    title: "Pulse Oximeter",
-    category: "Home device",
-    description:
-      "Future oxygen saturation ingestion for respiratory monitoring workflows.",
-    status: "sponsor",
-    icon: Activity,
-    bullets: [
-      "High-value for caregiver alerts later",
-      "Requires careful non-diagnostic messaging",
-      "Should preserve source metadata and timestamps",
-    ],
-  },
-];
-
-function statusTone(status: IntegrationStatus) {
-  switch (status) {
-    case "beta":
-      return "info";
-    case "planned":
-      return "warning";
-    case "sponsor":
-      return "danger";
-    case "future":
-      return "neutral";
-    default:
-      return "neutral";
-  }
+function StatCard({ title, value, description, icon }: { title: string; value: number | string; description: string; icon: ReactNode }) {
+  return <Card><CardHeader className="pb-3"><div className="flex items-start justify-between gap-3"><div><CardDescription>{title}</CardDescription><CardTitle className="mt-2 text-3xl">{value}</CardTitle></div><div className="rounded-2xl border border-border/60 bg-background/70 p-2">{icon}</div></div></CardHeader><CardContent><p className="text-sm text-muted-foreground">{description}</p></CardContent></Card>;
 }
 
-function statusLabel(status: IntegrationStatus) {
-  switch (status) {
-    case "beta":
-      return "Beta foundation";
-    case "planned":
-      return "Planned";
-    case "sponsor":
-      return "Requires sponsor";
-    case "future":
-      return "Coming later";
-    default:
-      return "Planned";
-  }
+function DeviceActionForms({ connection }: { connection: { id: string; status: string; lastError: string | null } }) {
+  return <div className="flex flex-wrap gap-2">
+    <Link href={`/device-connection/${connection.id}`} className="inline-flex h-9 items-center justify-center rounded-xl border border-border/70 bg-background/60 px-3 text-sm font-medium hover:bg-muted/50">View detail</Link>
+    {connection.status === "ACTIVE" || connection.status === "ERROR" ? <form action={disconnectDeviceConnectionAction}><input type="hidden" name="connectionId" value={connection.id} /><Button type="submit" variant="outline" size="sm">Disconnect</Button></form> : null}
+    {connection.status === "DISCONNECTED" || connection.status === "ERROR" ? <form action={reconnectDeviceConnectionAction}><input type="hidden" name="connectionId" value={connection.id} /><Button type="submit" size="sm">Reconnect</Button></form> : null}
+    {connection.lastError ? <form action={clearDeviceConnectionErrorAction}><input type="hidden" name="connectionId" value={connection.id} /><Button type="submit" variant="outline" size="sm">Clear error</Button></form> : null}
+  </div>;
 }
 
-export default function DeviceConnectionsPage() {
+export default async function DeviceConnectionsPage() {
+  const user = await requireUser();
+  const data = await getDeviceIntegrationDashboardData(user.id!);
+
   return (
     <AppShell>
       <div className="mx-auto max-w-7xl space-y-6 p-6">
-        <PageHeader
-          title="Device Connections"
-          description="A sponsor-friendly integration roadmap showing how VitaVault can grow into phone-linked and device-assisted health monitoring without overstating current capabilities."
-          action={
-            <Link
-              href="/alerts"
-              className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"
-            >
-              Open Alert Center
-            </Link>
-          }
-        />
+        <PageHeader title="Device Integrations" description="Manage connected mobile and health-device sync records, review ingestion health, test API payloads, and trace readings into sync jobs and mirrored vitals." action={<div className="flex flex-wrap gap-2"><Link href="/device-sync-simulator" className="inline-flex h-10 items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium hover:bg-muted/50">Run simulator</Link><Link href="/api-docs" className="inline-flex h-10 items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium hover:bg-muted/50">API docs</Link></div>} />
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <CardTitle>Integration roadmap</CardTitle>
-                  <CardDescription className="mt-1">
-                    These are intentionally visible as roadmap items so the product feels credible in client and sponsor demos.
-                  </CardDescription>
-                </div>
-                <StatusPill tone="info">Roadmap surface</StatusPill>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                {integrations.map((item) => {
-                  const Icon = item.icon;
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <StatCard title="Connections" value={data.summary.totalConnections} description="Mobile or device links registered for this account." icon={<Smartphone className="h-5 w-5 text-primary" />} />
+          <StatCard title="Active" value={data.summary.activeConnections} description="Connections currently accepting syncs." icon={<Watch className="h-5 w-5 text-emerald-500" />} />
+          <StatCard title="Readings" value={data.summary.totalReadings} description="Raw source-aware readings stored from connected devices." icon={<Activity className="h-5 w-5 text-sky-500" />} />
+          <StatCard title="Sync jobs" value={data.summary.totalSyncJobs} description="Persisted sync attempts linked to device connections." icon={<DatabaseZap className="h-5 w-5 text-violet-500" />} />
+          <StatCard title="Mobile sessions" value={data.summary.activeSessions} description="Active bearer-token sessions that can call mobile endpoints." icon={<ShieldCheck className="h-5 w-5 text-rose-500" />} />
+        </div>
 
-                  return (
-                    <div
-                      key={item.title}
-                      className="rounded-[28px] border border-border/60 bg-background/40 p-5"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-start gap-3">
-                          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                            <Icon className="h-5 w-5" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold">{item.title}</p>
-                            <p className="text-xs text-muted-foreground">{item.category}</p>
-                          </div>
-                        </div>
-
-                        <StatusPill tone={statusTone(item.status)}>
-                          {statusLabel(item.status)}
-                        </StatusPill>
-                      </div>
-
-                      <p className="mt-4 text-sm text-muted-foreground">
-                        {item.description}
-                      </p>
-
-                      <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-                        {item.bullets.map((bullet) => (
-                          <li key={bullet} className="flex gap-2">
-                            <span className="mt-[7px] h-1.5 w-1.5 rounded-full bg-primary/70" />
-                            <span>{bullet}</span>
-                          </li>
-                        ))}
-                      </ul>
-
-                      <div className="mt-5 flex items-center gap-2">
-                        <button
-                          type="button"
-                          disabled
-                          className="inline-flex cursor-not-allowed items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium text-muted-foreground opacity-70"
-                        >
-                          Not active yet
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+        <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
+          <Card>
+            <CardHeader><div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between"><div><CardTitle>Connection management</CardTitle><CardDescription className="mt-1">Real database-backed connections from mobile API syncs and the simulator, with safe user-owned lifecycle actions.</CardDescription></div><StatusPill tone={data.summary.erroredConnections ? "danger" : "success"}>{data.summary.erroredConnections ? `${data.summary.erroredConnections} needs review` : "No active errors"}</StatusPill></div></CardHeader>
+            <CardContent className="space-y-4">
+              {data.connections.map((connection) => {
+                const health = buildConnectionHealthSummary(connection);
+                const scopes = parseScopes(connection.scopesJson);
+                return <div key={connection.id} className="rounded-[28px] border border-border/60 bg-background/50 p-5">
+                  <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between"><div className="space-y-3"><div className="flex flex-wrap items-center gap-2"><Badge>{sourceLabel(connection.source)}</Badge><Badge>{connection.platform}</Badge><StatusPill tone={connectionStatusTone(connection.status)}>{connection.status}</StatusPill><StatusPill tone={health.tone}>{health.label}</StatusPill></div><div><h2 className="text-lg font-semibold">{connection.deviceLabel || sourceLabel(connection.source)}</h2><p className="text-sm text-muted-foreground">{connection.clientDeviceId} {connection.appVersion ? `• app ${connection.appVersion}` : ""}</p></div><p className="max-w-2xl text-sm text-muted-foreground">{health.description}</p></div><DeviceActionForms connection={connection} /></div>
+                  <div className="mt-5 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4"><div className="rounded-2xl border border-border/60 p-3"><div className="text-muted-foreground">Last sync</div><div className="mt-1 font-medium">{formatDateTime(connection.lastSyncedAt)}</div></div><div className="rounded-2xl border border-border/60 p-3"><div className="text-muted-foreground">Readings</div><div className="mt-1 font-medium">{connection._count.readings}</div></div><div className="rounded-2xl border border-border/60 p-3"><div className="text-muted-foreground">Sync jobs</div><div className="mt-1 font-medium">{connection._count.syncJobs}</div></div><div className="rounded-2xl border border-border/60 p-3"><div className="text-muted-foreground">Job runs</div><div className="mt-1 font-medium">{connection._count.jobRuns}</div></div></div>
+                  {scopes.length ? <div className="mt-4 flex flex-wrap gap-2">{scopes.map((scope) => <Badge key={scope}>{scope}</Badge>)}</div> : null}
+                  {connection.lastError ? <div className="mt-4 rounded-2xl border border-rose-200/70 bg-rose-50/70 p-4 text-sm text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-200">{connection.lastError}</div> : null}
+                  {connection.status !== "REVOKED" ? <form action={revokeDeviceConnectionAction} className="mt-4 flex flex-col gap-2 rounded-2xl border border-border/60 bg-background/40 p-3 sm:flex-row sm:items-center"><input type="hidden" name="connectionId" value={connection.id} /><input name="confirmation" placeholder="Type REVOKE" className="h-9 rounded-xl border border-input bg-background/70 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /><Button type="submit" variant="destructive" size="sm">Revoke</Button><p className="text-xs text-muted-foreground">Historical readings stay available for audit.</p></form> : null}
+                </div>;
+              })}
+              {data.connections.length === 0 ? <EmptyState title="No device connections yet" description="Run the simulator or call the mobile device readings endpoint to create the first connection." /> : null}
             </CardContent>
           </Card>
 
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Architecture direction</CardTitle>
-                <CardDescription className="mt-1">
-                  Designed now so later integrations slot in cleanly.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="rounded-3xl border border-border/60 bg-background/40 p-4">
-                  <div className="flex items-center gap-3">
-                    <Bluetooth className="h-4 w-4 text-primary" />
-                    <p className="text-sm font-medium">Connection layer</p>
-                  </div>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Future `device_connections` records can track source, status, account linkage, and last sync metadata.
-                  </p>
-                </div>
-
-                <div className="rounded-3xl border border-border/60 bg-background/40 p-4">
-                  <div className="flex items-center gap-3">
-                    <HeartPulse className="h-4 w-4 text-primary" />
-                    <p className="text-sm font-medium">Reading provenance</p>
-                  </div>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Future `device_readings` should store source type, captured timestamp, normalized values, and original metadata.
-                  </p>
-                </div>
-
-                <div className="rounded-3xl border border-border/60 bg-background/40 p-4">
-                  <div className="flex items-center gap-3">
-                    <BellRing className="h-4 w-4 text-primary" />
-                    <p className="text-sm font-medium">Alert readiness</p>
-                  </div>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Imported readings can later trigger threshold and trend-based alerts without changing the dashboard model again.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Product safety</CardTitle>
-                <CardDescription className="mt-1">
-                  Roadmap visible, but not misleading.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <ShieldCheck className="mt-0.5 h-4 w-4 text-primary" />
-                  <p className="text-sm text-muted-foreground">
-                    Every roadmap card is clearly disabled and labeled as not active yet.
-                  </p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Lock className="mt-0.5 h-4 w-4 text-primary" />
-                  <p className="text-sm text-muted-foreground">
-                    Future sync features should preserve auditability, permission checks, and source visibility.
-                  </p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Watch className="mt-0.5 h-4 w-4 text-primary" />
-                  <p className="text-sm text-muted-foreground">
-                    Device data should remain informational and non-diagnostic unless clinically validated workflows are added later.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <Card><CardHeader><CardTitle>Mobile API QA panel</CardTitle><CardDescription className="mt-1">Use this payload shape when testing a real mobile client or Postman request.</CardDescription></CardHeader><CardContent className="space-y-4"><pre className="max-h-[420px] overflow-auto rounded-2xl border border-border/60 bg-muted/40 p-4 text-xs">{JSON.stringify(data.qaPayload, null, 2)}</pre><div className="space-y-2">{data.qaChecklist.map((item) => <div key={item} className="flex items-start gap-2 text-sm text-muted-foreground"><ClipboardList className="mt-0.5 h-4 w-4 text-primary" /><span>{item}</span></div>)}</div></CardContent></Card>
+            <Card><CardHeader><CardTitle>Supported readings</CardTitle><CardDescription className="mt-1">Schema-backed values accepted by `/api/mobile/device-readings`.</CardDescription></CardHeader><CardContent className="space-y-3">{data.supportedReadings.map((reading) => <div key={reading.type} className="rounded-2xl border border-border/60 bg-background/40 p-3"><p className="font-medium">{readingLabel(reading.type)}</p><p className="mt-1 text-xs text-muted-foreground">Required: {reading.requiredValue}</p><p className="text-xs text-muted-foreground">{reading.behavior}</p></div>)}</CardContent></Card>
           </div>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-3">
+          <Card><CardHeader><CardTitle>Recent readings</CardTitle><CardDescription>Latest raw readings from any connection.</CardDescription></CardHeader><CardContent className="space-y-3">{data.recentReadings.map((reading) => <div key={reading.id} className="rounded-2xl border border-border/60 bg-background/50 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-medium">{readingLabel(reading.readingType)}</p><Badge>{sourceLabel(reading.source)}</Badge></div><p className="mt-2 text-2xl font-semibold">{readingDisplayValue(reading)}</p><p className="mt-1 text-xs text-muted-foreground">Captured {formatDateTime(reading.capturedAt)}</p></div>)}{data.recentReadings.length === 0 ? <EmptyState title="No readings yet" description="Accepted mobile/device readings will appear here." /> : null}</CardContent></Card>
+          <Card><CardHeader><CardTitle>Recent sync jobs</CardTitle><CardDescription>Accepted, mirrored, failed, and partial import runs.</CardDescription></CardHeader><CardContent className="space-y-3">{data.recentSyncJobs.map((job) => <div key={job.id} className="rounded-2xl border border-border/60 bg-background/50 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-medium">{sourceLabel(job.source)}</p><StatusPill tone={syncJobStatusTone(job.status)}>{job.status}</StatusPill></div><div className="mt-3 grid gap-1 text-xs text-muted-foreground"><p>Requested: {job.requestedCount}</p><p>Accepted: {job.acceptedCount}</p><p>Mirrored: {job.mirroredCount}</p><p>Created: {formatDateTime(job.createdAt)}</p></div>{job.connectionId ? <Link href={`/device-connection/${job.connectionId}`} className="mt-3 inline-flex text-sm font-medium text-primary hover:underline">Open connection</Link> : null}{job.errorMessage ? <p className="mt-3 text-sm text-destructive">{job.errorMessage}</p> : null}</div>)}{data.recentSyncJobs.length === 0 ? <EmptyState title="No sync jobs yet" description="Mobile imports and simulator runs will create sync jobs." /> : null}</CardContent></Card>
+          <Card><CardHeader><CardTitle>Security posture</CardTitle><CardDescription>How this module stays honest for a portfolio/demo app.</CardDescription></CardHeader><CardContent className="space-y-4 text-sm text-muted-foreground"><div className="flex items-start gap-3 rounded-2xl border border-border/60 p-4"><Lock className="mt-0.5 h-4 w-4 text-primary" /><div>Mobile bearer tokens are separate from browser sessions and can be revoked from Security.</div></div><div className="flex items-start gap-3 rounded-2xl border border-border/60 p-4"><RefreshCcw className="mt-0.5 h-4 w-4 text-primary" /><div>Each ingestion run creates a sync job so imports can be audited and reviewed.</div></div><div className="flex items-start gap-3 rounded-2xl border border-border/60 p-4"><HeartPulse className="mt-0.5 h-4 w-4 text-primary" /><div>Supported readings mirror into normal vitals, while raw readings remain traceable.</div></div><div className="flex items-start gap-3 rounded-2xl border border-border/60 p-4"><AlertTriangle className="mt-0.5 h-4 w-4 text-primary" /><div>Device data is informational and not clinical advice or a medical-device workflow.</div></div></CardContent></Card>
         </div>
       </div>
     </AppShell>
