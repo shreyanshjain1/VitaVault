@@ -56,7 +56,7 @@ export default function DemoOverviewPage() {
           <StatCards items={[
             { title: "Clinical summary", body: demoSummary.snapshot, status: "Healthy" },
             { title: "Ops readiness", body: demoOps.readiness.map((item) => `${item.label}: ${item.status}`).join(" • "), status: "Configured" },
-            { title: "Best route through the demo", body: "Dashboard → Notifications → Care Plan → Visit Prep → Trends → Exports → Security → Admin", status: "Recommended" },
+            { title: "Best route through the demo", body: "Dashboard → Notifications → Care Plan → Data Quality → Device Connections → Exports → Security → Admin", status: "Recommended" },
           ]} />
         </DemoSection>
       </div>

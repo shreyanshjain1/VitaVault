@@ -24,6 +24,7 @@ export const demoNav: DemoNavItem[] = [
   { href: "/demo/notifications", label: "Notifications", description: "Unified care inbox" },
   { href: "/demo/care-plan", label: "Care Plan", description: "Prioritized care actions" },
   { href: "/demo/visit-prep", label: "Visit Prep", description: "Doctor visit readiness" },
+  { href: "/demo/data-quality", label: "Data Quality", description: "Record cleanup and readiness" },
   { href: "/demo/emergency-card", label: "Emergency Card", description: "Printable emergency profile" },
   { href: "/demo/trends", label: "Health Trends", description: "Clinical analytics layer" },
   { href: "/demo/medication-safety", label: "Medication Safety", description: "Dose and adherence review" },
@@ -328,6 +329,7 @@ export const demoProductHubs = [
   { label: "Notification Center", href: "/demo/notifications", layer: "Care workflow", body: "Unified inbox for alerts, reminders, appointments, labs, documents, care invites, and device sync issues." },
   { label: "Care Plan Hub", href: "/demo/care-plan", layer: "Care workflow", body: "Readiness score, prioritized actions, upcoming care timeline, providers, active meds, and latest vitals." },
   { label: "Visit Prep", href: "/demo/visit-prep", layer: "Care workflow", body: "Provider-ready appointment prep with missing context, recent labs, symptoms, vitals, documents, and doctor packet handoff." },
+  { label: "Data Quality Center", href: "/demo/data-quality", layer: "Care workflow", body: "Record cleanup command center for profile gaps, stale vitals, device sync health, alerts, report readiness, and care-team handoff quality." },
   { label: "Emergency Card", href: "/demo/emergency-card", layer: "Reports", body: "Printable emergency profile with blood type, allergies, conditions, contacts, active medications, and latest vitals." },
   { label: "Health Trends", href: "/demo/trends", layer: "Clinical review", body: "Trend coverage, risk scoring, vital averages, lab flags, symptom severity, adherence, and merged clinical timeline." },
   { label: "Medication Safety", href: "/demo/medication-safety", layer: "Clinical review", body: "Dose board, adherence signal, missed/skipped rates, medication reminders, safety actions, and provider context." },
@@ -341,7 +343,7 @@ export const demoProductHubs = [
 
 export const demoFeatureMatrix = [
   { layer: "Patient records", modules: "Profile, medications, appointments, doctors, labs, vitals, symptoms, vaccines, documents", value: "Broad structured health data coverage" },
-  { layer: "Care workflows", modules: "Notifications, care plan, visit prep, reminders, alerts, review queue", value: "Turns stored records into clear next actions" },
+  { layer: "Care workflows", modules: "Notifications, care plan, visit prep, data quality, reminders, alerts, review queue", value: "Turns stored records into clear next actions" },
   { layer: "Clinical review", modules: "Trends, medication safety, lab review, vitals monitor, symptom review", value: "Adds interpretation surfaces without requiring a new schema" },
   { layer: "Reports", modules: "Summary packet, emergency card, exports, print views", value: "Supports doctor visits and portable handoffs" },
   { layer: "Platform", modules: "Device sync APIs, jobs, ops, admin, audit, security", value: "Shows production-minded backend and operations work" },
@@ -511,5 +513,23 @@ export const demoApiDocsHub = {
     "Bearer tokens are scoped to mobile sessions and can be revoked from the Security or Admin workspace.",
     "Device readings are normalized into VitaVault records after validation.",
     "The public demo shows API shape without exposing secrets or accepting writes.",
+  ],
+};
+
+
+export const demoDataQuality = {
+  score: 78,
+  sections: [
+    { name: "Profile readiness", score: "86%", issue: "Emergency contact is ready, allergies summary needs review", status: "Mostly ready" },
+    { name: "Record completeness", score: "74%", issue: "Vitals are fresh, lab review needs one follow-up note", status: "Needs cleanup" },
+    { name: "Safety queue", score: "68%", issue: "2 open high-priority items before report sharing", status: "Review first" },
+    { name: "Device sync health", score: "82%", issue: "1 stale Apple Health sync; Android Health Connect is current", status: "Mostly ready" },
+    { name: "Export quality", score: "76%", issue: "Document link coverage is 58%", status: "Needs cleanup" },
+    { name: "Collaboration", score: "88%", issue: "Care notes and care-team access are available", status: "Ready" },
+  ],
+  actions: [
+    { title: "Review high-risk open alerts", detail: "Two high-priority alerts should be resolved before sharing a doctor packet.", priority: "Critical" },
+    { title: "Refresh stale device sync", detail: "Apple Health has not synced in 3 days and may make vitals look outdated.", priority: "Warning" },
+    { title: "Link uploaded lab document", detail: "One lab PDF is uploaded but not linked to its lab result.", priority: "Medium" },
   ],
 };
