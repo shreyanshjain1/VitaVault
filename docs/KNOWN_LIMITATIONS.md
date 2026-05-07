@@ -77,3 +77,7 @@ Recommended future coverage:
 - Portfolio-facing README, feature matrix, known limitations, metadata, and demo wording were refreshed in Patch 45.
 - Device Integration v2 was added in Patch 46 with real connection management, detail pages, QA payloads, and traceable sync history.
 - Background Jobs v2 Admin Tools were added in Patch 47 with admin-only dispatch, filters, retry, acknowledge, and persisted cancellation workflows.
+
+## Patch 48 note: Data Quality Center
+
+The Data Quality Center computes quality and readiness at request time from existing VitaVault records. It does not yet persist historical data-quality snapshots, so trend-over-time cleanup analytics remain a future enhancement.

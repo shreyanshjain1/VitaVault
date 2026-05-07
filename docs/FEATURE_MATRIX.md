@@ -114,3 +114,7 @@ This matrix summarizes the current VitaVault product surface after the latest po
 4. Background jobs v2 with admin retry and rerun tools
 5. Data quality center for missing/old/contradictory health records
 6. Expanded tests around route access, report printing, and shared patient permissions
+
+## Patch 48 addition
+
+- **Data Quality Center**: computes profile, record, safety, device, export, and collaboration cleanup signals from existing records without adding a new database table.

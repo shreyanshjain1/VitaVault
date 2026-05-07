@@ -7,6 +7,7 @@ import {
   CalendarClock,
   ClipboardCheck,
   ClipboardList,
+  DatabaseZap,
   FileBarChart2,
   FileHeart,
   FileText,
@@ -68,6 +69,12 @@ export const overviewRoutes: AppRouteItem[] = [
     href: "/care-plan",
     description: "Prioritized next steps across records, alerts, reminders, and visits",
     icon: ClipboardCheck,
+  },
+  {
+    title: "Data Quality Center",
+    href: "/data-quality",
+    description: "Find profile, record, safety, device, and report cleanup gaps",
+    icon: DatabaseZap,
   },
   {
     title: "Visit Prep",
