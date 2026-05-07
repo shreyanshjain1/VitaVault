@@ -130,6 +130,8 @@ export async function enqueueDeviceSyncProcessingJob(payload: DeviceSyncProcessi
     queueName: QUEUE_NAMES.deviceSync,
     jobName: JOB_NAMES.deviceSyncProcessing,
     userId: payload.userId,
+    connectionId: payload.connectionId ?? null,
+    syncJobId: payload.syncJobId ?? null,
     input: payload as Record<string, unknown>,
     maxAttempts: 3,
   });

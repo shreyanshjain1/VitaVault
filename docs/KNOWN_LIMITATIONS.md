@@ -30,7 +30,7 @@ This document keeps the current limitations honest so reviewers can understand w
 | Mobile API | Mobile auth, sessions, connections, and device readings have schema-backed foundations. | Add OpenAPI output, SDK examples, rate limits, and request signing for production use. |
 | Sleep readings | Sleep tracking is not currently part of the Prisma `DeviceReadingType` enum. | Add sleep support only through a deliberate Prisma enum migration and matching docs/tests. |
 | Device ingestion | Device readings can be validated, ingested, reviewed in the Device Integration dashboard, opened in per-device detail pages, and mirrored into vitals. Provider integrations are still simulated/foundational. | Add provider-specific connectors and reconciliation logic for Apple Health, Health Connect, Fitbit, and smart devices. |
-| Background sync | BullMQ/Redis foundations exist, but production worker deployment depends on environment setup. | Add queue dashboards, retry/rerun controls, dead-letter handling, and alerting. |
+| Background sync | BullMQ/Redis foundations exist, and the Jobs dashboard now supports admin filtering, retry, acknowledgement, and persisted cancellation. Production worker deployment still depends on environment setup. | Add true BullMQ dead-letter queues, Redis job removal from the UI, alerting, and hosted worker runbooks. |
 
 ## Demo limitations
 
@@ -76,3 +76,4 @@ Recommended future coverage:
 - Care Notes were connected across timeline, report, print, and export workflows in Patch 44.
 - Portfolio-facing README, feature matrix, known limitations, metadata, and demo wording were refreshed in Patch 45.
 - Device Integration v2 was added in Patch 46 with real connection management, detail pages, QA payloads, and traceable sync history.
+- Background Jobs v2 Admin Tools were added in Patch 47 with admin-only dispatch, filters, retry, acknowledge, and persisted cancellation workflows.
