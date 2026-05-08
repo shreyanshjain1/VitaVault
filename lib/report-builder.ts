@@ -18,6 +18,7 @@ import {
   type ReportType,
 } from "@/lib/report-builder-presets";
 import { requireUser } from "@/lib/session";
+import { mapSavedReportToHistoryItem, summarizeSavedReportStats } from "@/lib/report-history";
 
 export { buildReportBuilderHref, buildReportPrintHref, reportBuilderPresets, sectionQuery } from "@/lib/report-builder-presets";
 export type { ReportPresetDefinition, ReportPresetId, ReportSectionKey, ReportType } from "@/lib/report-builder-presets";
@@ -183,6 +184,7 @@ export async function getReportBuilderData(options: ReportBuilderOptions = {}) {
     highRiskAlerts,
     careAccess,
     careNotes,
+    savedReports,
     aiInsight,
   ] = await Promise.all([
     db.healthProfile.findUnique({ where: { userId: user.id } }),
@@ -253,6 +255,28 @@ export async function getReportBuilderData(options: ReportBuilderOptions = {}) {
       orderBy: [{ pinned: "desc" }, { priority: "desc" }, { createdAt: "desc" }],
       take: 8,
       include: { author: { select: { name: true, email: true, role: true } } },
+    }),
+    db.savedReport.findMany({
+      where: { userId: user.id, archivedAt: null },
+      orderBy: { createdAt: "desc" },
+      take: 6,
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        reportType: true,
+        presetId: true,
+        sectionsJson: true,
+        fromDate: true,
+        toDate: true,
+        status: true,
+        readinessScore: true,
+        recordCount: true,
+        packetHref: true,
+        printHref: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     }),
     db.aiInsight.findFirst({
       where: { ownerUserId: user.id },
@@ -388,6 +412,8 @@ export async function getReportBuilderData(options: ReportBuilderOptions = {}) {
       documentLinkRate,
       medicationAdherenceRate,
     },
+    savedReports: savedReports.map(mapSavedReportToHistoryItem),
+    savedReportStats: summarizeSavedReportStats(savedReports),
     profile,
     medications,
     appointments,

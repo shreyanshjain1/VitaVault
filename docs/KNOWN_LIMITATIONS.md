@@ -17,7 +17,7 @@ This document keeps the current limitations honest so reviewers can understand w
 
 | Area | Current state | Recommended next step |
 |---|---|---|
-| Report history | Report Builder shows generated recent packet context, but report history is not persisted as a database model yet. | Add a `ReportPacket` or `GeneratedReport` model with saved parameters, creator, timestamps, and audit events. |
+| Report history | Report Builder now persists saved report packets with status, criteria, readiness metrics, audit events, and archive/share actions. | Add richer delivery tracking, recipient history, and signed share links. |
 | Care notes | Care notes now appear across timeline, report builder, print packets, and export readiness, but they are still patient-level notes. | Add optional links from notes to specific labs, appointments, medications, symptoms, documents, alerts, or reports. |
 | AI insights | AI insight foundations exist, including source-aware direction, but production AI review workflows need stricter controls. | Add source review UI, prompt/version logging, patient disclaimers, moderation, and confidence labels. |
 | Data quality | Many pages show readiness and follow-up signals, but there is no dedicated data quality center yet. | Add a central data quality page for missing, stale, duplicate, contradictory, or incomplete records. |
@@ -38,12 +38,7 @@ This document keeps the current limitations honest so reviewers can understand w
 |---|---|---|
 | Public demo | `/demo` routes are read-only and use sample data for portfolio review. | Keep demo pages aligned whenever authenticated features change. |
 | Live deployment | The Vercel demo may not have the database and secrets required for all authenticated flows. | Use the no-login demo for review and configure production env vars for full app testing. |
-| Screenshots | Patch 51 restores the original `.mkdir/` screenshot gallery and fixes the missing README image paths. Screenshots can still become visually outdated after large UI changes. | Keep filenames stable and refresh images after major visual redesigns. |
-
-
-## Screenshot gallery status
-
-Patch 51 fixes the README screenshot references and restores the original screenshot set from `.mkdir/`. The README now uses the actual repository filenames, including `Lab-Results.jpg` and `Vitals.jpg`, instead of the missing `Lab-Review.jpg` and `Vitals-Monitor.jpg` paths.
+| Screenshots | README screenshots may lag behind fast-moving UI patches. | Refresh screenshots after major visual updates and keep filenames stable. |
 
 ## Testing limitations
 
@@ -78,6 +73,7 @@ Recommended future coverage:
 - Migration safety was improved in Patch 41.
 - Mobile API docs and schema-backed reading types were aligned in Patch 42.
 - Report Builder presets and generated packet context were added in Patch 43.
+- Real Report History Persistence was added in Patch 52 with saved packet records, status actions, and audit events.
 - Care Notes were connected across timeline, report, print, and export workflows in Patch 44.
 - Portfolio-facing README, feature matrix, known limitations, metadata, and demo wording were refreshed in Patch 45.
 - Device Integration v2 was added in Patch 46 with real connection management, detail pages, QA payloads, and traceable sync history.
@@ -94,8 +90,3 @@ Patch 49 adds endpoint-specific in-memory rate limits, no-store headers, oversiz
 ## API contract exports
 
 Patch 50 adds generated OpenAPI and Postman JSON exports for the mobile/device API. These are intentionally scoped to the existing mobile endpoints only. The exports do not yet cover the full web app/server-action surface because most authenticated web workflows are rendered through App Router pages and server actions rather than public REST endpoints.
-
-
-## Patch 51 note: README Screenshot Restoration
-
-Patch 51 is a docs-only portfolio polish patch. It fixes broken README screenshot paths, restores the original screenshot grid, updates the reviewer guide, and records the screenshot inventory so future UI/image refreshes do not break GitHub previews.
