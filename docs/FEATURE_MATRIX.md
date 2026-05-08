@@ -109,12 +109,19 @@ This matrix summarizes the current VitaVault product surface after the latest po
 ## Recommended next improvements
 
 1. Persistent report-builder history stored in the database
-2. Optional care-note links to a specific lab, appointment, medication, symptom, document, or alert
-3. Production document storage provider hardening
-4. Background jobs v2 with admin retry and rerun tools
-5. Data quality center for missing/old/contradictory health records
-6. Expanded tests around route access, report printing, and shared patient permissions
+2. Device provider connector abstraction for Apple Health, Android Health Connect, Fitbit, and smart devices
+3. Mobile API SDK examples for JavaScript, React Native, and cURL
+4. Data quality snapshots and cleanup trend history
+5. Field-level care-team permissions
+6. AI insights review and approval workflow
+7. Worker heartbeat and queue health dashboard
+8. Security hardening v3 with persistent abuse tracking
+9. Playwright smoke tests for the public demo path
+10. Final screenshot refresh after the next visual UI pass
 
-## Patch 48 addition
+## Recent portfolio polish additions
 
-- **Data Quality Center**: computes profile, record, safety, device, export, and collaboration cleanup signals from existing records without adding a new database table.
+- **Patch 48: Data Quality Center** computes profile, record, safety, device, export, and collaboration cleanup signals from existing records without adding a new database table.
+- **Patch 49: Mobile API Security Hardening** adds mobile API rate limits, no-store headers, payload-size protection, and mobile session audit events.
+- **Patch 50: OpenAPI/Postman Export** adds machine-readable mobile API exports for reviewers and client-integration testing.
+- **Patch 51: README Screenshot Restoration** fixes broken screenshot references and restores the original screenshot gallery for GitHub review.
