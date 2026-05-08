@@ -304,3 +304,25 @@ The device readings endpoint currently:
 8. Returns sync counters to the client.
 
 This keeps the raw device data available while still making important readings visible in the normal VitaVault patient timeline.
+
+## Provider connector abstraction
+
+VitaVault keeps provider-specific logic separate from the core mobile ingestion contract. Each connector describes how an external source should authenticate, what readings it can send, which scopes it needs, and how payloads should normalize into `/api/mobile/device-readings`.
+
+| Provider | Source value | Status | Typical platform | Notes |
+|---|---|---|---|---|
+| Android Health Connect | `ANDROID_HEALTH_CONNECT` | API-ready | Android | Best current native-client target for steps, vitals, weight, glucose, and temperature. |
+| Apple HealthKit | `APPLE_HEALTH` | Adapter contract | iOS | Uses the same VitaVault payload shape after HealthKit authorization and normalization. |
+| Fitbit | `FITBIT` | Planned provider | Web / wearable | Requires future OAuth token storage before real provider sync. |
+| Smart BP Monitor | `SMART_BP_MONITOR` | API-ready | Companion app / gateway | Normalizes blood pressure and pulse into vitals. |
+| Smart Scale | `SMART_SCALE` | API-ready | Companion app / gateway | Normalizes weight into vitals. |
+| Pulse Oximeter | `PULSE_OXIMETER` | API-ready | Companion app / gateway | Normalizes SpO2 and pulse into vitals. |
+| Custom source | `OTHER` | Adapter contract | Web / other | Useful for QA tools, vendor CSV imports, and future custom gateways. |
+
+The source of truth for this mapping is:
+
+```txt
+lib/device-provider-connectors.ts
+```
+
+Provider connectors do not add new database tables. They are adapter contracts that sit on top of the existing `ReadingSource`, `DeviceConnection`, `DeviceReading`, and `SyncJob` models.

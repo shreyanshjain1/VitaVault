@@ -28,9 +28,11 @@ import {
 } from "@/components/ui";
 import { getMobileSecurityChecklist } from "@/lib/mobile-api-security";
 import { getMobileApiContractSummary } from "@/lib/mobile-api-contract-export";
+import { connectorCategoryLabel, connectorStatusLabel, getDeviceProviderConnectors } from "@/lib/device-provider-connectors";
 
 const baseUrl = "https://your-vitavault-domain.com";
 const contractSummary = getMobileApiContractSummary();
+const providerConnectors = getDeviceProviderConnectors();
 
 const endpointGroups = [
   {
@@ -534,6 +536,36 @@ export default function ApiDocsPage() {
             </Card>
           </div>
         </section>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Workflow className="h-5 w-5 text-primary" />
+              Provider connector abstraction
+            </CardTitle>
+            <CardDescription>
+              Provider adapters map platform-specific health records into the same schema-backed mobile sync contract.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {providerConnectors.map((connector) => (
+              <div key={connector.source} className="rounded-3xl border border-border/60 bg-background/55 p-5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="font-semibold">{connector.label}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{connectorCategoryLabel(connector.category)}</p>
+                  </div>
+                  <Badge>{connectorStatusLabel(connector.status)}</Badge>
+                </div>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">{connector.authModel}</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {connector.supportedReadings.slice(0, 4).map((type) => <Badge key={type}>{type}</Badge>)}
+                  {connector.supportedReadings.length > 4 ? <Badge>+{connector.supportedReadings.length - 4}</Badge> : null}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

@@ -17,20 +17,21 @@ This document keeps the current limitations honest so reviewers can understand w
 
 | Area | Current state | Recommended next step |
 |---|---|---|
-| Report history | Report Builder now persists saved report packets with status, criteria, readiness metrics, audit events, and archive/share actions. | Add richer delivery tracking, recipient history, and signed share links. |
-| Care notes | Care notes now appear across timeline, report builder, print packets, and export readiness, but they are still patient-level notes. | Add optional links from notes to specific labs, appointments, medications, symptoms, documents, alerts, or reports. |
+| Report history | Report Builder can save report packets and keep generated packet context. | Add sharing delivery records, recipient tracking, and export attachment history. |
+| Care notes | Care notes appear across timeline, report builder, print packets, and export readiness, but they are still patient-level notes. | Add optional links from notes to specific labs, appointments, medications, symptoms, documents, alerts, or reports. |
 | AI insights | AI insight foundations exist, including source-aware direction, but production AI review workflows need stricter controls. | Add source review UI, prompt/version logging, patient disclaimers, moderation, and confidence labels. |
-| Data quality | Many pages show readiness and follow-up signals, but there is no dedicated data quality center yet. | Add a central data quality page for missing, stale, duplicate, contradictory, or incomplete records. |
+| Data quality | The Data Quality Center computes quality and readiness at request time. | Add saved snapshots so users can see cleanup progress over time. |
 | Shared care | Shared patient access exists, but granular field-level permissions are not complete. | Add per-module sharing scopes and reviewable permission presets. |
 
 ## Mobile and device limitations
 
 | Area | Current state | Recommended next step |
 |---|---|---|
-| Mobile API | Mobile auth, sessions, connections, and device readings have schema-backed foundations. | Add OpenAPI output, SDK examples, rate limits, and request signing for production use. |
+| Mobile API | Mobile auth, sessions, connections, readings, OpenAPI/Postman exports, rate limits, and payload guards exist. | Add SDK examples, persistent distributed rate limits, and request signing for production use. |
 | Sleep readings | Sleep tracking is not currently part of the Prisma `DeviceReadingType` enum. | Add sleep support only through a deliberate Prisma enum migration and matching docs/tests. |
-| Device ingestion | Device readings can be validated, ingested, reviewed in the Device Integration dashboard, opened in per-device detail pages, and mirrored into vitals. Provider integrations are still simulated/foundational. | Add provider-specific connectors and reconciliation logic for Apple Health, Health Connect, Fitbit, and smart devices. |
-| Background sync | BullMQ/Redis foundations exist, and the Jobs dashboard now supports admin filtering, retry, acknowledgement, and persisted cancellation. Production worker deployment still depends on environment setup. | Add true BullMQ dead-letter queues, Redis job removal from the UI, alerting, and hosted worker runbooks. |
+| Device ingestion | Device readings can be validated, ingested, reviewed, opened in per-device detail pages, and mirrored into vitals. Provider connector contracts describe how external sources should normalize records. | Build native/provider clients for Apple Health, Android Health Connect, Fitbit, and smart-device vendors. |
+| Provider tokens | Provider connector contracts exist, but external OAuth token storage is not implemented. | Add encrypted provider-token storage before supporting Fitbit-style OAuth integrations. |
+| Background sync | BullMQ/Redis foundations exist, and the Jobs dashboard supports admin filtering, retry, acknowledgement, and persisted cancellation. Production worker deployment still depends on environment setup. | Add true BullMQ dead-letter queues, Redis job removal from the UI, alerting, and hosted worker runbooks. |
 
 ## Demo limitations
 
@@ -38,7 +39,7 @@ This document keeps the current limitations honest so reviewers can understand w
 |---|---|---|
 | Public demo | `/demo` routes are read-only and use sample data for portfolio review. | Keep demo pages aligned whenever authenticated features change. |
 | Live deployment | The Vercel demo may not have the database and secrets required for all authenticated flows. | Use the no-login demo for review and configure production env vars for full app testing. |
-| Screenshots | README screenshots may lag behind fast-moving UI patches. | Refresh screenshots after major visual updates and keep filenames stable. |
+| Screenshots | The README screenshot gallery uses the actual `.mkdir/` filenames currently in the repository. | Keep filenames stable and refresh images after major visual redesigns. |
 
 ## Testing limitations
 
@@ -49,12 +50,14 @@ Current coverage focuses on:
 - action export/import hygiene
 - route policy helpers
 - migration safety checks
-- mobile API validation
+- mobile API validation and security helpers
+- OpenAPI/Postman contract generation
+- device provider connector helper logic
 - export center readiness
 - document storage and protected download behavior
 - invite/outbound email helpers
 - notification and care-note workflow helpers
-- report builder presets
+- report builder presets and saved report history
 - security helper behavior
 
 Recommended future coverage:
@@ -66,27 +69,3 @@ Recommended future coverage:
 5. mobile API route integration tests
 6. export packet generation tests
 7. background job retry/rerun tests
-
-## Patch status notes
-
-- Role-based navigation and admin-only route policy were polished in Patch 40.
-- Migration safety was improved in Patch 41.
-- Mobile API docs and schema-backed reading types were aligned in Patch 42.
-- Report Builder presets and generated packet context were added in Patch 43.
-- Real Report History Persistence was added in Patch 52 with saved packet records, status actions, and audit events.
-- Care Notes were connected across timeline, report, print, and export workflows in Patch 44.
-- Portfolio-facing README, feature matrix, known limitations, metadata, and demo wording were refreshed in Patch 45.
-- Device Integration v2 was added in Patch 46 with real connection management, detail pages, QA payloads, and traceable sync history.
-- Background Jobs v2 Admin Tools were added in Patch 47 with admin-only dispatch, filters, retry, acknowledge, and persisted cancellation workflows.
-
-## Patch 48 note: Data Quality Center
-
-The Data Quality Center computes quality and readiness at request time from existing VitaVault records. It does not yet persist historical data-quality snapshots, so trend-over-time cleanup analytics remain a future enhancement.
-
-## Mobile API security scale
-
-Patch 49 adds endpoint-specific in-memory rate limits, no-store headers, oversized payload checks, and audit events for mobile session creation/revocation. This is suitable for local demo and portfolio review. For production-scale multi-instance hosting, move rate-limit buckets to Redis, database-backed counters, or an edge rate-limit provider so limits are shared across deployments.
-
-## API contract exports
-
-Patch 50 adds generated OpenAPI and Postman JSON exports for the mobile/device API. These are intentionally scoped to the existing mobile endpoints only. The exports do not yet cover the full web app/server-action surface because most authenticated web workflows are rendered through App Router pages and server actions rather than public REST endpoints.
