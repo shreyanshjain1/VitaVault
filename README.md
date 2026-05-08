@@ -237,7 +237,33 @@ This gives the project enough depth to support future upgrades without constantl
 |---|---|
 | <img src=".mkdir/Lab-Review.jpg" alt="Lab Review" width="100%"> | <img src=".mkdir/Vitals-Monitor.jpg" alt="Vitals Monitor" width="100%"> |
 
-> Screenshot filenames may be updated as the public demo is refreshed. The app routes and docs are the source of truth for current functionality.
+| Device Connections | Exports Page |
+|---|---|
+| <img src=".mkdir/Device-Connections.jpg" alt="Device connection dashboard" width="100%"> | <img src=".mkdir/Exports-Page.jpg" alt="Export center" width="100%"> |
+
+### Screenshot inventory
+
+| File | Represents |
+|---|---|
+| `.mkdir/Landing-Page.jpg` | Public landing and product entry point |
+| `.mkdir/Login-Page.jpg` | Authentication entry point |
+| `.mkdir/Dashboard.jpg` | Main patient command center |
+| `.mkdir/Health-Profile.jpg` | Baseline profile and emergency context |
+| `.mkdir/Medications.jpg` | Medication records and safety workflow entry |
+| `.mkdir/Appointments.jpg` | Visit and appointment tracking |
+| `.mkdir/Doctors.jpg` | Provider directory |
+| `.mkdir/Documents.jpg` | Document records and document-readiness surface |
+| `.mkdir/Lab-Results.jpg` | Lab record coverage |
+| `.mkdir/Vitals.jpg` | Vital-sign record coverage |
+| `.mkdir/Symptoms.jpg` | Symptom tracking |
+| `.mkdir/Vaccinations.jpg` | Preventive-care records |
+| `.mkdir/Care-Team.jpg` | Care-team collaboration |
+| `.mkdir/AI-Insights.jpg` | AI insight workspace |
+| `.mkdir/Alert-Center.jpg` | Alert and review workflow |
+| `.mkdir/Summary.jpg` | Patient summary handoff |
+| `.mkdir/Device-Connections.jpg` | Connected-device readiness |
+| `.mkdir/Exports-Page.jpg` | Export and packet generation |
+
 
 ---
 
@@ -420,6 +446,3 @@ For deeper review, inspect:
 
 MIT License. See [`LICENSE`](LICENSE).
 
-### Patch 48: Data Quality Center
-
-VitaVault now includes a Data Quality Center that surfaces missing profile fields, stale records, safety review items, device sync issues, export readiness gaps, and care-team collaboration cleanup actions from existing data.
