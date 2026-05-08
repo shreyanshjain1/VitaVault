@@ -13,9 +13,7 @@
 
 **VitaVault** is a full-stack personal health record and care-coordination platform built as a product-style healthcare workspace, not a simple CRUD demo.
 
-It combines structured health records, care-team collaboration, reminder and alert workflows, AI-assisted summaries, exports, report packets, security controls, admin/ops tooling, mobile/device API foundations, and a no-login public demo surface inside one Next.js application.
-
-The project is designed to show production-minded full-stack engineering: domain modeling, protected workflows, route policy, audit-aware actions, report generation, device ingestion contracts, operational pages, test coverage, and clear portfolio storytelling.
+It combines structured health records, care-team collaboration, alert and reminder workflows, report packets, exports, AI-assisted summaries, mobile/device ingestion foundations, security controls, admin tooling, and a public demo surface inside one Next.js application.
 
 ---
 
@@ -28,109 +26,53 @@ The project is designed to show production-minded full-stack engineering: domain
 - **Portfolio review guide:** [`docs/PORTFOLIO_REVIEW_GUIDE.md`](docs/PORTFOLIO_REVIEW_GUIDE.md)
 - **Known limitations:** [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md)
 
-> The deployed public demo is the best way to review the product online because database-backed live flows depend on production environment configuration.
+The public demo routes are designed for fast review without requiring a production database login.
 
 ---
 
 ## What VitaVault demonstrates
 
-Most health-record portfolio apps stop at forms and dashboards. VitaVault goes further by modeling the workflow and operating surface around a personal health record platform.
+VitaVault is designed to showcase production-minded full-stack engineering across product workflows, data modeling, access control, device ingestion, reporting, and operations.
 
 The app demonstrates:
 
-- longitudinal patient records across health profile, medications, appointments, doctors, labs, vitals, symptoms, vaccinations, and documents
-- patient-controlled care-team access and shared workspace foundations
-- notification center, care plan, visit prep, alerts, reminders, and review queues
-- clinical review hubs for trends, medication safety, labs, vitals, and symptoms
-- report builder presets, print views, emergency cards, exports, and patient handoff packets
-- care notes connected into timeline, report, print, and export workflows
+- longitudinal records for profile, medications, appointments, doctors, labs, vitals, symptoms, vaccinations, and documents
+- care-team access, shared patient workspace foundations, and care notes
+- notifications, care plans, visit prep, alerts, reminders, and review queues
+- clinical review hubs for trends, medication safety, lab follow-up, vitals monitoring, and symptom review
+- report builder presets, saved report history, print views, emergency cards, exports, and handoff packets
 - AI insight persistence and source-aware summary foundations
-- mobile authentication, bearer-token sessions, device connections, and device reading ingestion
-- admin, jobs, ops, audit log, security center, and deployment-readiness surfaces
-- no-login demo routes for recruiters and reviewers
-
-This repo sits at the intersection of **product engineering**, **health-data workflows**, and **production-minded full-stack architecture**.
+- mobile authentication, bearer-token sessions, device connections, provider connector contracts, and reading ingestion
+- admin, jobs, ops, audit log, security center, deployment checks, and route-policy enforcement
+- no-login demo routes for recruiter and reviewer walkthroughs
 
 ---
 
 ## Product pillars
 
-### 1. Personal Health Record Workspace
+### Personal Health Record Workspace
 
-Users can manage:
+Users can manage profile details, medications, schedules, adherence logs, appointments, providers, lab results, vitals, symptoms, vaccinations, protected documents, reminders, emergency information, summaries, and exports.
 
-- health profile and baseline context
-- medications, schedules, adherence logs, and medication safety review
-- appointments, visit preparation, and provider relationships
-- lab results with follow-up and trend context
-- vital readings with monitoring and watch-zone signals
-- symptom tracking with severity and unresolved-review context
-- vaccinations and preventive-care history
-- protected document records and document-readiness signals
-- reminders, summaries, exports, emergency cards, and print-oriented views
+### Shared Care Foundations
 
-### 2. Shared Care Foundations
+VitaVault supports care-team invites, scoped access, shared patient routes, caregiver workspace foundations, audit-aware access, and care notes that connect into timeline, report, print, and export workflows.
 
-VitaVault includes collaboration-oriented flows such as:
+### Alerts, Notifications, and Care Workflows
 
-- care-team invite creation and acceptance
-- scoped shared patient access
-- shared patient routes
-- access-aware patient views
-- invite email support and fallback link sharing
-- caregiver workspace and care access audit foundations
-- care notes that appear across timeline, reports, print packets, and export readiness
+The platform includes threshold-based alert rules, alert events, notification center, care plan, visit prep, review queues, reminder workflows, and worker-backed evaluation foundations.
 
-### 3. Alerts, Notifications, and Care Workflows
+### Reports, Exports, and Handoff Packets
 
-The platform includes workflow primitives beyond record storage:
+The app includes patient summaries, emergency cards, export readiness checks, report builder presets, saved report history, print packets, and pre-share checks for doctor visits and care-team reviews.
 
-- threshold-based alert rules
-- alert events and lifecycle states
-- notification center across alerts, reminders, appointments, labs, documents, invites, and devices
-- care plan hub with readiness scoring and prioritized next actions
-- visit prep hub for provider appointments and doctor-packet handoff context
-- review queue pages and print-oriented review flows
-- worker-backed scan and evaluation foundations
+### Device and Mobile Readiness
 
-### 4. Reports, Exports, and Handoff Packets
+The mobile/device layer includes credential login, bearer-token sessions, revocation, device connection tracking, device reading ingestion, sync jobs, OpenAPI/Postman exports, provider connector contracts, and a simulator for review.
 
-VitaVault includes several surfaces that make health data portable and useful:
+### Security, Admin, and Operations
 
-- patient summary dashboard
-- printable patient summary
-- emergency health card
-- export center readiness checks
-- report builder presets for doctor visits, medication reviews, lab follow-ups, weekly care-team reviews, and emergency handoffs
-- generated recent packet history for demo/review context
-- pre-share checks that flag missing or urgent data before handoff
-
-### 5. Device and Mobile Readiness
-
-The app is structured for connected-data expansion:
-
-- mobile login, logout, and authenticated user endpoints
-- bearer-token foundations for mobile sync flows
-- mobile session visibility and revocation foundations
-- device connection tracking
-- device reading ingestion
-- sync job lifecycle tracking
-- schema-backed mobile API documentation
-- device sync simulator for portfolio review
-
-### 6. Security, Admin, and Operations
-
-The application includes operational controls such as:
-
-- Auth.js / NextAuth authentication
-- protected user workflows
-- route-policy helper for admin-only surfaces
-- password rotation, email verification, and password reset flows
-- protected document delivery
-- audit log viewer and security center
-- admin account lifecycle tools
-- jobs, ops, and system readiness pages
-- deployment and environment validation scripts
+The platform includes Auth.js authentication, protected workflows, route policy, password rotation, email verification, password reset flows, protected documents, audit log, security center, admin account lifecycle tools, job operations, and deployment readiness scripts.
 
 ---
 
@@ -140,26 +82,24 @@ The application includes operational controls such as:
 
 | Area | Routes |
 |---|---|
-| Core | `/dashboard`, `/onboarding`, `/health-profile`, `/timeline` |
+| Core | `/dashboard`, `/onboarding`, `/health-profile`, `/timeline`, `/data-quality` |
 | Care workflow | `/notifications`, `/care-plan`, `/visit-prep`, `/emergency-card`, `/emergency-card/print` |
 | Records | `/medications`, `/appointments`, `/doctors`, `/labs`, `/vitals`, `/symptoms`, `/vaccinations`, `/documents` |
 | Review hubs | `/medication-safety`, `/lab-review`, `/vitals-monitor`, `/symptom-review`, `/trends` |
 | Collaboration | `/care-team`, `/care-notes`, `/patient/[ownerUserId]`, `/invite/[token]` |
 | Alerts & reminders | `/alerts`, `/alerts/[id]`, `/alerts/rules`, `/reminders`, `/review-queue`, `/review-queue/print` |
 | Intelligence & reports | `/ai-insights`, `/summary`, `/summary/print`, `/exports`, `/report-builder`, `/report-builder/print` |
-| Device/mobile | `/device-connection`, `/api-docs` |
+| Device/mobile | `/device-connection`, `/device-connection/[id]`, `/device-sync-simulator`, `/api-docs` |
 | Security/account | `/audit-log`, `/security`, `/login`, `/signup`, `/forgot-password`, `/reset-password`, `/verify-email` |
 | Admin/ops | `/admin`, `/ops`, `/jobs` |
 
 ### Public demo routes
 
-The app includes a no-login demo surface for portfolio review.
-
 | Demo area | Routes |
 |---|---|
 | Demo shell | `/demo`, `/demo/walkthrough`, `/demo/dashboard` |
 | Demo records | `/demo/health-profile`, `/demo/medications`, `/demo/appointments`, `/demo/doctors`, `/demo/labs`, `/demo/vitals`, `/demo/symptoms`, `/demo/vaccinations`, `/demo/documents` |
-| Demo workflows | `/demo/care-team`, `/demo/ai-insights`, `/demo/alerts`, `/demo/timeline`, `/demo/reminders`, `/demo/review-queue`, `/demo/summary`, `/demo/exports` |
+| Demo workflows | `/demo/care-team`, `/demo/ai-insights`, `/demo/alerts`, `/demo/timeline`, `/demo/reminders`, `/demo/review-queue`, `/demo/summary`, `/demo/exports`, `/demo/data-quality` |
 | Demo review hubs | `/demo/notifications`, `/demo/care-plan`, `/demo/visit-prep`, `/demo/trends`, `/demo/medication-safety`, `/demo/lab-review`, `/demo/vitals-monitor`, `/demo/symptom-review`, `/demo/emergency-card` |
 | Demo platform | `/demo/device-connection`, `/demo/api-docs`, `/demo/security`, `/demo/audit-log`, `/demo/jobs`, `/demo/ops`, `/demo/admin` |
 
@@ -173,8 +113,8 @@ The app includes a no-login demo surface for portfolio review.
 | Care workflow layer | Notifications, care plan, visit prep, review queue, reminders, alerts | Next-action thinking beyond CRUD |
 | Clinical review layer | Trends, medication safety, lab review, vitals monitor, symptom review | Data interpretation and follow-up readiness |
 | Collaboration layer | Care team, care notes, shared patient workspace, invites | Patient-controlled care access and collaboration |
-| Reporting layer | Summary, report builder, saved report history, emergency card, exports, print packets | Doctor handoff, persisted packet history, and portable records |
-| Device/mobile layer | Mobile auth APIs, sessions, connections, readings, API docs | Connected-device ingestion foundations |
+| Reporting layer | Summary, report builder, saved report history, emergency card, exports, print packets | Doctor handoff and portable records |
+| Device/mobile layer | Mobile auth APIs, sessions, connections, readings, provider adapters, API docs | Connected-health ingestion foundations |
 | Platform layer | Security, audit log, admin, ops, jobs, deployment checks | Production-minded backend and operations |
 | Demo layer | `/demo` and `/demo/walkthrough` | Recruiter-friendly product review without login |
 
@@ -194,48 +134,40 @@ See [`docs/FEATURE_MATRIX.md`](docs/FEATURE_MATRIX.md) for the full feature map.
 | Background jobs | Redis + BullMQ worker foundation |
 | AI | OpenAI client integration foundation |
 | Charts/UI utilities | Recharts, lucide-react, Framer Motion |
-| Testing | Vitest with targeted route/business-logic coverage |
+| Testing | Vitest with targeted route and business-logic coverage |
 | Repo health | action export checks, import checks, hygiene checks, Prisma validation, environment validation |
 
 ---
 
 ## Domain model coverage
 
-The Prisma schema models a broad health-product domain, including:
-
-- users, auth state, verification, password resets, and health profiles
-- doctors and appointments
-- medications, schedules, and adherence logs
-- labs, vitals, symptoms, and vaccinations
-- documents and protected file access
-- care invites, care access, and care notes
-- reminders and exports
-- AI insights
-- mobile sessions
-- device connections and device readings
-- sync jobs
-- alert rules, alert events, and alert audits
-- job runs and job run logs
-
-This gives the project enough depth to support future upgrades without constantly redesigning the database from scratch.
+The Prisma schema models a broad health-product domain, including users, auth state, profiles, doctors, appointments, medications, labs, vitals, symptoms, vaccinations, documents, care access, care notes, reminders, exports, saved reports, AI insights, mobile sessions, device connections, device readings, sync jobs, alert rules, alert events, alert audits, job runs, and job logs.
 
 ---
 
 ## Screenshots
 
-### Core experience
+The original screenshot set is stored in [`.mkdir/`](.mkdir/) so reviewers can preview the product quickly from GitHub.
+
+### Reviewer entry points
+
+| Landing Page | Login Page |
+|---|---|
+| <img src=".mkdir/Landing-Page.jpg" alt="VitaVault landing page" width="100%"> | <img src=".mkdir/Login-Page.jpg" alt="VitaVault login page" width="100%"> |
+
+### Core patient workspace
 
 | Dashboard | Health Profile |
 |---|---|
-| <img src=".mkdir/Dashboard.jpg" alt="Dashboard" width="100%"> | <img src=".mkdir/Health-Profile.jpg" alt="Health Profile" width="100%"> |
+| <img src=".mkdir/Dashboard.jpg" alt="VitaVault dashboard" width="100%"> | <img src=".mkdir/Health-Profile.jpg" alt="Health profile workspace" width="100%"> |
 
-| Medications | Documents |
+| Medications | Appointments |
 |---|---|
-| <img src=".mkdir/Medications.jpg" alt="Medications" width="100%"> | <img src=".mkdir/Documents.jpg" alt="Documents" width="100%"> |
+| <img src=".mkdir/Medications.jpg" alt="Medication management" width="100%"> | <img src=".mkdir/Appointments.jpg" alt="Appointment management" width="100%"> |
 
-| Lab Review | Vitals Monitor |
+| Doctors | Documents |
 |---|---|
-| <img src=".mkdir/Lab-Review.jpg" alt="Lab Review" width="100%"> | <img src=".mkdir/Vitals-Monitor.jpg" alt="Vitals Monitor" width="100%"> |
+| <img src=".mkdir/Doctors.jpg" alt="Doctor directory" width="100%"> | <img src=".mkdir/Documents.jpg" alt="Document workspace" width="100%"> |
 
 | Device Connections | Exports Page |
 |---|---|
@@ -280,28 +212,19 @@ npm run lint
 npm run test:run
 ```
 
-For deployment readiness:
-
-```bash
-npm run env:check
-npm run deploy:check
-```
-
 ---
 
 ## Local setup
 
-### 1. Install dependencies
-
 ```bash
 npm install
+cp .env.example .env
+npx prisma migrate dev
+npm run seed:demo
+npm run dev
 ```
 
-### 2. Configure environment
-
-Copy `.env.example` to `.env` and fill in the required values.
-
-Common local values:
+Common local environment values:
 
 ```env
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/vitavault"
@@ -321,40 +244,6 @@ SMTP_USER=""
 SMTP_PASS=""
 ```
 
-### 3. Validate Prisma schema
-
-```bash
-npm run db:validate:ci
-```
-
-### 4. Apply migrations locally
-
-```bash
-npx prisma migrate dev
-```
-
-For local demo databases only, reset is acceptable if you do not need the data:
-
-```bash
-npx prisma migrate reset
-```
-
-Do not use reset against real or production data.
-
-### 5. Seed demo data
-
-```bash
-npm run seed:demo
-```
-
-### 6. Run the app
-
-```bash
-npm run dev
-```
-
-Open `http://localhost:3000`.
-
 ---
 
 ## Deployment notes
@@ -366,49 +255,48 @@ Required for full production behavior:
 - PostgreSQL database connection
 - `NEXTAUTH_SECRET`
 - `NEXTAUTH_URL`
-- production email settings for invite/reset/verification flows
+- production email settings for invite, reset, and verification flows
 - Redis URL for worker-backed queues
 - OpenAI key for live AI features
 - storage provider configuration for production document storage
 
-The public demo routes are intentionally no-login and read-only so the app can still be reviewed even when production database configuration is not enabled.
+The public demo routes are read-only so the project can still be reviewed even when production database features are not configured.
 
 ---
 
 ## Testing strategy
 
-The test suite focuses on business logic and risk-prone workflow areas:
+The test suite focuses on business logic and regression-prone workflow areas:
 
 - internal API authorization
 - export center readiness
 - document storage and protected download behavior
-- outbound/invite email behavior
-- notification center helper logic
+- outbound and invite email behavior
+- notification helper logic
 - deployment readiness checks
 - route policy expectations
-- mobile/device API validation
+- mobile/device API validation and security helpers
+- OpenAPI/Postman contract generation
 - migration safety checks
-- report builder presets
+- report builder presets and saved report history
 - care-note workflow helpers
-- security hardening helpers
-
-The goal is not full end-to-end coverage yet. It is targeted coverage for areas most likely to regress during portfolio patching.
+- device integration helper logic
 
 ---
 
 ## Current limitations
 
-VitaVault is a strong portfolio/product foundation, but it is not a regulated medical device or production clinical system.
+VitaVault is a strong portfolio and product foundation, but it is not a regulated medical device or production clinical system.
 
 Known limitations include:
 
 - demo routes are read-only and use sample data
-- persistent report history is not yet database-backed
-- care notes are patient-level and not yet attached to specific records
-- sleep tracking is documented as a future feature and is not currently in the Prisma reading enum
+- care notes are patient-level and not yet attached to every individual record type
+- sleep tracking is not currently in the Prisma device reading enum
+- provider connector contracts exist, but native Apple Health, Android Health Connect, and wearable apps are external client work
 - production document storage needs provider-specific hardening before real PHI usage
 - background jobs require Redis and worker deployment configuration
-- AI features require production-grade source review, prompt logging, and clinician/user disclaimers before real use
+- AI features require production-grade source review, prompt logging, and medical disclaimer controls before real clinical use
 
 See [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) for details.
 
@@ -424,18 +312,19 @@ For a fast review, use this path:
 4. `/demo/care-plan`
 5. `/demo/visit-prep`
 6. `/demo/trends`
-7. `/demo/report-builder` if added to the public shell, or `/report-builder` in the authenticated app
+7. `/demo/data-quality`
 8. `/demo/exports`
-9. `/demo/security`
-10. `/demo/admin`
+9. `/demo/device-connection`
+10. `/demo/security`
 
 For deeper review, inspect:
 
 - `prisma/schema.prisma`
 - `lib/report-builder.ts`
-- `lib/report-builder-presets.ts`
+- `lib/report-history.ts`
 - `lib/care-note-workflows.ts`
 - `lib/mobile-device-api.ts`
+- `lib/device-provider-connectors.ts`
 - `lib/route-policy.ts`
 - `tests/`
 - `docs/`

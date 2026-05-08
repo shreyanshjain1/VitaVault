@@ -8,6 +8,7 @@ import {
 import { db } from "@/lib/db";
 import { getMobileSecurityChecklist } from "@/lib/mobile-api-security";
 import { SUPPORTED_DEVICE_READINGS } from "@/lib/mobile-device-api";
+import { buildProviderCapabilitySummary, getDeviceProviderConnectors } from "@/lib/device-provider-connectors";
 
 export type DeviceConnectionHealthTone = "neutral" | "info" | "success" | "warning" | "danger";
 
@@ -147,8 +148,11 @@ export async function getDeviceIntegrationDashboardData(userId: string) {
       select: { id: true, name: true, expiresAt: true, lastUsedAt: true, revokedAt: true, createdAt: true },
     }),
   ]);
+  const providerConnectors = getDeviceProviderConnectors();
   return {
     supportedReadings: SUPPORTED_DEVICE_READINGS,
+    providerConnectors,
+    providerSummary: buildProviderCapabilitySummary(providerConnectors),
     qaPayload: DEVICE_QA_SAMPLE_PAYLOAD,
     qaCurl: buildDeviceQaCurl(),
     qaChecklist: buildDeviceQaChecklist(),

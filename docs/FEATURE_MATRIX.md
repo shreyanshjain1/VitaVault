@@ -1,18 +1,18 @@
 # VitaVault Feature Matrix
 
-This matrix summarizes the current VitaVault product surface after the latest portfolio-polish pass. It is meant for recruiters, reviewers, and maintainers who want a fast view of what the app demonstrates.
+This matrix summarizes the current VitaVault product surface for recruiters, reviewers, and maintainers.
 
 ## Product layers
 
 | Layer | Modules | Main value |
 |---|---|---|
-| Core workspace | Dashboard, onboarding, health profile, timeline | Central command center and structured first-run setup |
+| Core workspace | Dashboard, onboarding, health profile, timeline, data quality | Central command center and structured first-run setup |
 | Patient records | Medications, appointments, doctors, labs, vitals, symptoms, vaccinations, documents | Broad personal health record coverage |
 | Care workflow | Notifications, care plan, visit prep, reminders, review queue, alerts | Converts records into next actions |
 | Clinical review | Health trends, medication safety, lab review, vitals monitor, symptom review | Adds readiness scoring and follow-up prioritization |
 | Collaboration | Care team, care notes, shared patient workspace, invites | Supports patient-controlled sharing and caregiver/provider visibility |
-| Reports and handoff | Summary, report builder, saved report history, emergency card, exports, print pages | Supports doctor visits, emergency handoffs, persisted packet history, and portable record packets |
-| Mobile/device | Mobile auth APIs, mobile sessions, device connections, device readings, API docs | Shows backend readiness for mobile and connected-device ingestion |
+| Reports and handoff | Summary, report builder, saved report history, emergency card, exports, print pages | Supports doctor visits, emergency handoffs, and portable record packets |
+| Mobile/device | Mobile auth APIs, mobile sessions, device connections, device readings, provider connector contracts, API docs | Shows backend readiness for mobile and connected-device ingestion |
 | Security/admin/ops | Security center, audit log, admin, ops, jobs | Shows production-minded operating surfaces beyond normal CRUD |
 | Public demo | `/demo`, `/demo/walkthrough`, demo module pages | Lets reviewers inspect the product surface without needing login |
 
@@ -24,6 +24,7 @@ This matrix summarizes the current VitaVault product surface after the latest po
 | `/onboarding` | First-time health setup | Authenticated setup flow |
 | `/health-profile` | Baseline patient context | Authenticated user data |
 | `/timeline` | Longitudinal activity timeline | Includes health records and care-note events |
+| `/data-quality` | Data quality center | Computes quality, readiness, and cleanup signals from current records |
 | `/notifications` | Unified notification inbox | Combines alerts, reminders, appointments, labs, documents, invites, and devices |
 | `/care-plan` | Care plan hub | Readiness score, prioritized actions, timeline, and care context |
 | `/visit-prep` | Doctor visit preparation | Provider-ready prep queue and packet handoff context |
@@ -40,54 +41,30 @@ This matrix summarizes the current VitaVault product surface after the latest po
 | `/ai-insights` | AI insight workspace | Stored insights and source-aware summary foundations |
 | `/summary` | Patient summary | Handoff dashboard for patient context and report generation |
 | `/summary/print` | Printable summary packet | Standard, compact, and doctor-visit print modes |
-| `/report-builder` | Report builder | Preset-driven report packets, saved report history, status actions, and generated live packet signals |
+| `/report-builder` | Report builder | Preset-driven report packets, saved report history, and generated packet context |
 | `/report-builder/print` | Printable report builder packet | Preserves selected preset and section context |
 | `/exports` | Export center | Export readiness, packet options, and pre-export warnings |
-| `/device-connection` | Device connection hub | Mobile/device readiness and sync context |
-| `/api-docs` | Mobile/device API docs | Product-facing API contract reference |
+| `/device-connection` | Device connection hub | Connection management, provider adapters, QA payloads, and sync context |
+| `/device-connection/[id]` | Device detail view | Per-connection readings, sync jobs, job runs, metadata, and mirrored vitals |
+| `/device-sync-simulator` | Device sync simulator | Demo/QA path for ingestion and sync job review |
+| `/api-docs` | Mobile/device API docs | Product-facing API contract, OpenAPI, Postman, and provider reference |
 | `/audit-log` | Audit log viewer | Scoped for regular users; broader activity for admin roles |
 | `/security` | Security center | Account and mobile/API session security context |
 | `/admin` | Admin command center | Admin-only route |
 | `/ops` | Operations command center | Admin-only route |
 | `/jobs` | Background job dashboard | Admin-only route |
 
-## Public demo matrix
-
-| Demo route | Shows |
-|---|---|
-| `/demo` | Showcase landing page, feature map, newest product surfaces, and recommended review path |
-| `/demo/walkthrough` | Guided reviewer path across records, workflows, review hubs, reports, and operations |
-| `/demo/dashboard` | Demo health command center |
-| `/demo/health-profile` | Patient baseline and profile context |
-| `/demo/medications` | Medication list, schedules, providers, and adherence |
-| `/demo/labs` | Lab result sample data |
-| `/demo/vitals` | Vital signs sample data |
-| `/demo/symptoms` | Symptom journal sample data |
-| `/demo/documents` | Protected document index sample data |
-| `/demo/care-team` | Care member and invite sample data |
-| `/demo/alerts` | Alert events and rule sample data |
-| `/demo/reminders` | Reminder sample data |
-| `/demo/review-queue` | Care review workload sample data |
-| `/demo/summary` | Patient summary sample data |
-| `/demo/exports` | Export capability preview |
-| `/demo/device-connection` | Connected-device readiness preview |
-| `/demo/api-docs` | Mobile/device API reference preview |
-| `/demo/jobs` | Background job sample data |
-| `/demo/ops` | Operational readiness sample data |
-| `/demo/security` | Security posture and mobile session sample data |
-| `/demo/audit-log` | Audit trail preview |
-| `/demo/admin` | Admin/ops sample data |
-
 ## Current strongest signals
 
-- Broad domain modeling using Prisma and PostgreSQL
+- Broad Prisma/PostgreSQL domain modeling
 - Authenticated app structure with protected workflows
 - Care-team sharing and shared patient workspace foundations
 - Care notes connected across timeline, reports, print packets, and exports
 - Alerts, reminders, notifications, and care-plan workflows
 - Clinical review pages that turn records into action signals
-- Report builder presets and print-ready handoff packets
-- Mobile and device API foundations with schema-backed validation
+- Report builder presets, saved report history, and print-ready handoff packets
+- Mobile/device API foundations with schema-backed validation and security helpers
+- Provider connector abstraction for Apple Health, Health Connect, Fitbit, BP monitors, scales, oximeters, and custom sources
 - Admin, ops, audit, jobs, and security surfaces
 - Route policy helper for admin-only surfaces
 - No-login demo routes for reviewers
@@ -101,20 +78,20 @@ This matrix summarizes the current VitaVault product surface after the latest po
 4. `/demo/care-plan`
 5. `/demo/visit-prep`
 6. `/demo/trends`
-7. `/demo/exports`
-8. `/demo/security`
-9. `/demo/admin`
-10. `docs/PORTFOLIO_REVIEW_GUIDE.md`
+7. `/demo/data-quality`
+8. `/demo/exports`
+9. `/demo/device-connection`
+10. `/demo/security`
 
 ## Recommended next improvements
 
-1. Persistent report-builder history stored in the database
-2. Optional care-note links to a specific lab, appointment, medication, symptom, document, or alert
-3. Production document storage provider hardening
-4. Background jobs v2 with admin retry and rerun tools
-5. Data quality center for missing/old/contradictory health records
-6. Expanded tests around route access, report printing, and shared patient permissions
-
-## Patch 48 addition
-
-- **Data Quality Center**: computes profile, record, safety, device, export, and collaboration cleanup signals from existing records without adding a new database table.
+1. Mobile API SDK examples for JavaScript, React Native, and cURL
+2. Data quality snapshots and cleanup trend history
+3. Field-level care-team permissions
+4. AI insights review and approval workflow
+5. Worker heartbeat and queue health dashboard
+6. Security hardening with persistent abuse tracking
+7. Playwright smoke tests for the public demo path
+8. Native mobile client prototype for Android Health Connect
+9. Provider OAuth token storage for Fitbit-style integrations
+10. Final screenshot refresh after the next visual UI pass
