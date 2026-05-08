@@ -292,7 +292,6 @@ The original screenshot set is stored in [`.mkdir/`](.mkdir/) and is intentional
 | `.mkdir/Device-Connections.jpg` | Connected-device readiness |
 | `.mkdir/Exports-Page.jpg` | Export and packet generation |
 
-> Patch 51 restores the screenshot gallery to use the actual files present in `.mkdir/`, including `Lab-Results.jpg` and `Vitals.jpg`. Avoid renaming screenshot files unless the README is updated in the same PR.
 
 ---
 
@@ -475,6 +474,3 @@ For deeper review, inspect:
 
 MIT License. See [`LICENSE`](LICENSE).
 
-### Patch 48: Data Quality Center
-
-VitaVault now includes a Data Quality Center that surfaces missing profile fields, stale records, safety review items, device sync issues, export readiness gaps, and care-team collaboration cleanup actions from existing data.
