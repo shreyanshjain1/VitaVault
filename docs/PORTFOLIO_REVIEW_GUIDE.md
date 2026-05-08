@@ -82,12 +82,47 @@ A strong walkthrough can be explained like this:
 - Persistent report history and record-attached care notes are future work.
 - Production document storage, compliance controls, and provider-specific device integrations need hardening.
 
+## Screenshot review path
+
+The README now includes the original screenshot set from `.mkdir/`. Use this screenshot path when reviewing the project quickly from GitHub:
+
+1. `Landing-Page.jpg` - public product entry point
+2. `Login-Page.jpg` - auth surface
+3. `Dashboard.jpg` - patient command center
+4. `Health-Profile.jpg` - baseline health profile
+5. `Medications.jpg` - medication record workflow
+6. `Lab-Results.jpg` - lab record coverage
+7. `Vitals.jpg` - vital-sign record coverage
+8. `Care-Team.jpg` - collaboration foundation
+9. `AI-Insights.jpg` - insight workspace
+10. `Device-Connections.jpg` - connected-health foundation
+11. `Exports-Page.jpg` - export and handoff workflow
+12. `Summary.jpg` - patient summary packet
+
+## Reviewer flow using routes and screenshots
+
+| Step | Route or file | What to inspect |
+|---|---|---|
+| 1 | `README.md` screenshots | Visual breadth of the product |
+| 2 | `/demo/walkthrough` | Guided no-login product story |
+| 3 | `/demo/dashboard` | Patient command center |
+| 4 | `/demo/notifications`, `/demo/care-plan`, `/demo/visit-prep` | Workflow layer beyond CRUD |
+| 5 | `/demo/trends`, `/demo/lab-review`, `/demo/vitals-monitor` | Clinical review surfaces |
+| 6 | `/demo/device-connection`, `/demo/api-docs` | Mobile/device readiness and API story |
+| 7 | `/demo/exports`, `/summary`, `/report-builder` | Handoff and reporting story |
+| 8 | `/security`, `/audit-log`, `/jobs`, `/ops`, `/admin` | Production-minded platform layer |
+| 9 | `prisma/schema.prisma` | Domain model depth |
+| 10 | `tests/` | Regression coverage and helper-level testing |
+
 ## Recommended future patch ideas
 
-1. Persistent report history model
-2. Record-attached care notes
-3. Background jobs v2 with admin retry tools
-4. Data Quality Center
-5. Production document storage provider hardening
-6. Playwright demo smoke tests
-7. OpenAPI spec generation for mobile routes
+1. Persistent report-builder history stored in the database
+2. Device provider connector abstraction for Apple Health, Android Health Connect, Fitbit, and smart devices
+3. Mobile API SDK examples for JavaScript, React Native, and cURL
+4. Data quality snapshots and cleanup trend history
+5. Field-level care-team permissions
+6. AI insights review and approval workflow
+7. Worker heartbeat and queue health dashboard
+8. Security hardening v3 with persistent abuse tracking
+9. Final demo screenshot refresh after the next visual UI pass
+10. Playwright smoke tests for the public demo path

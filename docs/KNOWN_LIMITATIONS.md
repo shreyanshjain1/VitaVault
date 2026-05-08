@@ -38,7 +38,12 @@ This document keeps the current limitations honest so reviewers can understand w
 |---|---|---|
 | Public demo | `/demo` routes are read-only and use sample data for portfolio review. | Keep demo pages aligned whenever authenticated features change. |
 | Live deployment | The Vercel demo may not have the database and secrets required for all authenticated flows. | Use the no-login demo for review and configure production env vars for full app testing. |
-| Screenshots | README screenshots may lag behind fast-moving UI patches. | Refresh screenshots after major visual updates and keep filenames stable. |
+| Screenshots | Patch 51 restores the original `.mkdir/` screenshot gallery and fixes the missing README image paths. Screenshots can still become visually outdated after large UI changes. | Keep filenames stable and refresh images after major visual redesigns. |
+
+
+## Screenshot gallery status
+
+Patch 51 fixes the README screenshot references and restores the original screenshot set from `.mkdir/`. The README now uses the actual repository filenames, including `Lab-Results.jpg` and `Vitals.jpg`, instead of the missing `Lab-Review.jpg` and `Vitals-Monitor.jpg` paths.
 
 ## Testing limitations
 
@@ -89,3 +94,8 @@ Patch 49 adds endpoint-specific in-memory rate limits, no-store headers, oversiz
 ## API contract exports
 
 Patch 50 adds generated OpenAPI and Postman JSON exports for the mobile/device API. These are intentionally scoped to the existing mobile endpoints only. The exports do not yet cover the full web app/server-action surface because most authenticated web workflows are rendered through App Router pages and server actions rather than public REST endpoints.
+
+
+## Patch 51 note: README Screenshot Restoration
+
+Patch 51 is a docs-only portfolio polish patch. It fixes broken README screenshot paths, restores the original screenshot grid, updates the reviewer guide, and records the screenshot inventory so future UI/image refreshes do not break GitHub previews.
