@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, CalendarDays, CheckCircle2, FileText, Printer, SlidersHorizontal } from "lucide-react";
+import { ArrowRight, CalendarDays, CheckCircle2, FileText, Printer, Save, SlidersHorizontal } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { archiveSavedReportAction, markSavedReportSharedAction, saveReportPacketAction } from "@/app/report-builder/actions";
 import { EmptyState, PageHeader, StatusPill } from "@/components/common";
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, Select } from "@/components/ui";
 import { DataCard, ModuleHero } from "@/components/module-sections";
@@ -15,6 +16,7 @@ import {
   type ReportHistoryItem,
   type ReportType,
 } from "@/lib/report-builder";
+import type { SavedReportHistoryItem } from "@/lib/report-history";
 
 const reportTypeOptions: Array<{ value: ReportType; label: string; description: string }> = [
   { value: "patient", label: "Patient summary", description: "Broad personal record packet" },
@@ -45,6 +47,50 @@ function ProgressBar({ value }: { value: number }) {
   return (
     <div className="h-2 overflow-hidden rounded-full bg-muted">
       <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${safeValue}%` }} />
+    </div>
+  );
+}
+
+
+function SaveCurrentReportForm({ data, sections, className }: { data: Awaited<ReturnType<typeof getReportBuilderData>>; sections: string; className?: string }) {
+  return (
+    <form action={saveReportPacketAction} className={className}>
+      <input type="hidden" name="preset" value={data.selectedPreset?.id || ""} />
+      <input type="hidden" name="reportType" value={data.reportType} />
+      <input type="hidden" name="sections" value={sections} />
+      <input type="hidden" name="from" value={data.range.from} />
+      <input type="hidden" name="to" value={data.range.to} />
+      <input type="hidden" name="title" value={data.selectedPreset ? `${data.selectedPreset.label} - ${new Date().toISOString().slice(0, 10)}` : `${data.reportTitle} - ${new Date().toISOString().slice(0, 10)}`} />
+      <Button type="submit" variant="outline">
+        <Save className="mr-2 h-4 w-4" />
+        Save packet
+      </Button>
+    </form>
+  );
+}
+
+function SavedReportCard({ item }: { item: SavedReportHistoryItem }) {
+  return (
+    <div className="rounded-2xl border border-border/60 bg-background/50 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <StatusPill tone={item.tone}>{item.statusLabel}</StatusPill>
+        <Badge>{item.readinessScore}% ready</Badge>
+      </div>
+      <p className="mt-3 font-medium">{item.title}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
+      <p className="mt-3 text-xs text-muted-foreground">Saved {formatDateTime(item.createdAt)} • {item.recordCount} item{item.recordCount === 1 ? "" : "s"}</p>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Link href={item.packetHref} className="inline-flex h-9 items-center justify-center rounded-xl border border-border/70 bg-background/60 px-3 text-xs font-medium transition hover:bg-muted/60">Open</Link>
+        <Link href={item.printHref} className="inline-flex h-9 items-center justify-center rounded-xl border border-border/70 bg-background/60 px-3 text-xs font-medium transition hover:bg-muted/60">Print</Link>
+        <form action={markSavedReportSharedAction}>
+          <input type="hidden" name="reportId" value={item.id} />
+          <Button type="submit" variant="ghost" size="sm">Mark shared</Button>
+        </form>
+        <form action={archiveSavedReportAction}>
+          <input type="hidden" name="reportId" value={item.id} />
+          <Button type="submit" variant="ghost" size="sm">Archive</Button>
+        </form>
+      </div>
     </div>
   );
 }
@@ -83,6 +129,7 @@ export default async function ReportBuilderPage({ searchParams }: { searchParams
             description="Assemble custom patient, doctor, emergency, and care-team report packets with presets, section controls, date ranges, readiness checks, and print previews."
             action={
               <div className="flex flex-wrap gap-2">
+                <SaveCurrentReportForm data={data} sections={selectedSectionsQuery} />
                 <Link href={printHref} className="inline-flex h-10 items-center justify-center rounded-2xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-95">
                   <Printer className="mr-2 h-4 w-4" />
                   Preview packet
@@ -286,8 +333,28 @@ export default async function ReportBuilderPage({ searchParams }: { searchParams
 
         <Card>
           <CardHeader>
-            <CardTitle>Recent packet history</CardTitle>
-            <CardDescription className="mt-1">A lightweight generated history of the current draft, latest source event, and pre-share checks.</CardDescription>
+            <CardTitle>Saved report history</CardTitle>
+            <CardDescription className="mt-1">Persist generated packets, reopen previous report criteria, mark packets as shared, and archive old handoffs.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid gap-3 sm:grid-cols-5">
+              <DataCard className="rounded-2xl p-4"><p className="text-xs text-muted-foreground">Saved</p><p className="mt-1 text-2xl font-semibold">{data.savedReportStats.total}</p></DataCard>
+              <DataCard className="rounded-2xl p-4"><p className="text-xs text-muted-foreground">Generated</p><p className="mt-1 text-2xl font-semibold">{data.savedReportStats.generated}</p></DataCard>
+              <DataCard className="rounded-2xl p-4"><p className="text-xs text-muted-foreground">Review</p><p className="mt-1 text-2xl font-semibold">{data.savedReportStats.review}</p></DataCard>
+              <DataCard className="rounded-2xl p-4"><p className="text-xs text-muted-foreground">Shared</p><p className="mt-1 text-2xl font-semibold">{data.savedReportStats.shared}</p></DataCard>
+              <DataCard className="rounded-2xl p-4"><p className="text-xs text-muted-foreground">Avg. readiness</p><p className="mt-1 text-2xl font-semibold">{data.savedReportStats.averageReadiness}%</p></DataCard>
+            </div>
+            <div className="grid gap-3 md:grid-cols-3">
+              {data.savedReports.map((item) => <SavedReportCard key={item.id} item={item} />)}
+              {data.savedReports.length === 0 ? <EmptyState title="No saved reports yet" description="Save the current packet to create a real report history record." /> : null}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Generated packet signals</CardTitle>
+            <CardDescription className="mt-1">Live draft, latest source event, and pre-share checks computed from current records.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-3">
             {data.reportHistory.map((item) => (
@@ -310,10 +377,13 @@ export default async function ReportBuilderPage({ searchParams }: { searchParams
               <p className="font-semibold">Ready to review the packet?</p>
               <p className="text-sm text-muted-foreground">Open a print-friendly preview using the selected sections and date range.</p>
             </div>
-            <Link href={printHref} className="inline-flex h-10 items-center justify-center rounded-2xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-95">
-              <FileText className="mr-2 h-4 w-4" />
-              Open print preview
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <SaveCurrentReportForm data={data} sections={selectedSectionsQuery} />
+              <Link href={printHref} className="inline-flex h-10 items-center justify-center rounded-2xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-95">
+                <FileText className="mr-2 h-4 w-4" />
+                Open print preview
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>

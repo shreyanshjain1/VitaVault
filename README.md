@@ -173,7 +173,7 @@ The app includes a no-login demo surface for portfolio review.
 | Care workflow layer | Notifications, care plan, visit prep, review queue, reminders, alerts | Next-action thinking beyond CRUD |
 | Clinical review layer | Trends, medication safety, lab review, vitals monitor, symptom review | Data interpretation and follow-up readiness |
 | Collaboration layer | Care team, care notes, shared patient workspace, invites | Patient-controlled care access and collaboration |
-| Reporting layer | Summary, report builder, emergency card, exports, print packets | Doctor handoff and portable records |
+| Reporting layer | Summary, report builder, saved report history, emergency card, exports, print packets | Doctor handoff, persisted packet history, and portable records |
 | Device/mobile layer | Mobile auth APIs, sessions, connections, readings, API docs | Connected-device ingestion foundations |
 | Platform layer | Security, audit log, admin, ops, jobs, deployment checks | Production-minded backend and operations |
 | Demo layer | `/demo` and `/demo/walkthrough` | Recruiter-friendly product review without login |
@@ -223,47 +223,19 @@ This gives the project enough depth to support future upgrades without constantl
 
 ## Screenshots
 
-The original screenshot set is stored in [`.mkdir/`](.mkdir/) and is intentionally kept in the repo so reviewers can preview the product quickly from GitHub.
-
-### Reviewer entry points
-
-| Landing Page | Login Page |
-|---|---|
-| <img src=".mkdir/Landing-Page.jpg" alt="VitaVault landing page" width="100%"> | <img src=".mkdir/Login-Page.jpg" alt="VitaVault login page" width="100%"> |
-
-### Core patient workspace
+### Core experience
 
 | Dashboard | Health Profile |
 |---|---|
-| <img src=".mkdir/Dashboard.jpg" alt="VitaVault dashboard" width="100%"> | <img src=".mkdir/Health-Profile.jpg" alt="Health profile workspace" width="100%"> |
+| <img src=".mkdir/Dashboard.jpg" alt="Dashboard" width="100%"> | <img src=".mkdir/Health-Profile.jpg" alt="Health Profile" width="100%"> |
 
-| Medications | Appointments |
+| Medications | Documents |
 |---|---|
-| <img src=".mkdir/Medications.jpg" alt="Medication management" width="100%"> | <img src=".mkdir/Appointments.jpg" alt="Appointment management" width="100%"> |
+| <img src=".mkdir/Medications.jpg" alt="Medications" width="100%"> | <img src=".mkdir/Documents.jpg" alt="Documents" width="100%"> |
 
-| Doctors | Documents |
+| Lab Review | Vitals Monitor |
 |---|---|
-| <img src=".mkdir/Doctors.jpg" alt="Doctor directory" width="100%"> | <img src=".mkdir/Documents.jpg" alt="Document intelligence hub" width="100%"> |
-
-### Clinical review and record coverage
-
-| Lab Results | Vitals |
-|---|---|
-| <img src=".mkdir/Lab-Results.jpg" alt="Lab results review" width="100%"> | <img src=".mkdir/Vitals.jpg" alt="Vitals monitoring" width="100%"> |
-
-| Symptoms | Vaccinations |
-|---|---|
-| <img src=".mkdir/Symptoms.jpg" alt="Symptom tracking" width="100%"> | <img src=".mkdir/Vaccinations.jpg" alt="Vaccination records" width="100%"> |
-
-### Collaboration, intelligence, and handoff
-
-| Care Team | AI Insights |
-|---|---|
-| <img src=".mkdir/Care-Team.jpg" alt="Care team workspace" width="100%"> | <img src=".mkdir/AI-Insights.jpg" alt="AI insights workspace" width="100%"> |
-
-| Alert Center | Summary |
-|---|---|
-| <img src=".mkdir/Alert-Center.jpg" alt="Alert center" width="100%"> | <img src=".mkdir/Summary.jpg" alt="Patient summary" width="100%"> |
+| <img src=".mkdir/Lab-Review.jpg" alt="Lab Review" width="100%"> | <img src=".mkdir/Vitals-Monitor.jpg" alt="Vitals Monitor" width="100%"> |
 
 | Device Connections | Exports Page |
 |---|---|
