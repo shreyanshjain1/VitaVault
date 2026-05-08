@@ -169,29 +169,33 @@ The original screenshot set is stored in [`.mkdir/`](.mkdir/) so reviewers can p
 |---|---|
 | <img src=".mkdir/Doctors.jpg" alt="Doctor directory" width="100%"> | <img src=".mkdir/Documents.jpg" alt="Document workspace" width="100%"> |
 
-### Clinical review and record coverage
-
-| Lab Results | Vitals |
-|---|---|
-| <img src=".mkdir/Lab-Results.jpg" alt="Lab results review" width="100%"> | <img src=".mkdir/Vitals.jpg" alt="Vitals monitoring" width="100%"> |
-
-| Symptoms | Vaccinations |
-|---|---|
-| <img src=".mkdir/Symptoms.jpg" alt="Symptom tracking" width="100%"> | <img src=".mkdir/Vaccinations.jpg" alt="Vaccination records" width="100%"> |
-
-### Collaboration, intelligence, devices, and handoff
-
-| Care Team | AI Insights |
-|---|---|
-| <img src=".mkdir/Care-Team.jpg" alt="Care team workspace" width="100%"> | <img src=".mkdir/AI-Insights.jpg" alt="AI insights workspace" width="100%"> |
-
-| Alert Center | Summary |
-|---|---|
-| <img src=".mkdir/Alert-Center.jpg" alt="Alert center" width="100%"> | <img src=".mkdir/Summary.jpg" alt="Patient summary" width="100%"> |
-
 | Device Connections | Exports Page |
 |---|---|
 | <img src=".mkdir/Device-Connections.jpg" alt="Device connection dashboard" width="100%"> | <img src=".mkdir/Exports-Page.jpg" alt="Export center" width="100%"> |
+
+### Screenshot inventory
+
+| File | Represents |
+|---|---|
+| `.mkdir/Landing-Page.jpg` | Public landing and product entry point |
+| `.mkdir/Login-Page.jpg` | Authentication entry point |
+| `.mkdir/Dashboard.jpg` | Main patient command center |
+| `.mkdir/Health-Profile.jpg` | Baseline profile and emergency context |
+| `.mkdir/Medications.jpg` | Medication records and safety workflow entry |
+| `.mkdir/Appointments.jpg` | Visit and appointment tracking |
+| `.mkdir/Doctors.jpg` | Provider directory |
+| `.mkdir/Documents.jpg` | Document records and document-readiness surface |
+| `.mkdir/Lab-Results.jpg` | Lab record coverage |
+| `.mkdir/Vitals.jpg` | Vital-sign record coverage |
+| `.mkdir/Symptoms.jpg` | Symptom tracking |
+| `.mkdir/Vaccinations.jpg` | Preventive-care records |
+| `.mkdir/Care-Team.jpg` | Care-team collaboration |
+| `.mkdir/AI-Insights.jpg` | AI insight workspace |
+| `.mkdir/Alert-Center.jpg` | Alert and review workflow |
+| `.mkdir/Summary.jpg` | Patient summary handoff |
+| `.mkdir/Device-Connections.jpg` | Connected-device readiness |
+| `.mkdir/Exports-Page.jpg` | Export and packet generation |
+
 
 ---
 
@@ -330,3 +334,4 @@ For deeper review, inspect:
 ## License
 
 MIT License. See [`LICENSE`](LICENSE).
+
