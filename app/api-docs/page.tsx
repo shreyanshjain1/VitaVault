@@ -28,6 +28,7 @@ import {
 } from "@/components/ui";
 import { getMobileSecurityChecklist } from "@/lib/mobile-api-security";
 import { getMobileApiContractSummary } from "@/lib/mobile-api-contract-export";
+import { MOBILE_API_SDK_EXAMPLES } from "@/lib/mobile-api-sdk-examples";
 import { connectorCategoryLabel, connectorStatusLabel, getDeviceProviderConnectors } from "@/lib/device-provider-connectors";
 
 const baseUrl = "https://your-vitavault-domain.com";
@@ -336,6 +337,40 @@ export default function ApiDocsPage() {
             </CardContent>
           </Card>
         </section>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardList className="h-5 w-5 text-primary" />
+              SDK and QA examples
+            </CardTitle>
+            <CardDescription>
+              Copy-paste client examples live in the repository under <code>examples/mobile-api</code>.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 lg:grid-cols-3">
+            {MOBILE_API_SDK_EXAMPLES.map((example) => (
+              <div key={example.file} className="rounded-3xl border border-border/60 bg-background/55 p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <Badge>{example.language}</Badge>
+                  <span className="text-[11px] text-muted-foreground">SDK example</span>
+                </div>
+                <h3 className="text-sm font-semibold">{example.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{example.purpose}</p>
+                <code className="mt-3 block rounded-2xl bg-muted px-3 py-2 text-[11px] text-muted-foreground">
+                  {example.file}
+                </code>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {example.covers.slice(0, 4).map((capability) => (
+                    <Badge key={capability} className="text-[10px]">
+                      {capability}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
 
         <section className="grid gap-6 lg:grid-cols-3">
           {endpointGroups.map((group) => {

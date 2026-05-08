@@ -326,3 +326,19 @@ lib/device-provider-connectors.ts
 ```
 
 Provider connectors do not add new database tables. They are adapter contracts that sit on top of the existing `ReadingSource`, `DeviceConnection`, `DeviceReading`, and `SyncJob` models.
+
+## SDK and QA examples
+
+The repository includes copy-paste examples under:
+
+```txt
+examples/mobile-api
+```
+
+| File | Purpose |
+|---|---|
+| `examples/mobile-api/vitavault-mobile-client.ts` | Framework-neutral TypeScript client for login, session checks, logout, device connections, and reading sync. |
+| `examples/mobile-api/react-native-sync.ts` | React Native-style helper layer for secure token storage and queued health reading sync. |
+| `examples/mobile-api/curl-examples.md` | Terminal-ready cURL examples for smoke testing the mobile API. |
+
+These examples use the same schema-backed reading types documented above and intentionally avoid extra runtime dependencies.
