@@ -17,7 +17,8 @@ export type VitaVaultReadingSource =
   | "PULSE_OXIMETER"
   | "OTHER";
 
-export type VitaVaultDevicePlatform = "ANDROID" | "IOS" | "WEB" | "WEARABLE" | "BLUETOOTH" | "OTHER";
+export const VITAVAULT_DEVICE_PLATFORMS = ["ANDROID", "IOS", "WEB", "OTHER"] as const;
+export type VitaVaultDevicePlatform = (typeof VITAVAULT_DEVICE_PLATFORMS)[number];
 export type VitaVaultConnectionStatus = "ACTIVE" | "ERROR" | "REVOKED" | "DISCONNECTED";
 
 export type VitaVaultUser = { id: string; email: string; name: string | null };
