@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { DevicePlatform, DeviceReadingType, ReadingSource } from "@prisma/client";
 import { MOBILE_API_SDK_EXAMPLES, getMobileApiSdkCoveredCapabilities, getMobileApiSdkExampleCount } from "@/lib/mobile-api-sdk-examples";
-import { VITAVAULT_DEVICE_PLATFORMS, buildAndroidHealthConnectSamplePayload } from "@/examples/mobile-api/vitavault-mobile-client";
+import {
+  VITAVAULT_DEVICE_PLATFORMS,
+  VITAVAULT_READING_SOURCES,
+  VITAVAULT_READING_TYPES,
+  buildAndroidHealthConnectSamplePayload,
+} from "@/examples/mobile-api/vitavault-mobile-client";
 import { buildReactNativeSyncPayload, mapDraftToVitaVaultReading } from "@/examples/mobile-api/react-native-sync";
 
 describe("mobile API SDK examples", () => {
@@ -19,10 +25,10 @@ describe("mobile API SDK examples", () => {
     expect(getMobileApiSdkCoveredCapabilities()).toEqual(expect.arrayContaining(["login", "session", "logout", "connections", "device reading sync"]));
   });
 
-  it("keeps SDK device platforms aligned to the Prisma-backed mobile API contract", () => {
-    expect(VITAVAULT_DEVICE_PLATFORMS).toEqual(["ANDROID", "IOS", "WEB", "OTHER"]);
-    expect(VITAVAULT_DEVICE_PLATFORMS).not.toContain("WEARABLE");
-    expect(VITAVAULT_DEVICE_PLATFORMS).not.toContain("BLUETOOTH");
+  it("keeps exported SDK contract values aligned with Prisma enums", () => {
+    expect([...VITAVAULT_DEVICE_PLATFORMS].sort()).toEqual(Object.values(DevicePlatform).sort());
+    expect([...VITAVAULT_READING_SOURCES].sort()).toEqual(Object.values(ReadingSource).sort());
+    expect([...VITAVAULT_READING_TYPES].sort()).toEqual(Object.values(DeviceReadingType).sort());
   });
 
   it("builds a schema-backed Android Health Connect sample payload", () => {

@@ -1,25 +1,33 @@
-export type VitaVaultReadingType =
-  | "HEART_RATE"
-  | "BLOOD_PRESSURE"
-  | "OXYGEN_SATURATION"
-  | "WEIGHT"
-  | "BLOOD_GLUCOSE"
-  | "TEMPERATURE"
-  | "STEPS";
+export const VITAVAULT_READING_TYPES = [
+  "HEART_RATE",
+  "BLOOD_PRESSURE",
+  "OXYGEN_SATURATION",
+  "WEIGHT",
+  "BLOOD_GLUCOSE",
+  "TEMPERATURE",
+  "STEPS",
+] as const;
 
-export type VitaVaultReadingSource =
-  | "MANUAL"
-  | "ANDROID_HEALTH_CONNECT"
-  | "APPLE_HEALTH"
-  | "FITBIT"
-  | "SMART_BP_MONITOR"
-  | "SMART_SCALE"
-  | "PULSE_OXIMETER"
-  | "OTHER";
+export type VitaVaultReadingType = (typeof VITAVAULT_READING_TYPES)[number];
+
+export const VITAVAULT_READING_SOURCES = [
+  "MANUAL",
+  "ANDROID_HEALTH_CONNECT",
+  "APPLE_HEALTH",
+  "FITBIT",
+  "SMART_BP_MONITOR",
+  "SMART_SCALE",
+  "PULSE_OXIMETER",
+  "OTHER",
+] as const;
+
+export type VitaVaultReadingSource = (typeof VITAVAULT_READING_SOURCES)[number];
 
 export const VITAVAULT_DEVICE_PLATFORMS = ["ANDROID", "IOS", "WEB", "OTHER"] as const;
 export type VitaVaultDevicePlatform = (typeof VITAVAULT_DEVICE_PLATFORMS)[number];
-export type VitaVaultConnectionStatus = "ACTIVE" | "ERROR" | "REVOKED" | "DISCONNECTED";
+
+export const VITAVAULT_CONNECTION_STATUSES = ["ACTIVE", "ERROR", "REVOKED", "DISCONNECTED"] as const;
+export type VitaVaultConnectionStatus = (typeof VITAVAULT_CONNECTION_STATUSES)[number];
 
 export type VitaVaultUser = { id: string; email: string; name: string | null };
 export type VitaVaultLoginResponse = { token: string; expiresAt: string; user: VitaVaultUser };
