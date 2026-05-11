@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { AppRole } from "@prisma/client";
-import { requireUser } from "@/lib/session";
 import { hasRedisConfig, shouldSkipRedisDuringBuild } from "@/lib/jobs/connection";
+import { requireApiRoutePolicy } from "@/lib/route-policy";
 import {
   enqueueAlertEvaluationJob,
   enqueueDailyHealthSummaryJob,
@@ -65,15 +64,17 @@ export async function POST(request: Request) {
       );
     }
 
-    const currentUser = await requireUser();
+    const guard = await requireApiRoutePolicy("jobDispatchApi");
 
-    if (currentUser.role !== AppRole.ADMIN) {
-      return NextResponse.json({ error: "Only admins can dispatch background jobs." }, { status: 403 });
+    if (!guard.ok) {
+      return guard.response;
     }
+
+    const currentUser = guard.user;
 
     const body = (await request.json()) as DispatchBody;
 
-    const userId = body.userId || currentUser.id!;
+    const userId = body.userId || currentUser.id;
     if (!userId) {
       return NextResponse.json({ error: "Missing user id." }, { status: 400 });
     }
@@ -96,7 +97,7 @@ export async function POST(request: Request) {
           userId,
           timezone: body.timezone ?? null,
           targetDate: body.targetDate ?? null,
-          requestedByUserId: currentUser.id!,
+          requestedByUserId: currentUser.id,
         });
 
         return NextResponse.json({ ok: true, jobType: body.jobType, ...result });
@@ -106,7 +107,7 @@ export async function POST(request: Request) {
         const result = await enqueueReminderOverdueEvaluationJob({
           userId,
           timezone: body.timezone ?? null,
-          requestedByUserId: currentUser.id!,
+          requestedByUserId: currentUser.id,
         });
 
         return NextResponse.json({ ok: true, jobType: body.jobType, ...result });
@@ -116,7 +117,7 @@ export async function POST(request: Request) {
         const result = await enqueueDailyHealthSummaryJob({
           userId,
           targetDate: body.targetDate ?? null,
-          requestedByUserId: currentUser.id!,
+          requestedByUserId: currentUser.id,
         });
 
         return NextResponse.json({ ok: true, jobType: body.jobType, ...result });
@@ -127,7 +128,7 @@ export async function POST(request: Request) {
           userId,
           connectionId: body.connectionId ?? null,
           syncJobId: body.syncJobId ?? null,
-          triggeredBy: currentUser.id!,
+          triggeredBy: currentUser.id,
         });
 
         return NextResponse.json({ ok: true, jobType: body.jobType, ...result });
