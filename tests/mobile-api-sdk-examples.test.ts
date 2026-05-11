@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { MOBILE_API_SDK_EXAMPLES, getMobileApiSdkCoveredCapabilities, getMobileApiSdkExampleCount } from "@/lib/mobile-api-sdk-examples";
-import { buildAndroidHealthConnectSamplePayload } from "@/examples/mobile-api/vitavault-mobile-client";
+import { VITAVAULT_DEVICE_PLATFORMS, buildAndroidHealthConnectSamplePayload } from "@/examples/mobile-api/vitavault-mobile-client";
 import { buildReactNativeSyncPayload, mapDraftToVitaVaultReading } from "@/examples/mobile-api/react-native-sync";
 
 describe("mobile API SDK examples", () => {
@@ -17,6 +17,12 @@ describe("mobile API SDK examples", () => {
 
   it("documents expected client capabilities", () => {
     expect(getMobileApiSdkCoveredCapabilities()).toEqual(expect.arrayContaining(["login", "session", "logout", "connections", "device reading sync"]));
+  });
+
+  it("keeps SDK device platforms aligned to the Prisma-backed mobile API contract", () => {
+    expect(VITAVAULT_DEVICE_PLATFORMS).toEqual(["ANDROID", "IOS", "WEB", "OTHER"]);
+    expect(VITAVAULT_DEVICE_PLATFORMS).not.toContain("WEARABLE");
+    expect(VITAVAULT_DEVICE_PLATFORMS).not.toContain("BLUETOOTH");
   });
 
   it("builds a schema-backed Android Health Connect sample payload", () => {
