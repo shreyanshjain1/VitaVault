@@ -1,26 +1,43 @@
 # VitaVault Mobile and Device API
 
-This document summarizes the current VitaVault mobile/device API foundation for Android, mobile sync, QA, OpenAPI import, and Postman testing. It intentionally lists only reading types currently backed by the Prisma `DeviceReadingType` enum.
+VitaVault exposes a mobile/device ingestion layer for native apps, wearable companion apps, QA tools, and future health-data integrations. The API lets a client authenticate with a dedicated mobile token, list connected devices, submit normalized health readings, and keep raw device data traceable while mirroring supported values into the patient health timeline.
 
-The same information is also available as a product-facing page at:
+This document describes the current supported contract only. Values listed here are backed by the application schema and should be treated as the source of truth for mobile client work.
+
+## Product-facing API docs
+
+The same contract is available inside the app at:
 
 ```txt
 /api-docs
 ```
 
+Machine-readable exports are available at:
+
+```txt
+/api/mobile/openapi
+/api/mobile/postman
+```
+
 ## Base URL
+
+Use your local or deployed VitaVault app URL.
 
 ```txt
 https://your-vitavault-domain.com
 ```
 
-Use your local or deployed app URL when testing.
+Local development usually uses:
+
+```txt
+http://localhost:3000
+```
 
 ## Authentication model
 
-VitaVault mobile clients authenticate with normal account credentials, but they receive a separate mobile bearer token.
+Mobile clients authenticate with normal account credentials and receive a dedicated bearer token for mobile API calls.
 
-The raw token is returned once to the client. The server stores only a SHA-256 hash of the token in `MobileSessionToken`.
+The raw token is returned only once to the client. VitaVault stores a SHA-256 hash of the token in `MobileSessionToken`, which allows the token to be revoked without storing the plaintext secret.
 
 Protected mobile endpoints require:
 
@@ -28,15 +45,17 @@ Protected mobile endpoints require:
 Authorization: Bearer <mobile_token>
 ```
 
-## Endpoints
+Mobile tokens are separate from browser sessions. Logging out of the browser does not automatically revoke a mobile token, and revoking a mobile token does not delete historical device readings.
+
+## Endpoint summary
 
 | Method | Route | Auth | Purpose |
 |---|---|---|---|
-| POST | `/api/mobile/auth/login` | Public credentials | Validate email/password and issue a mobile bearer token |
-| GET | `/api/mobile/auth/me` | Bearer token | Validate current mobile session and return user |
-| POST | `/api/mobile/auth/logout` | Bearer token | Revoke current mobile token |
-| GET | `/api/mobile/connections` | Bearer token | List connected mobile/device sync records |
-| POST | `/api/mobile/device-readings` | Bearer token | Upsert connection, persist readings, create sync job, and mirror supported vitals |
+| `POST` | `/api/mobile/auth/login` | Email/password | Validate credentials and issue a mobile bearer token |
+| `GET` | `/api/mobile/auth/me` | Bearer token | Validate the current mobile token and return the user |
+| `POST` | `/api/mobile/auth/logout` | Bearer token | Revoke the current mobile token |
+| `GET` | `/api/mobile/connections` | Bearer token | List the user's mobile/device connections |
+| `POST` | `/api/mobile/device-readings` | Bearer token | Upsert a connection, persist readings, create a sync job, and mirror supported vitals |
 
 ## Login
 
@@ -55,7 +74,7 @@ Content-Type: application/json
 }
 ```
 
-### Response
+### Successful response
 
 ```json
 {
@@ -173,7 +192,7 @@ Content-Type: application/json
 }
 ```
 
-### Response
+### Successful response
 
 ```json
 {
@@ -196,7 +215,40 @@ Content-Type: application/json
 }
 ```
 
-## Supported reading types
+## Supported contract values
+
+### Reading sources
+
+| Value | Typical use |
+|---|---|
+| `MANUAL` | Manual or admin-entered reading source |
+| `ANDROID_HEALTH_CONNECT` | Android Health Connect sync |
+| `APPLE_HEALTH` | Apple HealthKit-normalized sync |
+| `FITBIT` | Fitbit provider integration |
+| `SMART_BP_MONITOR` | Blood pressure monitor gateway |
+| `SMART_SCALE` | Smart scale gateway |
+| `PULSE_OXIMETER` | Pulse oximeter gateway |
+| `OTHER` | Custom source, QA client, or vendor gateway |
+
+### Device platforms
+
+| Value | Typical use |
+|---|---|
+| `ANDROID` | Android phones and Health Connect clients |
+| `IOS` | iPhone and HealthKit clients |
+| `WEB` | Web dashboards, QA tools, or browser-based sync clients |
+| `OTHER` | Custom gateway or provider that does not fit the main platform buckets |
+
+### Connection statuses
+
+| Value | Meaning |
+|---|---|
+| `ACTIVE` | Connection is active and can continue syncing |
+| `DISCONNECTED` | Connection is no longer actively syncing |
+| `REVOKED` | User or system revoked the connection/token |
+| `ERROR` | Connection encountered a sync or validation problem |
+
+### Reading types
 
 | Reading type | Required value | VitaVault behavior |
 |---|---|---|
@@ -206,13 +258,11 @@ Content-Type: application/json
 | `WEIGHT` | `valueFloat` | Mirrors into `weightKg` |
 | `BLOOD_GLUCOSE` | `valueFloat` | Mirrors into `bloodSugar` |
 | `TEMPERATURE` | `valueFloat` | Mirrors into `temperatureC` |
-| `STEPS` | `valueInt` | Stored as device reading only |
+| `STEPS` | `valueInt` | Stored as a device reading only |
 
-### Unsupported or future reading types
+`SLEEP_MINUTES` is not a supported request value in the current contract. Add a dedicated schema migration and ingestion path before exposing sleep tracking to mobile clients.
 
-`SLEEP_MINUTES` is intentionally not listed as a supported request value yet because it is not present in the current Prisma `DeviceReadingType` enum. Add a dedicated schema migration before exposing sleep tracking to mobile clients.
-
-## Error responses
+## Validation and error responses
 
 ### Invalid payload
 
@@ -243,30 +293,26 @@ Content-Type: application/json
 }
 ```
 
+## Device integration surfaces
 
-## Device Integration v2 UI
-
-Patch 46 adds authenticated device integration surfaces on top of the mobile API foundation:
+Authenticated users can review, test, and manage device integrations from these app routes:
 
 | Route | Purpose |
 |---|---|
-| `/device-connection` | Connection dashboard, lifecycle actions, QA payload, supported reading contract, recent readings, and sync jobs |
+| `/device-connection` | Device connection dashboard with lifecycle actions, QA payloads, supported contract details, recent readings, and sync jobs |
 | `/device-connection/[id]` | Per-device detail page with readings, sync jobs, job runs, metadata, mirrored vitals, and lifecycle actions |
 | `/device-sync-simulator` | Safe demo sync runner that creates connections, readings, sync jobs, job runs, and mirrored vitals |
 
-Lifecycle actions are user-owned and audited. Revoking a connection does not delete historical readings; it marks the connection as no longer active while keeping traceability intact.
-
+Lifecycle actions are user-owned and audited. Revoking a connection keeps historical readings available for traceability.
 
 ## Machine-readable exports
 
-Patch 50 adds generated API contract downloads for reviewers, QA, and future mobile client work.
+VitaVault generates API contract exports for QA, mobile client development, reviewer demos, and future client generation.
 
 | Export | Route | Use |
 |---|---|---|
-| OpenAPI 3.1 JSON | `/api/mobile/openapi` | Import into Swagger UI, Insomnia, API gateways, or client generators. |
-| Postman Collection 2.1 JSON | `/api/mobile/postman` | Import into Postman and set `baseUrl` plus `mobileToken` variables. |
-
-Both exports are generated from VitaVault's existing mobile API contract helpers and include the five supported mobile endpoints, bearer-token security, schema-backed reading types, request examples, response schemas, and rate-limit/security context.
+| OpenAPI 3.1 JSON | `/api/mobile/openapi` | Import into Swagger UI, Insomnia, API gateways, or client generators |
+| Postman Collection 2.1 JSON | `/api/mobile/postman` | Import into Postman and set the `baseUrl` and `mobileToken` variables |
 
 Optional base URL override:
 
@@ -276,8 +322,6 @@ Optional base URL override:
 ```
 
 ## Security notes
-
-Patch 49 hardens the mobile API surface without changing the Prisma schema or mobile contract.
 
 - Use HTTPS only in production.
 - Store the mobile token in secure device storage, not plaintext storage.
@@ -290,42 +334,42 @@ Patch 49 hardens the mobile API surface without changing the Prisma schema or mo
 - Mobile API responses use `Cache-Control: no-store` and `X-Content-Type-Options: nosniff`.
 - Mobile session creation and revocation are written to the access audit timeline.
 
-## Implementation notes
+## Ingestion behavior
 
 The device readings endpoint currently:
 
 1. Validates the mobile bearer token.
-2. Validates the sync payload with Zod.
+2. Validates the sync payload.
 3. Upserts the `DeviceConnection` record.
 4. Creates a `SyncJob` record.
-5. Deduplicates device readings using either `clientReadingId` or a captured-value signature.
+5. Deduplicates device readings by `clientReadingId` or a captured-value signature.
 6. Persists raw `DeviceReading` records.
 7. Mirrors supported reading types into normal `Vital` records.
 8. Returns sync counters to the client.
 
-This keeps the raw device data available while still making important readings visible in the normal VitaVault patient timeline.
+This keeps raw device data available while making important readings visible in the normal VitaVault patient timeline.
 
 ## Provider connector abstraction
 
-VitaVault keeps provider-specific logic separate from the core mobile ingestion contract. Each connector describes how an external source should authenticate, what readings it can send, which scopes it needs, and how payloads should normalize into `/api/mobile/device-readings`.
+Provider-specific logic stays separate from the core mobile ingestion contract. Each connector describes how an external source should authenticate, what readings it can send, which scopes it needs, and how payloads normalize into `/api/mobile/device-readings`.
 
 | Provider | Source value | Status | Typical platform | Notes |
 |---|---|---|---|---|
-| Android Health Connect | `ANDROID_HEALTH_CONNECT` | API-ready | Android | Best current native-client target for steps, vitals, weight, glucose, and temperature. |
-| Apple HealthKit | `APPLE_HEALTH` | Adapter contract | iOS | Uses the same VitaVault payload shape after HealthKit authorization and normalization. |
-| Fitbit | `FITBIT` | Planned provider | Web / wearable | Requires future OAuth token storage before real provider sync. |
-| Smart BP Monitor | `SMART_BP_MONITOR` | API-ready | Companion app / gateway | Normalizes blood pressure and pulse into vitals. |
-| Smart Scale | `SMART_SCALE` | API-ready | Companion app / gateway | Normalizes weight into vitals. |
-| Pulse Oximeter | `PULSE_OXIMETER` | API-ready | Companion app / gateway | Normalizes SpO2 and pulse into vitals. |
-| Custom source | `OTHER` | Adapter contract | Web / other | Useful for QA tools, vendor CSV imports, and future custom gateways. |
+| Android Health Connect | `ANDROID_HEALTH_CONNECT` | API-ready | Android | Best current native-client target for steps, vitals, weight, glucose, and temperature |
+| Apple HealthKit | `APPLE_HEALTH` | Adapter contract | iOS | Uses the same VitaVault payload shape after HealthKit authorization and normalization |
+| Fitbit | `FITBIT` | Planned provider | Web / other gateway | Requires future OAuth token storage before real provider sync |
+| Smart BP Monitor | `SMART_BP_MONITOR` | API-ready | Companion app / gateway | Normalizes blood pressure and pulse into vitals |
+| Smart Scale | `SMART_SCALE` | API-ready | Companion app / gateway | Normalizes weight into vitals |
+| Pulse Oximeter | `PULSE_OXIMETER` | API-ready | Companion app / gateway | Normalizes SpO2 and pulse into vitals |
+| Custom source | `OTHER` | Adapter contract | Web / other | Useful for QA tools, vendor CSV imports, and future custom gateways |
 
-The source of truth for this mapping is:
+The source of truth for provider connector mapping is:
 
 ```txt
 lib/device-provider-connectors.ts
 ```
 
-Provider connectors do not add new database tables. They are adapter contracts that sit on top of the existing `ReadingSource`, `DeviceConnection`, `DeviceReading`, and `SyncJob` models.
+Provider connectors do not add database tables. They are adapter contracts that sit on top of the existing `ReadingSource`, `DeviceConnection`, `DeviceReading`, and `SyncJob` models.
 
 ## SDK and QA examples
 
@@ -337,8 +381,17 @@ examples/mobile-api
 
 | File | Purpose |
 |---|---|
-| `examples/mobile-api/vitavault-mobile-client.ts` | Framework-neutral TypeScript client for login, session checks, logout, device connections, and reading sync. |
-| `examples/mobile-api/react-native-sync.ts` | React Native-style helper layer for secure token storage and queued health reading sync. |
-| `examples/mobile-api/curl-examples.md` | Terminal-ready cURL examples for smoke testing the mobile API. |
+| `examples/mobile-api/vitavault-mobile-client.ts` | Framework-neutral TypeScript client for login, session checks, logout, device connections, and reading sync |
+| `examples/mobile-api/react-native-sync.ts` | React Native-style helper layer for secure token storage and queued health reading sync |
+| `examples/mobile-api/curl-examples.md` | Terminal-ready cURL examples for smoke testing the mobile API |
 
-These examples use the same schema-backed reading types documented above and intentionally avoid extra runtime dependencies.
+These examples use schema-backed contract values and avoid extra runtime dependencies.
+
+## Reviewer smoke test flow
+
+1. Start the app locally or open the deployed demo.
+2. Sign in with a test account.
+3. Call `/api/mobile/auth/login` to issue a mobile token.
+4. Use the token against `/api/mobile/device-readings` with the sample payload above.
+5. Open `/device-connection` to confirm the connection, sync job, and recent readings.
+6. Open the patient vitals/timeline surfaces to confirm mirrored supported readings.
