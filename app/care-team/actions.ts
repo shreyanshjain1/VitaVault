@@ -8,14 +8,24 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { logAccessAudit } from "@/lib/access";
-import { CareAccessRole } from "@prisma/client";
+import type { CareAccessRole } from "@prisma/client";
 
 import { sendCareInviteEmail } from "@/lib/invite-email";
+import { normalizeCarePermissionInput } from "@/lib/care-permissions";
 
 function boolFromForm(formData: FormData, key: string) {
   return formData.get(key) === "on";
 }
 
+function permissionsFromForm(formData: FormData) {
+  return normalizeCarePermissionInput({
+    canViewRecords: boolFromForm(formData, "canViewRecords"),
+    canEditRecords: boolFromForm(formData, "canEditRecords"),
+    canAddNotes: boolFromForm(formData, "canAddNotes"),
+    canExport: boolFromForm(formData, "canExport"),
+    canGenerateAIInsights: boolFromForm(formData, "canGenerateAIInsights"),
+  });
+}
 
 function getAppOrigin() {
   return (
@@ -68,6 +78,14 @@ async function activateInviteForActor(args: {
     throw new Error("Invite not found or expired.");
   }
 
+  const permissions = normalizeCarePermissionInput({
+    canViewRecords: invite.canViewRecords,
+    canEditRecords: invite.canEditRecords,
+    canAddNotes: invite.canAddNotes,
+    canExport: invite.canExport,
+    canGenerateAIInsights: invite.canGenerateAIInsights,
+  });
+
   const access = await db.careAccess.upsert({
     where: {
       ownerUserId_memberUserId: {
@@ -78,11 +96,7 @@ async function activateInviteForActor(args: {
     update: {
       accessRole: invite.accessRole,
       status: "ACTIVE",
-      canViewRecords: invite.canViewRecords,
-      canEditRecords: invite.canEditRecords,
-      canAddNotes: invite.canAddNotes,
-      canExport: invite.canExport,
-      canGenerateAIInsights: invite.canGenerateAIInsights,
+      ...permissions,
       grantedByUserId: invite.grantedByUserId,
       note: invite.note,
     },
@@ -91,11 +105,7 @@ async function activateInviteForActor(args: {
       memberUserId: args.actorId,
       accessRole: invite.accessRole,
       status: "ACTIVE",
-      canViewRecords: invite.canViewRecords,
-      canEditRecords: invite.canEditRecords,
-      canAddNotes: invite.canAddNotes,
-      canExport: invite.canExport,
-      canGenerateAIInsights: invite.canGenerateAIInsights,
+      ...permissions,
       grantedByUserId: invite.grantedByUserId,
       note: invite.note,
     },
@@ -176,6 +186,7 @@ export async function inviteCareMemberAction(formData: FormData) {
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const accessRole = String(formData.get("accessRole") || "CAREGIVER") as CareAccessRole;
   const note = String(formData.get("note") || "").trim() || null;
+  const permissions = permissionsFromForm(formData);
 
   if (!email) {
     throw new Error("Email is required.");
@@ -197,11 +208,7 @@ export async function inviteCareMemberAction(formData: FormData) {
       status: "PENDING",
       token: randomUUID(),
       grantedByUserId: actor.id,
-      canViewRecords: boolFromForm(formData, "canViewRecords"),
-      canEditRecords: boolFromForm(formData, "canEditRecords"),
-      canAddNotes: boolFromForm(formData, "canAddNotes"),
-      canExport: boolFromForm(formData, "canExport"),
-      canGenerateAIInsights: boolFromForm(formData, "canGenerateAIInsights"),
+      ...permissions,
       note,
       expiresAt: addDays(new Date(), 7),
       acceptedAt: null,
@@ -213,11 +220,7 @@ export async function inviteCareMemberAction(formData: FormData) {
       status: "PENDING",
       token: randomUUID(),
       grantedByUserId: actor.id,
-      canViewRecords: boolFromForm(formData, "canViewRecords"),
-      canEditRecords: boolFromForm(formData, "canEditRecords"),
-      canAddNotes: boolFromForm(formData, "canAddNotes"),
-      canExport: boolFromForm(formData, "canExport"),
-      canGenerateAIInsights: boolFromForm(formData, "canGenerateAIInsights"),
+      ...permissions,
       note,
       expiresAt: addDays(new Date(), 7),
     },
@@ -480,6 +483,8 @@ export async function revokeCareAccessAction(formData: FormData) {
     throw new Error("Access record not found.");
   }
 
+  const permissions = permissionsFromForm(formData);
+
   await db.careAccess.update({
     where: { id: access.id },
     data: {
@@ -521,14 +526,12 @@ export async function updateCareAccessPermissionsAction(formData: FormData) {
     throw new Error("Access record not found.");
   }
 
+  const permissions = permissionsFromForm(formData);
+
   await db.careAccess.update({
     where: { id: access.id },
     data: {
-      canViewRecords: boolFromForm(formData, "canViewRecords"),
-      canEditRecords: boolFromForm(formData, "canEditRecords"),
-      canAddNotes: boolFromForm(formData, "canAddNotes"),
-      canExport: boolFromForm(formData, "canExport"),
-      canGenerateAIInsights: boolFromForm(formData, "canGenerateAIInsights"),
+      ...permissions,
       note: String(formData.get("note") || "").trim() || null,
     },
   });
