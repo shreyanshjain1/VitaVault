@@ -79,12 +79,32 @@ describe("export center data", () => {
     expect(data.summary.reportPackets).toBe(4);
     expect(data.summary.documentLinkRate).toBe(50);
     expect(data.summary.medicationAdherenceRate).toBe(80);
-    expect(data.csvCoverage.map((item) => item.label)).toEqual(["Core records", "Monitoring data", "Coordination"]);
+    expect(data.reliability.status).toBe("Blocked");
+    expect(data.reliability.safeToShare).toBe(false);
+    expect(data.reliability.highPriorityActions).toBeGreaterThan(0);
+    expect(data.reliability.blockedReasons.join(" ")).toContain(
+      "high-priority alert",
+    );
+    expect(data.csvCoverage.map((item) => item.label)).toEqual([
+      "Core records",
+      "Monitoring data",
+      "Coordination",
+    ]);
     expect(data.packets.map((item) => item.title)).toEqual(
-      expect.arrayContaining(["Patient summary packet", "Doctor visit packet", "Emergency health card", "Care plan review workspace"]),
+      expect.arrayContaining([
+        "Patient summary packet",
+        "Doctor visit packet",
+        "Emergency health card",
+        "Care plan review workspace",
+      ]),
     );
     expect(data.actionItems.map((item) => item.title)).toEqual(
-      expect.arrayContaining(["Improve document link coverage", "Review high-risk open alerts", "Add lab review context", "Review severe unresolved symptoms"]),
+      expect.arrayContaining([
+        "Improve document link coverage",
+        "Review high-risk open alerts",
+        "Add lab review context",
+        "Review severe unresolved symptoms",
+      ]),
     );
   });
 
@@ -121,7 +141,58 @@ describe("export center data", () => {
 
     expect(data.summary.documentLinkRate).toBe(100);
     expect(data.summary.medicationAdherenceRate).toBe(100);
+    expect(data.reliability.status).toBe("Ready");
+    expect(data.reliability.safeToShare).toBe(true);
     expect(data.actionItems).toHaveLength(1);
     expect(data.actionItems[0]?.title).toBe("Export readiness looks healthy");
+  });
+
+  it("classifies export reliability states without requiring database access", async () => {
+    const { buildExportReliabilitySignal } =
+      await import("@/lib/export-center");
+
+    const blocked = buildExportReliabilitySignal({
+      readinessScore: 35,
+      documentLinkRate: 20,
+      medicationAdherenceRate: 55,
+      openAlerts: 2,
+      highRiskAlerts: 1,
+      activeReminders: 1,
+      actionItems: [
+        {
+          title: "Review critical alert",
+          description: "Needs review",
+          href: "/alerts",
+          priority: "high",
+        },
+      ],
+    });
+
+    expect(blocked.status).toBe("Blocked");
+    expect(blocked.safeToShare).toBe(false);
+    expect(blocked.checklist.some((item) => item.status === "blocked")).toBe(
+      true,
+    );
+
+    const ready = buildExportReliabilitySignal({
+      readinessScore: 100,
+      documentLinkRate: 100,
+      medicationAdherenceRate: 95,
+      openAlerts: 0,
+      highRiskAlerts: 0,
+      activeReminders: 0,
+      actionItems: [
+        {
+          title: "Export readiness looks healthy",
+          description: "Ready",
+          href: "/summary",
+          priority: "low",
+        },
+      ],
+    });
+
+    expect(ready.status).toBe("Ready");
+    expect(ready.safeToShare).toBe(true);
+    expect(ready.blockedReasons).toHaveLength(0);
   });
 });

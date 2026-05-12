@@ -41,8 +41,12 @@ describe("exports route", () => {
     } as never);
 
     expect(response.status).toBe(404);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
     const body = await response.json();
     expect(body.error).toBe("Unknown export type.");
+    expect(body.type).toBe("nope");
+    expect(body.supportedTypes).toContain("medications");
   });
 
   it("returns medication data as CSV for the current user", async () => {
@@ -64,13 +68,20 @@ describe("exports route", () => {
     ]);
 
     const { GET } = await import("@/app/exports/[type]/route");
-    const response = await GET(new Request("http://localhost/exports/medications"), {
-      params: Promise.resolve({ type: "medications" }),
-    } as never);
+    const response = await GET(
+      new Request("http://localhost/exports/medications"),
+      {
+        params: Promise.resolve({ type: "medications" }),
+      } as never,
+    );
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toContain("text/csv");
-    expect(response.headers.get("Content-Disposition")).toContain("medications-");
+    expect(response.headers.get("Content-Disposition")).toContain(
+      "medications-",
+    );
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
     const csv = await response.text();
     expect(csv).toContain("Name,Dosage,Frequency,Instructions,Times");
     expect(csv).toContain("Metformin");
