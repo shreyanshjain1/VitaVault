@@ -3,6 +3,10 @@ import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
 import { toCsv } from "@/lib/export";
 import { formatDate, formatDateTime, bpLabel } from "@/lib/utils";
+import {
+  exportDefinitionMap,
+  exportDefinitions,
+} from "@/lib/export-definitions";
 
 function formatBytes(bytes: number | null | undefined) {
   if (!bytes || bytes <= 0) return "0 B";
@@ -15,7 +19,23 @@ function formatBytes(bytes: number | null | undefined) {
   }
   return `${value >= 10 || unitIndex === 0 ? Math.round(value) : value.toFixed(1)} ${units[unitIndex]}`;
 }
-import { exportDefinitionMap } from "@/lib/export-definitions";
+
+function unknownExportResponse(type: string) {
+  return NextResponse.json(
+    {
+      error: "Unknown export type.",
+      type,
+      supportedTypes: exportDefinitions.map((definition) => definition.type),
+    },
+    {
+      status: 404,
+      headers: {
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+      },
+    },
+  );
+}
 
 function csvResponse(type: string, rows: Record<string, unknown>[]) {
   const timestamp = new Date().toISOString().slice(0, 10);
@@ -26,16 +46,20 @@ function csvResponse(type: string, rows: Record<string, unknown>[]) {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="${filename}"`,
       "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }
 
-export async function GET(_: Request, { params }: { params: Promise<{ type: string }> }) {
+export async function GET(
+  _: Request,
+  { params }: { params: Promise<{ type: string }> },
+) {
   const user = await requireUser();
   const { type } = await params;
 
   if (!exportDefinitionMap.has(type)) {
-    return NextResponse.json({ error: "Unknown export type." }, { status: 404 });
+    return unknownExportResponse(type);
   }
 
   let rows: Record<string, unknown>[] = [];
@@ -216,7 +240,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ type: stri
       break;
     }
     default:
-      return NextResponse.json({ error: "Unknown export type." }, { status: 404 });
+      return unknownExportResponse(type);
   }
 
   return csvResponse(type, rows);
