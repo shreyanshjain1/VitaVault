@@ -1,6 +1,7 @@
 import type { AlertSeverity, AlertStatus, CareAccessRole, LabFlag, ReminderState, SymptomSeverity } from "@prisma/client";
 
 import { db } from "@/lib/db";
+import { buildCarePermissionMatrix } from "@/lib/care-permissions";
 
 export type CaregiverPermission = {
   label: string;
@@ -55,33 +56,11 @@ function permissionMatrix(access: {
   canExport: boolean;
   canGenerateAIInsights: boolean;
 }): CaregiverPermission[] {
-  return [
-    {
-      label: "View records",
-      enabled: access.canViewRecords,
-      description: "Can review shared profile, records, alerts, and care context.",
-    },
-    {
-      label: "Edit records",
-      enabled: access.canEditRecords,
-      description: "Can update shared patient records where product flows allow edits.",
-    },
-    {
-      label: "Add notes",
-      enabled: access.canAddNotes,
-      description: "Can contribute care context and follow-up notes in supported workflows.",
-    },
-    {
-      label: "Export data",
-      enabled: access.canExport,
-      description: "Can prepare printable or downloadable care handoff packets.",
-    },
-    {
-      label: "Generate AI insights",
-      enabled: access.canGenerateAIInsights,
-      description: "Can request AI-assisted summaries for the shared patient record.",
-    },
-  ];
+  return buildCarePermissionMatrix(access).map((item) => ({
+    label: item.label,
+    enabled: item.enabled,
+    description: item.description,
+  }));
 }
 
 function severityScore(severity: AlertSeverity | SymptomSeverity | LabFlag | ReminderState | AlertStatus | string) {

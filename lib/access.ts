@@ -1,13 +1,8 @@
-import { CareAccessRole } from "@prisma/client";
+import type { CareAccessRole } from "@prisma/client";
 import { db } from "@/lib/db";
+import { canUseCarePermission, type CarePermission } from "@/lib/care-permissions";
 
-export type AccessPermission =
-  | "view"
-  | "edit"
-  | "notes"
-  | "export"
-  | "ai"
-  | "alerts";
+export type AccessPermission = CarePermission;
 
 export type OwnerAccessContext = {
   ownerUserId: string;
@@ -54,18 +49,7 @@ export async function requireOwnerAccess(
     throw new Error("Access denied.");
   }
 
-  const allowed =
-    permission === "view" || permission === "alerts"
-      ? grant.canViewRecords
-      : permission === "edit"
-      ? grant.canEditRecords
-      : permission === "notes"
-      ? grant.canAddNotes
-      : permission === "export"
-      ? grant.canExport
-      : grant.canGenerateAIInsights;
-
-  if (!allowed) {
+  if (!canUseCarePermission({ ...grant, isOwner: false }, permission)) {
     throw new Error("You do not have permission for this action.");
   }
 
