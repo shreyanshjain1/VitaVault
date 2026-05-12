@@ -46,7 +46,7 @@ async function getOwnedSavedReport(reportId: string, userId: string) {
   if (!reportId) throw new Error("Saved report id is required.");
   const report = await db.savedReport.findFirst({
     where: { id: reportId, userId },
-    select: { id: true, title: true, status: true, archivedAt: true, reportType: true, presetId: true },
+    select: { id: true, title: true, status: true, archivedAt: true, reportType: true, presetId: true, readinessScore: true },
   });
   if (!report) throw new Error("Saved report not found.");
   return report;
@@ -106,6 +106,15 @@ export async function saveReportPacketAction(formData: FormData) {
   revalidateReportPages();
 }
 
+export async function markSavedReportReviewAction(formData: FormData) {
+  const user = await requireUser();
+  const report = await getOwnedSavedReport(formString(formData, "reportId"), user.id!);
+  if (report.archivedAt) throw new Error("Archived reports cannot be moved back to review until restored.");
+  await db.savedReport.update({ where: { id: report.id }, data: { status: SavedReportStatus.REVIEW } });
+  await writeReportAudit({ ownerUserId: user.id!, actorUserId: user.id!, action: "SAVED_REPORT_MARKED_REVIEW", reportId: report.id, metadata: { previousStatus: report.status } });
+  revalidateReportPages();
+}
+
 export async function markSavedReportSharedAction(formData: FormData) {
   const user = await requireUser();
   const report = await getOwnedSavedReport(formString(formData, "reportId"), user.id!);
@@ -120,5 +129,14 @@ export async function archiveSavedReportAction(formData: FormData) {
   const report = await getOwnedSavedReport(formString(formData, "reportId"), user.id!);
   await db.savedReport.update({ where: { id: report.id }, data: { status: SavedReportStatus.ARCHIVED, archivedAt: new Date() } });
   await writeReportAudit({ ownerUserId: user.id!, actorUserId: user.id!, action: "SAVED_REPORT_ARCHIVED", reportId: report.id, metadata: { previousStatus: report.status } });
+  revalidateReportPages();
+}
+
+export async function restoreSavedReportAction(formData: FormData) {
+  const user = await requireUser();
+  const report = await getOwnedSavedReport(formString(formData, "reportId"), user.id!);
+  const restoredStatus = savedReportStatusFromReadiness(report.readinessScore);
+  await db.savedReport.update({ where: { id: report.id }, data: { status: restoredStatus, archivedAt: null } });
+  await writeReportAudit({ ownerUserId: user.id!, actorUserId: user.id!, action: "SAVED_REPORT_RESTORED", reportId: report.id, metadata: { previousStatus: report.status, restoredStatus } });
   revalidateReportPages();
 }

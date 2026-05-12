@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ArrowRight, CalendarDays, CheckCircle2, FileText, Printer, Save, SlidersHorizontal } from "lucide-react";
+import { SavedReportStatus } from "@prisma/client";
 import { AppShell } from "@/components/app-shell";
-import { archiveSavedReportAction, markSavedReportSharedAction, saveReportPacketAction } from "@/app/report-builder/actions";
+import { archiveSavedReportAction, markSavedReportReviewAction, markSavedReportSharedAction, restoreSavedReportAction, saveReportPacketAction } from "@/app/report-builder/actions";
 import { EmptyState, PageHeader, StatusPill } from "@/components/common";
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, Select } from "@/components/ui";
 import { DataCard, ModuleHero } from "@/components/module-sections";
@@ -16,7 +17,7 @@ import {
   type ReportHistoryItem,
   type ReportType,
 } from "@/lib/report-builder";
-import type { SavedReportHistoryItem } from "@/lib/report-history";
+import type { SavedReportHistoryFilter, SavedReportHistoryItem } from "@/lib/report-history";
 
 const reportTypeOptions: Array<{ value: ReportType; label: string; description: string }> = [
   { value: "patient", label: "Patient summary", description: "Broad personal record packet" },
@@ -40,6 +41,28 @@ function historyTone(status: ReportHistoryItem["status"]) {
 
 function formatDateTime(value: Date) {
   return new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeStyle: "short" }).format(value);
+}
+
+
+type ReportBuilderSearchParams = Record<string, string | string[] | undefined>;
+
+function searchParamValue(params: ReportBuilderSearchParams, key: string) {
+  const value = params[key];
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function buildReportBuilderHistoryHref(params: ReportBuilderSearchParams, history: SavedReportHistoryFilter) {
+  const query = new URLSearchParams();
+
+  for (const key of ["preset", "type", "sections", "from", "to"]) {
+    const value = searchParamValue(params, key);
+    if (value) query.set(key, value);
+  }
+
+  if (history !== "active") query.set("history", history);
+
+  const serialized = query.toString();
+  return `/report-builder${serialized ? `?${serialized}` : ""}`;
 }
 
 function ProgressBar({ value }: { value: number }) {
@@ -73,23 +96,46 @@ function SavedReportCard({ item }: { item: SavedReportHistoryItem }) {
   return (
     <div className="rounded-2xl border border-border/60 bg-background/50 p-4">
       <div className="flex items-start justify-between gap-3">
-        <StatusPill tone={item.tone}>{item.statusLabel}</StatusPill>
+        <div className="flex flex-wrap gap-2">
+          <StatusPill tone={item.tone}>{item.statusLabel}</StatusPill>
+          {item.presetLabel ? <Badge>{item.presetLabel}</Badge> : null}
+        </div>
         <Badge>{item.readinessScore}% ready</Badge>
       </div>
       <p className="mt-3 font-medium">{item.title}</p>
       <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
-      <p className="mt-3 text-xs text-muted-foreground">Saved {formatDateTime(item.createdAt)} • {item.recordCount} item{item.recordCount === 1 ? "" : "s"}</p>
+      <p className="mt-3 text-xs text-muted-foreground">
+        Saved {formatDateTime(item.createdAt)} • {item.recordCount} item{item.recordCount === 1 ? "" : "s"}
+        {item.archivedAt ? ` • Archived ${formatDateTime(item.archivedAt)}` : ""}
+      </p>
       <div className="mt-4 flex flex-wrap gap-2">
         <Link href={item.packetHref} className="inline-flex h-9 items-center justify-center rounded-xl border border-border/70 bg-background/60 px-3 text-xs font-medium transition hover:bg-muted/60">Open</Link>
         <Link href={item.printHref} className="inline-flex h-9 items-center justify-center rounded-xl border border-border/70 bg-background/60 px-3 text-xs font-medium transition hover:bg-muted/60">Print</Link>
-        <form action={markSavedReportSharedAction}>
-          <input type="hidden" name="reportId" value={item.id} />
-          <Button type="submit" variant="ghost" size="sm">Mark shared</Button>
-        </form>
-        <form action={archiveSavedReportAction}>
-          <input type="hidden" name="reportId" value={item.id} />
-          <Button type="submit" variant="ghost" size="sm">Archive</Button>
-        </form>
+        {item.isArchived ? (
+          <form action={restoreSavedReportAction}>
+            <input type="hidden" name="reportId" value={item.id} />
+            <Button type="submit" variant="ghost" size="sm">Restore</Button>
+          </form>
+        ) : (
+          <>
+            {item.status !== SavedReportStatus.REVIEW ? (
+              <form action={markSavedReportReviewAction}>
+                <input type="hidden" name="reportId" value={item.id} />
+                <Button type="submit" variant="ghost" size="sm">Mark review</Button>
+              </form>
+            ) : null}
+            {item.status !== SavedReportStatus.SHARED ? (
+              <form action={markSavedReportSharedAction}>
+                <input type="hidden" name="reportId" value={item.id} />
+                <Button type="submit" variant="ghost" size="sm">Mark shared</Button>
+              </form>
+            ) : null}
+            <form action={archiveSavedReportAction}>
+              <input type="hidden" name="reportId" value={item.id} />
+              <Button type="submit" variant="ghost" size="sm">Archive</Button>
+            </form>
+          </>
+        )}
       </div>
     </div>
   );
@@ -116,7 +162,8 @@ export default async function ReportBuilderPage({ searchParams }: { searchParams
   const sections = Array.isArray(params.sections) ? params.sections.join(",") : typeof params.sections === "string" ? params.sections : undefined;
   const from = typeof params.from === "string" ? params.from : "";
   const to = typeof params.to === "string" ? params.to : "";
-  const data = await getReportBuilderData({ preset, reportType, sections, from, to });
+  const history = typeof params.history === "string" ? params.history : undefined;
+  const data = await getReportBuilderData({ preset, reportType, sections, from, to, history });
   const selectedSectionsQuery = sectionQuery(data.selectedSections);
   const printHref = buildReportPrintHref({ preset: data.selectedPreset?.id, reportType: data.reportType, sections: selectedSectionsQuery, from: data.range.from, to: data.range.to });
 
@@ -338,15 +385,32 @@ export default async function ReportBuilderPage({ searchParams }: { searchParams
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="grid gap-3 sm:grid-cols-5">
-              <DataCard className="rounded-2xl p-4"><p className="text-xs text-muted-foreground">Saved</p><p className="mt-1 text-2xl font-semibold">{data.savedReportStats.total}</p></DataCard>
-              <DataCard className="rounded-2xl p-4"><p className="text-xs text-muted-foreground">Generated</p><p className="mt-1 text-2xl font-semibold">{data.savedReportStats.generated}</p></DataCard>
+              <DataCard className="rounded-2xl p-4"><p className="text-xs text-muted-foreground">Active</p><p className="mt-1 text-2xl font-semibold">{data.savedReportStats.active}</p></DataCard>
               <DataCard className="rounded-2xl p-4"><p className="text-xs text-muted-foreground">Review</p><p className="mt-1 text-2xl font-semibold">{data.savedReportStats.review}</p></DataCard>
               <DataCard className="rounded-2xl p-4"><p className="text-xs text-muted-foreground">Shared</p><p className="mt-1 text-2xl font-semibold">{data.savedReportStats.shared}</p></DataCard>
+              <DataCard className="rounded-2xl p-4"><p className="text-xs text-muted-foreground">Archived</p><p className="mt-1 text-2xl font-semibold">{data.savedReportStats.archived}</p></DataCard>
               <DataCard className="rounded-2xl p-4"><p className="text-xs text-muted-foreground">Avg. readiness</p><p className="mt-1 text-2xl font-semibold">{data.savedReportStats.averageReadiness}%</p></DataCard>
             </div>
+
+            <div className="flex flex-wrap gap-2">
+              {data.savedReportHistoryFilters.map((filter) => {
+                const isActive = data.savedReportHistoryFilter === filter.value;
+                return (
+                  <Link
+                    key={filter.value}
+                    href={buildReportBuilderHistoryHref(params, filter.value)}
+                    className={`inline-flex h-9 items-center justify-center rounded-xl border px-3 text-xs font-medium transition ${isActive ? "border-primary/50 bg-primary/10 text-primary" : "border-border/70 bg-background/60 hover:bg-muted/60"}`}
+                    title={filter.description}
+                  >
+                    {filter.label}
+                  </Link>
+                );
+              })}
+            </div>
+
             <div className="grid gap-3 md:grid-cols-3">
               {data.savedReports.map((item) => <SavedReportCard key={item.id} item={item} />)}
-              {data.savedReports.length === 0 ? <EmptyState title="No saved reports yet" description="Save the current packet to create a real report history record." /> : null}
+              {data.savedReports.length === 0 ? <EmptyState title="No saved reports in this view" description="Save the current packet or switch history filters to review older packets." /> : null}
             </div>
           </CardContent>
         </Card>

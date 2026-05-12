@@ -2,13 +2,16 @@ import { describe, expect, it } from "vitest";
 import { SavedReportStatus } from "@prisma/client";
 import {
   buildSavedReportDescription,
+  buildSavedReportHistoryWhere,
   formatSavedReportRange,
   mapSavedReportToHistoryItem,
+  normalizeSavedReportHistoryFilter,
   parseSavedReportSections,
   savedReportStatusFromReadiness,
   savedReportStatusLabel,
   savedReportStatusTone,
   summarizeSavedReportStats,
+  savedReportHistoryFilterOptions,
 } from "@/lib/report-history";
 
 describe("report history helpers", () => {
@@ -30,16 +33,31 @@ describe("report history helpers", () => {
 
   it("summarizes saved report stats", () => {
     const stats = summarizeSavedReportStats([
-      { status: SavedReportStatus.GENERATED, readinessScore: 90 },
-      { status: SavedReportStatus.REVIEW, readinessScore: 60 },
-      { status: SavedReportStatus.SHARED, readinessScore: 80 },
+      { status: SavedReportStatus.GENERATED, readinessScore: 90, archivedAt: null },
+      { status: SavedReportStatus.REVIEW, readinessScore: 60, archivedAt: null },
+      { status: SavedReportStatus.SHARED, readinessScore: 80, archivedAt: null },
+      { status: SavedReportStatus.ARCHIVED, readinessScore: 70, archivedAt: new Date("2026-05-02T00:00:00.000Z") },
     ]);
 
-    expect(stats.total).toBe(3);
+    expect(stats.total).toBe(4);
+    expect(stats.active).toBe(3);
     expect(stats.generated).toBe(1);
     expect(stats.review).toBe(1);
     expect(stats.shared).toBe(1);
-    expect(stats.averageReadiness).toBe(77);
+    expect(stats.archived).toBe(1);
+    expect(stats.averageReadiness).toBe(75);
+  });
+
+
+  it("normalizes and builds saved report history filters", () => {
+    expect(normalizeSavedReportHistoryFilter(undefined)).toBe("active");
+    expect(normalizeSavedReportHistoryFilter("SHARED")).toBe("shared");
+    expect(normalizeSavedReportHistoryFilter("bad-filter")).toBe("active");
+    expect(savedReportHistoryFilterOptions.map((option) => option.value)).toContain("archived");
+
+    expect(buildSavedReportHistoryWhere("user_1", "active")).toEqual({ userId: "user_1", archivedAt: null });
+    expect(buildSavedReportHistoryWhere("user_1", "archived")).toEqual({ userId: "user_1", archivedAt: { not: null } });
+    expect(buildSavedReportHistoryWhere("user_1", "review")).toEqual({ userId: "user_1", status: SavedReportStatus.REVIEW, archivedAt: null });
   });
 
   it("maps database records to history cards", () => {
@@ -60,6 +78,7 @@ describe("report history helpers", () => {
       printHref: "/report-builder/print?type=doctor",
       createdAt,
       updatedAt: createdAt,
+      archivedAt: null,
     });
 
     expect(item.presetLabel).toBe("Doctor visit packet");
