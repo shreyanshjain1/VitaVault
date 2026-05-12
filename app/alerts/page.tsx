@@ -5,6 +5,7 @@ import { PageHeader, StatusPill } from "@/components/common";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
 import { requireUser } from "@/lib/session";
 import { getAlertList, getAlertRules } from "@/lib/alerts/queries";
+import { buildAlertWorkflowSummary } from "@/lib/alerts/workflow";
 import { AlertFilterBar } from "@/components/alerts/alert-filter-bar";
 import { AlertList } from "@/components/alerts/alert-list";
 import { sendAlertDigestAction } from "./actions";
@@ -21,7 +22,6 @@ export default async function AlertsPage({
   const severity = typeof params.severity === "string" ? params.severity : "ALL";
   const category = typeof params.category === "string" ? params.category : "ALL";
 
-
   const [alerts, rules] = await Promise.all([
     getAlertList({
       userId: currentUser.id!,
@@ -32,6 +32,7 @@ export default async function AlertsPage({
     getAlertRules({ userId: currentUser.id! }),
   ]);
 
+  const workflowSummary = buildAlertWorkflowSummary(alerts);
   const openCount = alerts.filter((item) => item.status === "OPEN").length;
   const criticalCount = alerts.filter((item) => item.severity === "CRITICAL").length;
 
@@ -105,6 +106,24 @@ export default async function AlertsPage({
                 </div>
                 <p className="mt-4 text-4xl font-semibold">{rules.length}</p>
               </div>
+
+              <div className="rounded-3xl border border-border/60 bg-background/40 p-5">
+                <p className="text-sm font-medium text-muted-foreground">Urgent triage</p>
+                <p className="mt-4 text-4xl font-semibold">{workflowSummary.urgent}</p>
+                <p className="mt-2 text-xs text-muted-foreground">Critical/high open alerts needing fast review.</p>
+              </div>
+
+              <div className="rounded-3xl border border-border/60 bg-background/40 p-5">
+                <p className="text-sm font-medium text-muted-foreground">In review</p>
+                <p className="mt-4 text-4xl font-semibold">{workflowSummary.inReview}</p>
+                <p className="mt-2 text-xs text-muted-foreground">Acknowledged alerts waiting for final outcome.</p>
+              </div>
+
+              <div className="rounded-3xl border border-border/60 bg-background/40 p-5">
+                <p className="text-sm font-medium text-muted-foreground">Care-team visible</p>
+                <p className="mt-4 text-4xl font-semibold">{workflowSummary.careTeamVisible}</p>
+                <p className="mt-2 text-xs text-muted-foreground">Events shared into collaborative review.</p>
+              </div>
             </CardContent>
           </Card>
 
@@ -118,9 +137,13 @@ export default async function AlertsPage({
                   <ShieldCheck className="mt-0.5 h-4 w-4 text-primary" />
                   <div>
                     <p className="text-sm font-semibold">Care-team visibility</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Shared alerts show whether they are owner-only, care-team visible, or part of closed history.
+                    </p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <StatusPill tone="info">Owner view</StatusPill>
                       <StatusPill tone="neutral">Rule-linked access</StatusPill>
+                      <StatusPill tone="warning">Triage workflow</StatusPill>
                     </div>
                   </div>
                 </div>

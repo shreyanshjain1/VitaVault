@@ -7,6 +7,9 @@ export type AlertListItem = {
   category: string;
   createdAt: Date;
   visibleToCareTeam: boolean;
+  ownerAcknowledgedAt?: Date | null;
+  resolvedAt?: Date | null;
+  dismissedAt?: Date | null;
   rule?: { name?: string | null } | null;
   sourceType?: string | null;
   sourceId?: string | null;
