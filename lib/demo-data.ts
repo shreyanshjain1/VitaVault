@@ -41,6 +41,7 @@ export const demoNav: DemoNavItem[] = [
   { href: "/demo/doctors", label: "Doctors", description: "Care provider directory" },
   { href: "/demo/documents", label: "Documents", description: "Protected file index" },
   { href: "/demo/care-team", label: "Care Team", description: "Shared access preview" },
+  { href: "/demo/care-notes", label: "Care Notes", description: "Shared handoff notes" },
   { href: "/demo/ai-insights", label: "AI Insights", description: "AI-assisted summaries" },
   { href: "/demo/alerts", label: "Alerts", description: "Alert events and rules" },
   { href: "/demo/timeline", label: "Timeline", description: "Merged patient activity" },
@@ -48,6 +49,7 @@ export const demoNav: DemoNavItem[] = [
   { href: "/demo/review-queue", label: "Review Queue", description: "Care review workload" },
   { href: "/demo/summary", label: "Summary", description: "Patient handoff summary" },
   { href: "/demo/exports", label: "Exports", description: "Portable reports" },
+  { href: "/demo/report-builder", label: "Report Builder", description: "Custom packet builder" },
   { href: "/demo/device-connection", label: "Device Connections", description: "Connected data readiness" },
   { href: "/demo/device-sync-simulator", label: "Device Sync Simulator", description: "Connected-device sync demo" },
   { href: "/demo/audit-log", label: "Audit Log", description: "Unified audit trail" },
@@ -127,6 +129,25 @@ export const demoCareTeam = {
   ],
 };
 
+export const demoCareNotesHub = {
+  metrics: [
+    { label: "Open notes", value: "7", note: "2 clinical, 3 caregiver, 2 admin follow-ups" },
+    { label: "Linked records", value: "12", note: "Labs, symptoms, reminders, alerts, and documents" },
+    { label: "Unread replies", value: "3", note: "Doctor and caregiver handoff comments" },
+    { label: "Escalations", value: "2", note: "Items needing provider review before export" },
+  ],
+  notes: [
+    { title: "Endocrinology visit prep", category: "Clinical", author: "Dr. Angela Santos", status: "Needs review", detail: "Bring A1C, LDL, medication adherence, and foot tingling timeline into the visit packet." },
+    { title: "Caregiver medication observation", category: "Caregiver", author: "Marco Cruz", status: "Open", detail: "Atorvastatin was skipped twice this week because the evening alarm was missed." },
+    { title: "Lab document handoff", category: "Admin", author: "Admin Support", status: "Done", detail: "A1C lab PDF has been linked to the April 20 result and summary export." },
+  ],
+  workflow: [
+    "Care notes keep family, clinicians, and admin support aligned without exposing unrelated records.",
+    "Notes can be linked to alerts, labs, symptoms, reminders, documents, and report packets.",
+    "The real app uses permission checks so shared users only see notes within their approved scope.",
+  ],
+};
+
 export const demoAiInsights = [
   { title: "Blood sugar stability is improving", severity: "Positive", summary: "Recent fasting glucose and A1C trends suggest better adherence and diet consistency over the last 8 weeks." },
   { title: "Neuropathy watch signal", severity: "Monitor", summary: "Foot tingling has appeared twice this month. Recommend discussing neuropathy screening and vitamin B12 status." },
@@ -181,6 +202,27 @@ export const demoExports = [
   { name: "Document Index CSV", format: "CSV", status: "Ready", note: "Shows protected file access references" },
   { name: "Alerts Snapshot CSV", format: "CSV", status: "Ready", note: "Useful for admin review and handoff" },
 ];
+
+export const demoReportBuilderHub = {
+  presets: [
+    { name: "Doctor Visit Packet", audience: "Clinician", sections: "Profile, labs, vitals, medications, symptoms, notes", status: "Ready" },
+    { name: "Emergency Summary", audience: "Emergency contact", sections: "Allergies, conditions, medications, contacts", status: "Ready" },
+    { name: "Care Team Handoff", audience: "Caregiver", sections: "Tasks, reminders, notes, alerts, upcoming visits", status: "Draft" },
+    { name: "Device Review Export", audience: "Ops / QA", sections: "Connections, readings, sync jobs, stale providers", status: "Preview" },
+  ],
+  history: [
+    { title: "Endocrinology visit packet", generatedAt: "Apr 24, 2026 · 8:15 AM", format: "PDF", status: "Saved" },
+    { title: "Medication adherence CSV", generatedAt: "Apr 23, 2026 · 6:30 PM", format: "CSV", status: "Saved" },
+    { title: "Care team handoff packet", generatedAt: "Apr 22, 2026 · 9:10 AM", format: "PDF", status: "Archived" },
+  ],
+  checks: [
+    { label: "Patient identity", value: "Included" },
+    { label: "Recent labs", value: "Included" },
+    { label: "Open alerts", value: "Included" },
+    { label: "Care notes", value: "Included" },
+    { label: "Device context", value: "Optional" },
+  ],
+};
 
 export const demoDevices = [
   { provider: "Health Connect", status: "Active", lastSync: "15 minutes ago", readings: "Glucose, steps, weight" },
@@ -254,14 +296,14 @@ export const demoTourSteps = [
   {
     step: "02",
     title: "Review the care workflow hubs",
-    route: "/notifications",
+    route: "/demo/notifications",
     status: "Workflow hubs",
     body: "Notification Center, Care Plan, Visit Prep, and Emergency Card show how VitaVault turns records into next actions.",
   },
   {
     step: "03",
     title: "Inspect clinical review depth",
-    route: "/trends",
+    route: "/demo/trends",
     status: "Clinical review",
     body: "Health Trends, Medication Safety, Lab Review, Vitals Monitor, and Symptom Review show interpretation surfaces on top of records.",
   },
@@ -303,7 +345,7 @@ export const demoPersona = {
 };
 
 export const demoShowcaseMetrics = [
-  { label: "Demo modules", value: "25", note: "Public read-only pages plus a guided walkthrough for reviewers" },
+  { label: "Demo modules", value: "40", note: "Public read-only pages plus a guided walkthrough for reviewers" },
   { label: "Clinical records", value: "9", note: "Profile, meds, labs, vitals, symptoms, vaccines, doctors, documents, timeline" },
   { label: "Workflow layers", value: "12+", note: "Notifications, care plan, visit prep, alerts, reminders, review, exports, device sync, jobs" },
   { label: "Ops surfaces", value: "5", note: "Security, audit log, admin, ops, jobs, and reviewer-friendly controls" },
@@ -331,6 +373,7 @@ export const demoProductHubs = [
   { label: "Visit Prep", href: "/demo/visit-prep", layer: "Care workflow", body: "Provider-ready appointment prep with missing context, recent labs, symptoms, vitals, documents, and doctor packet handoff." },
   { label: "Data Quality Center", href: "/demo/data-quality", layer: "Care workflow", body: "Record cleanup command center for profile gaps, stale vitals, device sync health, alerts, report readiness, and care-team handoff quality." },
   { label: "Emergency Card", href: "/demo/emergency-card", layer: "Reports", body: "Printable emergency profile with blood type, allergies, conditions, contacts, active medications, and latest vitals." },
+  { label: "Care Notes", href: "/demo/care-notes", layer: "Care workflow", body: "Shared handoff notes connecting caregivers, clinicians, records, alerts, reminders, and report packets." },
   { label: "Health Trends", href: "/demo/trends", layer: "Clinical review", body: "Trend coverage, risk scoring, vital averages, lab flags, symptom severity, adherence, and merged clinical timeline." },
   { label: "Medication Safety", href: "/demo/medication-safety", layer: "Clinical review", body: "Dose board, adherence signal, missed/skipped rates, medication reminders, safety actions, and provider context." },
   { label: "Lab Review", href: "/demo/lab-review", layer: "Clinical review", body: "Lab readiness, abnormal/borderline action queue, trend cards, document coverage, and provider review guidance." },
@@ -339,13 +382,14 @@ export const demoProductHubs = [
   { label: "Device Sync Simulator", href: "/demo/device-sync-simulator", layer: "Platform", body: "Simulated Apple Health, Health Connect, BP monitor, pulse ox, and smart scale sync flow for reviewer demos." },
   { label: "Audit Log", href: "/demo/audit-log", layer: "Security/Ops", body: "Unified audit feed for care access, alerts, reminders, jobs, and mobile/API session events." },
   { label: "Mobile API Docs", href: "/demo/api-docs", layer: "Platform", body: "Product-facing documentation for mobile login, bearer sessions, device connections, and reading ingestion." },
+  { label: "Report Builder", href: "/demo/report-builder", layer: "Reports", body: "Custom patient, doctor, emergency, device, and care-team packets with saved report history." },
 ];
 
 export const demoFeatureMatrix = [
   { layer: "Patient records", modules: "Profile, medications, appointments, doctors, labs, vitals, symptoms, vaccines, documents", value: "Broad structured health data coverage" },
   { layer: "Care workflows", modules: "Notifications, care plan, visit prep, data quality, reminders, alerts, review queue", value: "Turns stored records into clear next actions" },
   { layer: "Clinical review", modules: "Trends, medication safety, lab review, vitals monitor, symptom review", value: "Adds interpretation surfaces without requiring a new schema" },
-  { layer: "Reports", modules: "Summary packet, emergency card, exports, print views", value: "Supports doctor visits and portable handoffs" },
+  { layer: "Reports", modules: "Summary packet, emergency card, report builder, exports, print views", value: "Supports doctor visits and portable handoffs" },
   { layer: "Platform", modules: "Device sync APIs, jobs, ops, admin, audit, security", value: "Shows production-minded backend and operations work" },
 ];
 
