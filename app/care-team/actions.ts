@@ -483,8 +483,6 @@ export async function revokeCareAccessAction(formData: FormData) {
     throw new Error("Access record not found.");
   }
 
-  const permissions = permissionsFromForm(formData);
-
   await db.careAccess.update({
     where: { id: access.id },
     data: {

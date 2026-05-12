@@ -8,7 +8,6 @@ import {
   HeartPulse,
   Lock,
   RefreshCcw,
-  ShieldCheck,
   Smartphone,
   Watch,
 } from "lucide-react";
