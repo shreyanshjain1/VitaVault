@@ -6,14 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
 import { AlertStatusForm } from "@/components/alerts/alert-status-form";
 import { getAlertDetail } from "@/lib/alerts/queries";
 import { describeAlertSource } from "@/lib/alerts/source";
+import { buildAlertWorkflowCard } from "@/lib/alerts/workflow";
 import { requireUser } from "@/lib/session";
-
-function toneFromSeverity(severity: string): "neutral" | "info" | "success" | "warning" | "danger" {
-  if (severity === "CRITICAL") return "danger";
-  if (severity === "HIGH") return "warning";
-  if (severity === "MEDIUM") return "info";
-  return "neutral";
-}
 
 export default async function AlertDetailPage({
   params,
@@ -31,6 +25,9 @@ export default async function AlertDetailPage({
   if (!alert) {
     notFound();
   }
+
+  const workflow = buildAlertWorkflowCard(alert);
+  const statusClosed = ["RESOLVED", "DISMISSED"].includes(alert.status);
 
   return (
     <AppShell>
@@ -55,9 +52,30 @@ export default async function AlertDetailPage({
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="flex flex-wrap gap-2">
-                <StatusPill tone={toneFromSeverity(alert.severity)}>{alert.severity}</StatusPill>
-                <StatusPill tone="neutral">{alert.status}</StatusPill>
-                <StatusPill tone="info">{alert.category}</StatusPill>
+                <StatusPill tone={workflow.triage.tone}>{workflow.triage.label}</StatusPill>
+                <StatusPill tone="neutral">{workflow.statusLabel}</StatusPill>
+                <StatusPill tone={workflow.triage.tone}>{workflow.severityLabel}</StatusPill>
+                <StatusPill tone="info">{workflow.categoryLabel}</StatusPill>
+                <StatusPill tone={workflow.visibility.tone}>{workflow.visibility.label}</StatusPill>
+              </div>
+
+              <div className="rounded-3xl border border-border/60 bg-background/60 p-5">
+                <p className="text-sm font-semibold">Workflow signal</p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{workflow.triage.nextAction}</p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-border/60 bg-background/50 p-3">
+                    <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Age</p>
+                    <p className="mt-1 text-sm font-semibold">{workflow.ageLabel}</p>
+                  </div>
+                  <div className="rounded-2xl border border-border/60 bg-background/50 p-3">
+                    <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Visibility</p>
+                    <p className="mt-1 text-sm font-semibold">{workflow.visibility.label}</p>
+                  </div>
+                  <div className="rounded-2xl border border-border/60 bg-background/50 p-3">
+                    <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Review state</p>
+                    <p className="mt-1 text-sm font-semibold">{statusClosed ? "Closed" : "Actionable"}</p>
+                  </div>
+                </div>
               </div>
 
               <dl className="grid gap-4 text-sm sm:grid-cols-2">
@@ -77,6 +95,22 @@ export default async function AlertDetailPage({
                   <dt className="text-muted-foreground">Source recorded</dt>
                   <dd className="mt-1 font-medium">
                     {alert.sourceRecordedAt ? new Date(alert.sourceRecordedAt).toLocaleString() : "Not available"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Acknowledged</dt>
+                  <dd className="mt-1 font-medium">
+                    {alert.ownerAcknowledgedAt ? new Date(alert.ownerAcknowledgedAt).toLocaleString() : "Not yet"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Closed</dt>
+                  <dd className="mt-1 font-medium">
+                    {alert.resolvedAt
+                      ? new Date(alert.resolvedAt).toLocaleString()
+                      : alert.dismissedAt
+                        ? new Date(alert.dismissedAt).toLocaleString()
+                        : "Not closed"}
                   </dd>
                 </div>
               </dl>
@@ -105,8 +139,19 @@ export default async function AlertDetailPage({
               <CardHeader>
                 <CardTitle>Update status</CardTitle>
               </CardHeader>
-              <CardContent>
-                <AlertStatusForm alertId={alert.id} disabled={["RESOLVED", "DISMISSED"].includes(alert.status)} />
+              <CardContent className="space-y-4">
+                <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
+                  <p className="text-sm font-semibold">Triage checklist</p>
+                  <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+                    {workflow.triage.checklist.map((item) => (
+                      <li key={item} className="flex gap-2">
+                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <AlertStatusForm alertId={alert.id} disabled={statusClosed} />
               </CardContent>
             </Card>
 
