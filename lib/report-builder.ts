@@ -18,7 +18,7 @@ import {
   type ReportType,
 } from "@/lib/report-builder-presets";
 import { requireUser } from "@/lib/session";
-import { mapSavedReportToHistoryItem, summarizeSavedReportStats } from "@/lib/report-history";
+import { buildSavedReportHistoryWhere, mapSavedReportToHistoryItem, normalizeSavedReportHistoryFilter, savedReportHistoryFilterOptions, summarizeSavedReportStats } from "@/lib/report-history";
 
 export { buildReportBuilderHref, buildReportPrintHref, reportBuilderPresets, sectionQuery } from "@/lib/report-builder-presets";
 export type { ReportPresetDefinition, ReportPresetId, ReportSectionKey, ReportType } from "@/lib/report-builder-presets";
@@ -29,6 +29,7 @@ export type ReportBuilderOptions = {
   sections?: string;
   from?: string;
   to?: string;
+  history?: string;
 };
 
 export type ReportSectionDefinition = {
@@ -166,6 +167,8 @@ export async function getReportBuilderData(options: ReportBuilderOptions = {}) {
   const from = parseDate(controls.from);
   const to = parseDate(controls.to);
   const selectedPreset = getReportBuilderPreset(controls.presetId);
+  const savedReportHistoryFilter = normalizeSavedReportHistoryFilter(options.history);
+  const savedReportHistoryWhere = buildSavedReportHistoryWhere(user.id!, savedReportHistoryFilter);
   const thirtyDaysAgo = new Date(now);
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -185,6 +188,7 @@ export async function getReportBuilderData(options: ReportBuilderOptions = {}) {
     careAccess,
     careNotes,
     savedReports,
+    savedReportStatsSource,
     aiInsight,
   ] = await Promise.all([
     db.healthProfile.findUnique({ where: { userId: user.id } }),
@@ -257,7 +261,7 @@ export async function getReportBuilderData(options: ReportBuilderOptions = {}) {
       include: { author: { select: { name: true, email: true, role: true } } },
     }),
     db.savedReport.findMany({
-      where: { userId: user.id, archivedAt: null },
+      where: savedReportHistoryWhere,
       orderBy: { createdAt: "desc" },
       take: 6,
       select: {
@@ -276,7 +280,12 @@ export async function getReportBuilderData(options: ReportBuilderOptions = {}) {
         printHref: true,
         createdAt: true,
         updatedAt: true,
+        archivedAt: true,
       },
+    }),
+    db.savedReport.findMany({
+      where: { userId: user.id },
+      select: { status: true, readinessScore: true, archivedAt: true },
     }),
     db.aiInsight.findFirst({
       where: { ownerUserId: user.id },
@@ -413,7 +422,9 @@ export async function getReportBuilderData(options: ReportBuilderOptions = {}) {
       medicationAdherenceRate,
     },
     savedReports: savedReports.map(mapSavedReportToHistoryItem),
-    savedReportStats: summarizeSavedReportStats(savedReports),
+    savedReportStats: summarizeSavedReportStats(savedReportStatsSource),
+    savedReportHistoryFilter,
+    savedReportHistoryFilters: savedReportHistoryFilterOptions,
     profile,
     medications,
     appointments,
