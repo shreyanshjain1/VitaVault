@@ -10,7 +10,12 @@ import {
 import { db } from "@/lib/db";
 
 export type NotificationPriority = "critical" | "high" | "medium" | "low";
-export type NotificationTone = "danger" | "warning" | "info" | "success" | "neutral";
+export type NotificationTone =
+  | "danger"
+  | "warning"
+  | "info"
+  | "success"
+  | "neutral";
 export type NotificationSource =
   | "ALERT"
   | "REMINDER"
@@ -19,6 +24,14 @@ export type NotificationSource =
   | "DOCUMENT"
   | "CARE"
   | "DEVICE";
+
+export type NotificationReliabilityState =
+  | "urgent"
+  | "due_now"
+  | "follow_up"
+  | "stale"
+  | "scheduled"
+  | "review";
 
 export type NotificationItem = {
   id: string;
@@ -39,6 +52,34 @@ export type NotificationItem = {
 export type NotificationCenterFilters = {
   source?: string;
   priority?: string;
+  state?: string;
+};
+
+export type NotificationItemSignal = {
+  state: NotificationReliabilityState;
+  label: string;
+  tone: NotificationTone;
+  actionLabel: string;
+  cleanupHint: string;
+  ageLabel: string;
+  isStale: boolean;
+  isActionable: boolean;
+};
+
+export type NotificationReliabilitySummary = {
+  urgent: number;
+  dueNow: number;
+  followUp: number;
+  stale: number;
+  scheduled: number;
+  review: number;
+  actionable: number;
+  cleanupCandidates: number;
+  byState: Array<{
+    state: NotificationReliabilityState;
+    label: string;
+    count: number;
+  }>;
 };
 
 function addDays(date: Date, days: number) {
@@ -68,13 +109,18 @@ function alertPriority(severity: AlertSeverity): NotificationPriority {
 }
 
 function alertTone(severity: AlertSeverity): NotificationTone {
-  if (severity === AlertSeverity.CRITICAL || severity === AlertSeverity.HIGH) return "danger";
+  if (severity === AlertSeverity.CRITICAL || severity === AlertSeverity.HIGH)
+    return "danger";
   if (severity === AlertSeverity.MEDIUM) return "warning";
   return "info";
 }
 
-function reminderPriority(state: ReminderState, dueAt: Date): NotificationPriority {
-  if (state === ReminderState.OVERDUE || dueAt.getTime() < Date.now()) return "high";
+function reminderPriority(
+  state: ReminderState,
+  dueAt: Date,
+): NotificationPriority {
+  if (state === ReminderState.OVERDUE || dueAt.getTime() < Date.now())
+    return "high";
   if (dueAt.getTime() - Date.now() <= 4 * 60 * 60 * 1000) return "medium";
   return "low";
 }
@@ -91,24 +137,243 @@ function labTone(flag: LabFlag): NotificationTone {
   return "success";
 }
 
-function matchesFilter(item: NotificationItem, filters: NotificationCenterFilters) {
-  const source = filters.source && filters.source !== "ALL" ? filters.source : undefined;
-  const priority = filters.priority && filters.priority !== "ALL" ? filters.priority : undefined;
+function dayDifference(from: Date, to: Date) {
+  const start = new Date(from);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(to);
+  end.setHours(0, 0, 0, 0);
+  return Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000));
+}
+
+export function formatNotificationAgeLabel(
+  referenceDate: Date,
+  now = new Date(),
+) {
+  const days = dayDifference(now, referenceDate);
+
+  if (days === 0)
+    return referenceDate.getTime() >= now.getTime()
+      ? "Due today"
+      : "Updated today";
+  if (days === 1) return "Due tomorrow";
+  if (days > 1) return `Due in ${days} days`;
+  if (days === -1) return "1 day old";
+  return `${Math.abs(days)} days old`;
+}
+
+function isOlderThan(referenceDate: Date, now: Date, days: number) {
+  return referenceDate.getTime() < now.getTime() - days * 24 * 60 * 60 * 1000;
+}
+
+export function getNotificationActionLabel(
+  item: Pick<NotificationItem, "source" | "status" | "priority">,
+) {
+  if (item.source === "ALERT") {
+    return item.status === AlertStatus.ACKNOWLEDGED
+      ? "Resolve acknowledged alert"
+      : "Acknowledge or resolve alert";
+  }
+  if (item.source === "REMINDER") {
+    return item.status === ReminderState.OVERDUE ||
+      item.status === ReminderState.MISSED
+      ? "Complete, snooze, or skip overdue reminder"
+      : "Complete, snooze, or skip reminder";
+  }
+  if (item.source === "APPOINTMENT") return "Prepare visit packet";
+  if (item.source === "LAB") return "Review abnormal lab result";
+  if (item.source === "DOCUMENT") return "Link or document review notes";
+  if (item.source === "CARE") return "Review care-team invite";
+  if (item.source === "DEVICE") return "Review device sync health";
+  return item.priority === "critical" || item.priority === "high"
+    ? "Review now"
+    : "Create follow-up";
+}
+
+export function getNotificationItemSignal(
+  item: NotificationItem,
+  now = new Date(),
+): NotificationItemSignal {
+  const referenceDate = item.dueAt || item.createdAt;
+  const stale = isOlderThan(
+    referenceDate,
+    now,
+    item.priority === "low" ? 21 : 14,
+  );
+  const actionLabel = getNotificationActionLabel(item);
+
+  if (
+    item.priority === "critical" ||
+    (item.source === "DEVICE" && item.status === DeviceConnectionStatus.ERROR)
+  ) {
+    return {
+      state: "urgent",
+      label: "Urgent",
+      tone: "danger",
+      actionLabel,
+      cleanupHint: "Handle this before routine notification cleanup.",
+      ageLabel: formatNotificationAgeLabel(referenceDate, now),
+      isStale: stale,
+      isActionable: true,
+    };
+  }
+
+  if (
+    item.source === "REMINDER" &&
+    (item.status === ReminderState.OVERDUE ||
+      item.status === ReminderState.MISSED ||
+      (item.dueAt && item.dueAt.getTime() <= now.getTime()))
+  ) {
+    return {
+      state: "due_now",
+      label: "Due now",
+      tone: "warning",
+      actionLabel,
+      cleanupHint: "Complete, snooze, or skip to clear this item.",
+      ageLabel: formatNotificationAgeLabel(referenceDate, now),
+      isStale: stale,
+      isActionable: true,
+    };
+  }
+
+  if (item.status === AlertStatus.ACKNOWLEDGED) {
+    return {
+      state: "follow_up",
+      label: "Follow-up",
+      tone: "info",
+      actionLabel,
+      cleanupHint:
+        "Resolve this acknowledged item once the follow-up is complete.",
+      ageLabel: formatNotificationAgeLabel(referenceDate, now),
+      isStale: stale,
+      isActionable: true,
+    };
+  }
+
+  if (stale) {
+    return {
+      state: "stale",
+      label: "Stale",
+      tone: "neutral",
+      actionLabel,
+      cleanupHint:
+        "Create a follow-up or resolve the source record so it leaves the inbox.",
+      ageLabel: formatNotificationAgeLabel(referenceDate, now),
+      isStale: true,
+      isActionable: true,
+    };
+  }
+
+  if (
+    item.source === "APPOINTMENT" ||
+    (item.dueAt && item.dueAt.getTime() > now.getTime())
+  ) {
+    return {
+      state: "scheduled",
+      label: "Scheduled",
+      tone: "info",
+      actionLabel,
+      cleanupHint:
+        "Keep this visible until the scheduled date passes or preparation is complete.",
+      ageLabel: formatNotificationAgeLabel(referenceDate, now),
+      isStale: false,
+      isActionable: item.priority !== "low",
+    };
+  }
+
+  return {
+    state: "review",
+    label: "Needs review",
+    tone: item.priority === "high" ? "warning" : "neutral",
+    actionLabel,
+    cleanupHint: "Review this item or create a follow-up reminder.",
+    ageLabel: formatNotificationAgeLabel(referenceDate, now),
+    isStale: false,
+    isActionable: true,
+  };
+}
+
+export function buildNotificationReliabilitySummary(
+  items: NotificationItem[],
+  now = new Date(),
+): NotificationReliabilitySummary {
+  const signals = items.map((item) => getNotificationItemSignal(item, now));
+  const countState = (state: NotificationReliabilityState) =>
+    signals.filter((signal) => signal.state === state).length;
+
+  return {
+    urgent: countState("urgent"),
+    dueNow: countState("due_now"),
+    followUp: countState("follow_up"),
+    stale: countState("stale"),
+    scheduled: countState("scheduled"),
+    review: countState("review"),
+    actionable: signals.filter((signal) => signal.isActionable).length,
+    cleanupCandidates: signals.filter(
+      (signal) => signal.isStale || signal.state === "follow_up",
+    ).length,
+    byState: [
+      { state: "urgent", label: "Urgent", count: countState("urgent") },
+      { state: "due_now", label: "Due now", count: countState("due_now") },
+      {
+        state: "follow_up",
+        label: "Follow-up",
+        count: countState("follow_up"),
+      },
+      { state: "stale", label: "Stale", count: countState("stale") },
+      {
+        state: "scheduled",
+        label: "Scheduled",
+        count: countState("scheduled"),
+      },
+      { state: "review", label: "Needs review", count: countState("review") },
+    ],
+  };
+}
+
+function matchesFilter(
+  item: NotificationItem,
+  filters: NotificationCenterFilters,
+  now: Date,
+) {
+  const source =
+    filters.source && filters.source !== "ALL" ? filters.source : undefined;
+  const priority =
+    filters.priority && filters.priority !== "ALL"
+      ? filters.priority
+      : undefined;
+  const state =
+    filters.state && filters.state !== "ALL" ? filters.state : undefined;
 
   if (source && item.source !== source) return false;
   if (priority && item.priority !== priority) return false;
+  if (state && getNotificationItemSignal(item, now).state !== state)
+    return false;
   return true;
 }
 
-export async function getNotificationCenterData(userId: string, filters: NotificationCenterFilters = {}) {
+export async function getNotificationCenterData(
+  userId: string,
+  filters: NotificationCenterFilters = {},
+) {
   const now = new Date();
   const today = startOfToday();
   const soon = addDays(now, 14);
   const staleDeviceCutoff = addDays(now, -7);
 
-  const [alerts, reminders, appointments, labs, documents, careInvites, deviceConnections] = await Promise.all([
+  const [
+    alerts,
+    reminders,
+    appointments,
+    labs,
+    documents,
+    careInvites,
+    deviceConnections,
+  ] = await Promise.all([
     db.alertEvent.findMany({
-      where: { userId, status: { in: [AlertStatus.OPEN, AlertStatus.ACKNOWLEDGED] } },
+      where: {
+        userId,
+        status: { in: [AlertStatus.OPEN, AlertStatus.ACKNOWLEDGED] },
+      },
       orderBy: { createdAt: "desc" },
       take: 20,
       select: {
@@ -124,7 +389,14 @@ export async function getNotificationCenterData(userId: string, filters: Notific
     db.reminder.findMany({
       where: {
         userId,
-        state: { in: [ReminderState.DUE, ReminderState.SENT, ReminderState.OVERDUE, ReminderState.MISSED] },
+        state: {
+          in: [
+            ReminderState.DUE,
+            ReminderState.SENT,
+            ReminderState.OVERDUE,
+            ReminderState.MISSED,
+          ],
+        },
         dueAt: { lte: soon },
       },
       orderBy: { dueAt: "asc" },
@@ -157,7 +429,10 @@ export async function getNotificationCenterData(userId: string, filters: Notific
       },
     }),
     db.labResult.findMany({
-      where: { userId, flag: { in: [LabFlag.BORDERLINE, LabFlag.HIGH, LabFlag.LOW] } },
+      where: {
+        userId,
+        flag: { in: [LabFlag.BORDERLINE, LabFlag.HIGH, LabFlag.LOW] },
+      },
       orderBy: { dateTaken: "desc" },
       take: 12,
       select: {
@@ -238,16 +513,25 @@ export async function getNotificationCenterData(userId: string, filters: Notific
       createdAt: alert.createdAt,
       status: alert.status,
       meta: `${alert.category} • ${alert.severity}`,
-      actionHint: alert.status === AlertStatus.OPEN ? "Acknowledge or resolve this alert." : "Resolve this acknowledged alert.",
+      actionHint:
+        alert.status === AlertStatus.OPEN
+          ? "Acknowledge or resolve this alert."
+          : "Resolve this acknowledged alert.",
     })),
     ...reminders.map((reminder) => ({
       id: `reminder-${reminder.id}`,
       sourceId: reminder.id,
       source: "REMINDER" as const,
       title: reminder.title,
-      description: reminder.description || `${reminder.type} reminder due ${reminder.dueAt.toLocaleString()}`,
+      description:
+        reminder.description ||
+        `${reminder.type} reminder due ${reminder.dueAt.toLocaleString()}`,
       priority: reminderPriority(reminder.state, reminder.dueAt),
-      tone: reminder.state === ReminderState.OVERDUE || reminder.dueAt.getTime() < Date.now() ? "warning" as const : "info" as const,
+      tone:
+        reminder.state === ReminderState.OVERDUE ||
+        reminder.dueAt.getTime() < Date.now()
+          ? ("warning" as const)
+          : ("info" as const),
       href: `/reminders?state=${reminder.state}`,
       createdAt: reminder.createdAt,
       dueAt: reminder.dueAt,
@@ -261,7 +545,11 @@ export async function getNotificationCenterData(userId: string, filters: Notific
       source: "APPOINTMENT" as const,
       title: appointment.purpose,
       description: `${appointment.doctorName} • ${appointment.clinic}`,
-      priority: appointment.scheduledAt.getTime() - now.getTime() <= 3 * 24 * 60 * 60 * 1000 ? "medium" as const : "low" as const,
+      priority:
+        appointment.scheduledAt.getTime() - now.getTime() <=
+        3 * 24 * 60 * 60 * 1000
+          ? ("medium" as const)
+          : ("low" as const),
       tone: "info" as const,
       href: "/appointments",
       createdAt: appointment.createdAt,
@@ -296,13 +584,17 @@ export async function getNotificationCenterData(userId: string, filters: Notific
         description: needsLink
           ? `${document.fileName} is not linked to a record yet.`
           : `${document.fileName} needs stronger review notes.`,
-        priority: needsLink ? "medium" as const : "low" as const,
-        tone: needsLink ? "warning" as const : "neutral" as const,
-        href: needsLink ? "/documents?link=UNLINKED" : "/documents?quality=NEEDS_NOTES",
+        priority: needsLink ? ("medium" as const) : ("low" as const),
+        tone: needsLink ? ("warning" as const) : ("neutral" as const),
+        href: needsLink
+          ? "/documents?link=UNLINKED"
+          : "/documents?quality=NEEDS_NOTES",
         createdAt: document.createdAt,
         status: needsLink ? "UNLINKED" : needsNotes ? "NEEDS_NOTES" : "READY",
         meta: document.type,
-        actionHint: needsLink ? "Open document hub and link this file." : "Open document hub and add notes.",
+        actionHint: needsLink
+          ? "Open document hub and link this file."
+          : "Open document hub and add notes.",
       };
     }),
     ...careInvites.map((invite) => ({
@@ -311,7 +603,10 @@ export async function getNotificationCenterData(userId: string, filters: Notific
       source: "CARE" as const,
       title: `Pending invite for ${invite.email}`,
       description: `${invite.accessRole} access expires ${invite.expiresAt.toLocaleDateString()}`,
-      priority: invite.expiresAt.getTime() - now.getTime() <= 3 * 24 * 60 * 60 * 1000 ? "medium" as const : "low" as const,
+      priority:
+        invite.expiresAt.getTime() - now.getTime() <= 3 * 24 * 60 * 60 * 1000
+          ? ("medium" as const)
+          : ("low" as const),
       tone: "info" as const,
       href: "/care-team",
       createdAt: invite.createdAt,
@@ -325,28 +620,39 @@ export async function getNotificationCenterData(userId: string, filters: Notific
       sourceId: device.id,
       source: "DEVICE" as const,
       title: device.deviceLabel || `${device.platform} ${device.source}`,
-      description: device.lastError || `Last synced ${device.lastSyncedAt ? device.lastSyncedAt.toLocaleDateString() : "never"}`,
-      priority: device.status === DeviceConnectionStatus.ERROR ? "high" as const : "medium" as const,
-      tone: device.status === DeviceConnectionStatus.ERROR ? "danger" as const : "warning" as const,
+      description:
+        device.lastError ||
+        `Last synced ${device.lastSyncedAt ? device.lastSyncedAt.toLocaleDateString() : "never"}`,
+      priority:
+        device.status === DeviceConnectionStatus.ERROR
+          ? ("high" as const)
+          : ("medium" as const),
+      tone:
+        device.status === DeviceConnectionStatus.ERROR
+          ? ("danger" as const)
+          : ("warning" as const),
       href: "/device-connection",
       createdAt: device.updatedAt || device.createdAt,
       dueAt: device.lastSyncedAt,
       status: device.status,
       meta: `${device.source} • ${device.platform}`,
-      actionHint: "Open device connection review or create a sync follow-up reminder.",
+      actionHint:
+        "Open device connection review or create a sync follow-up reminder.",
     })),
   ];
 
-  const sortedItems = items
-    .sort((a, b) => {
-      const score = priorityScore(b.priority) - priorityScore(a.priority);
-      if (score !== 0) return score;
-      const aTime = (a.dueAt || a.createdAt).getTime();
-      const bTime = (b.dueAt || b.createdAt).getTime();
-      return bTime - aTime;
-    });
+  const sortedItems = items.sort((a, b) => {
+    const score = priorityScore(b.priority) - priorityScore(a.priority);
+    if (score !== 0) return score;
+    const aTime = (a.dueAt || a.createdAt).getTime();
+    const bTime = (b.dueAt || b.createdAt).getTime();
+    return bTime - aTime;
+  });
 
-  const filteredItems = sortedItems.filter((item) => matchesFilter(item, filters));
+  const filteredItems = sortedItems.filter((item) =>
+    matchesFilter(item, filters, now),
+  );
+  const reliability = buildNotificationReliabilitySummary(sortedItems, now);
 
   const counts = {
     total: sortedItems.length,
@@ -355,22 +661,42 @@ export async function getNotificationCenterData(userId: string, filters: Notific
     high: sortedItems.filter((item) => item.priority === "high").length,
     medium: sortedItems.filter((item) => item.priority === "medium").length,
     low: sortedItems.filter((item) => item.priority === "low").length,
-    bySource: (['ALERT', 'REMINDER', 'APPOINTMENT', 'LAB', 'DOCUMENT', 'CARE', 'DEVICE'] as NotificationSource[]).map((source) => ({
+    bySource: (
+      [
+        "ALERT",
+        "REMINDER",
+        "APPOINTMENT",
+        "LAB",
+        "DOCUMENT",
+        "CARE",
+        "DEVICE",
+      ] as NotificationSource[]
+    ).map((source) => ({
       source,
       count: sortedItems.filter((item) => item.source === source).length,
     })),
   };
 
   const nextActions = [
-    counts.critical || counts.high ? "Review high-priority alerts, abnormal labs, or device errors first." : "No high-risk items are waiting right now.",
-    counts.bySource.find((item) => item.source === "REMINDER")?.count ? "Clear due and overdue reminders to keep the care plan current." : "Reminder queue is clear for the current filter window.",
-    counts.bySource.find((item) => item.source === "DOCUMENT")?.count ? "Link uploaded documents to records so future summaries are more complete." : "Document hygiene looks good for now.",
+    reliability.urgent || counts.critical || counts.high
+      ? "Review urgent alerts, abnormal labs, or device errors first."
+      : "No urgent notification items are waiting right now.",
+    reliability.dueNow
+      ? "Clear due and overdue reminders to keep the care plan current."
+      : "Reminder queue is clear for the current filter window.",
+    reliability.cleanupCandidates
+      ? "Clean up stale or follow-up items so the inbox stays reviewer-ready."
+      : "No stale notification cleanup is needed right now.",
+    counts.bySource.find((item) => item.source === "DOCUMENT")?.count
+      ? "Link uploaded documents to records so future summaries are more complete."
+      : "Document hygiene looks good for now.",
   ];
 
   return {
     items: filteredItems,
     allItems: sortedItems,
     counts,
+    reliability,
     nextActions,
   };
 }
