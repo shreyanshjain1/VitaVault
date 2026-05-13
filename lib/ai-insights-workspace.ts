@@ -1,4 +1,12 @@
-import { AlertSeverity, AlertStatus, AppointmentStatus, LabFlag, MedicationLogStatus, ReminderState, SymptomSeverity } from "@prisma/client";
+import {
+  AlertSeverity,
+  AlertStatus,
+  AppointmentStatus,
+  LabFlag,
+  MedicationLogStatus,
+  ReminderState,
+  SymptomSeverity,
+} from "@prisma/client";
 import { db } from "@/lib/db";
 
 export type InsightTrendFlag = {
@@ -78,6 +86,40 @@ export type AiSourceGap = {
   priority: "low" | "medium" | "high";
 };
 
+export type AiInsightReviewState =
+  | "source-backed"
+  | "needs-review"
+  | "stale"
+  | "draft"
+  | "blocked";
+
+export type AiInsightReviewSignal = {
+  state: AiInsightReviewState;
+  label: string;
+  tone: "neutral" | "info" | "success" | "warning" | "danger";
+  detail: string;
+  nextStep: string;
+  sourceBacked: boolean;
+  needsClinicianReview: boolean;
+};
+
+export type AiTrustChecklistItem = {
+  id: string;
+  label: string;
+  detail: string;
+  status: "passed" | "review" | "blocked";
+  tone: "neutral" | "info" | "success" | "warning" | "danger";
+};
+
+export type AiReviewQueueSummary = {
+  sourceBacked: number;
+  needsReview: number;
+  stale: number;
+  draft: number;
+  blocked: number;
+  total: number;
+};
+
 function parseJsonArray<T>(value: string | null): T[] {
   if (!value) return [];
   try {
@@ -88,9 +130,27 @@ function parseJsonArray<T>(value: string | null): T[] {
   }
 }
 
-function latestDate(items: Array<{ createdAt?: Date; updatedAt?: Date; recordedAt?: Date; dateTaken?: Date; startedAt?: Date; scheduledAt?: Date; dueAt?: Date }>) {
+function latestDate(
+  items: Array<{
+    createdAt?: Date;
+    updatedAt?: Date;
+    recordedAt?: Date;
+    dateTaken?: Date;
+    startedAt?: Date;
+    scheduledAt?: Date;
+    dueAt?: Date;
+  }>,
+) {
   const timestamps = items
-    .flatMap((item) => [item.updatedAt, item.createdAt, item.recordedAt, item.dateTaken, item.startedAt, item.scheduledAt, item.dueAt])
+    .flatMap((item) => [
+      item.updatedAt,
+      item.createdAt,
+      item.recordedAt,
+      item.dateTaken,
+      item.startedAt,
+      item.scheduledAt,
+      item.dueAt,
+    ])
     .filter((value): value is Date => Boolean(value))
     .map((value) => value.getTime());
 
@@ -152,10 +212,19 @@ function parseInsight(item: {
   };
 }
 
-
-function formatVitalDetail(vital: { systolic: number | null; diastolic: number | null; heartRate: number | null; oxygenSaturation: number | null; bloodSugar: number | null; temperatureC: number | null; weightKg: number | null }) {
+function formatVitalDetail(vital: {
+  systolic: number | null;
+  diastolic: number | null;
+  heartRate: number | null;
+  oxygenSaturation: number | null;
+  bloodSugar: number | null;
+  temperatureC: number | null;
+  weightKg: number | null;
+}) {
   const parts = [
-    vital.systolic && vital.diastolic ? `${vital.systolic}/${vital.diastolic} BP` : null,
+    vital.systolic && vital.diastolic
+      ? `${vital.systolic}/${vital.diastolic} BP`
+      : null,
     vital.heartRate ? `${vital.heartRate} bpm` : null,
     vital.oxygenSaturation ? `${vital.oxygenSaturation}% SpO2` : null,
     vital.bloodSugar ? `${vital.bloodSugar} glucose` : null,
@@ -170,6 +239,215 @@ function priorityTone(priority: "low" | "medium" | "high") {
   if (priority === "high") return "danger" as const;
   if (priority === "medium") return "warning" as const;
   return "info" as const;
+}
+
+function daysSince(value: Date, now = new Date()) {
+  return Math.floor((now.getTime() - value.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+export function getAiReviewStateLabel(state: AiInsightReviewState) {
+  if (state === "source-backed") return "Source-backed";
+  if (state === "needs-review") return "Needs review";
+  if (state === "stale") return "Stale insight";
+  if (state === "blocked") return "Blocked";
+  return "Draft needed";
+}
+
+export function getAiReviewStateTone(
+  state: AiInsightReviewState,
+): AiInsightReviewSignal["tone"] {
+  if (state === "source-backed") return "success";
+  if (state === "needs-review" || state === "stale") return "warning";
+  if (state === "blocked") return "danger";
+  return "neutral";
+}
+
+export function buildAiInsightReviewSignal(args: {
+  latestInsight: ParsedAiInsight | null;
+  readinessScore: number;
+  citationCount: number;
+  highPriorityGapCount: number;
+  urgentRiskCount: number;
+  followUpCount: number;
+  now?: Date;
+}): AiInsightReviewSignal {
+  const now = args.now ?? new Date();
+
+  if (!args.latestInsight) {
+    return {
+      state: "draft",
+      label: getAiReviewStateLabel("draft"),
+      tone: getAiReviewStateTone("draft"),
+      detail: "No saved insight is available yet for review.",
+      nextStep:
+        "Generate an insight after profile, medications, labs, vitals, symptoms, and documents are ready.",
+      sourceBacked: false,
+      needsClinicianReview: true,
+    };
+  }
+
+  const ageDays = daysSince(args.latestInsight.createdAt, now);
+  const lowEvidence = args.citationCount < 3 || args.readinessScore < 65;
+
+  if (ageDays > 30) {
+    return {
+      state: "stale",
+      label: getAiReviewStateLabel("stale"),
+      tone: getAiReviewStateTone("stale"),
+      detail: `Latest insight is ${ageDays} days old and may not reflect recent records.`,
+      nextStep:
+        "Regenerate the insight after reviewing new labs, vitals, symptoms, medications, and documents.",
+      sourceBacked: args.citationCount >= 3,
+      needsClinicianReview: true,
+    };
+  }
+
+  if (args.highPriorityGapCount > 0 || args.urgentRiskCount > 0) {
+    return {
+      state: "needs-review",
+      label: getAiReviewStateLabel("needs-review"),
+      tone: getAiReviewStateTone("needs-review"),
+      detail:
+        "High-priority gaps or urgent risk signals should be reviewed before sharing the insight.",
+      nextStep:
+        "Resolve the highest-risk signals, then regenerate or clinician-review the AI summary.",
+      sourceBacked: args.citationCount >= 3,
+      needsClinicianReview: true,
+    };
+  }
+
+  if (lowEvidence) {
+    return {
+      state: "needs-review",
+      label: getAiReviewStateLabel("needs-review"),
+      tone: getAiReviewStateTone("needs-review"),
+      detail:
+        "The insight exists, but the source pool is still too thin for strong confidence.",
+      nextStep:
+        "Add more structured records or citations before using this as a visit-prep summary.",
+      sourceBacked: false,
+      needsClinicianReview: true,
+    };
+  }
+
+  return {
+    state: "source-backed",
+    label: getAiReviewStateLabel("source-backed"),
+    tone: getAiReviewStateTone("source-backed"),
+    detail:
+      "Latest insight has enough recent source context for review-ready visit preparation.",
+    nextStep:
+      args.followUpCount > 0
+        ? "Review the follow-up queue and bring the strongest questions to the visit."
+        : "Keep the insight as reviewed context and refresh it when new records arrive.",
+    sourceBacked: true,
+    needsClinicianReview: true,
+  };
+}
+
+export function buildAiTrustChecklist(args: {
+  latestInsight: ParsedAiInsight | null;
+  readinessScore: number;
+  citationCount: number;
+  sourceGapCount: number;
+  highPriorityGapCount: number;
+  urgentRiskCount: number;
+  isAiConfigured: boolean;
+}): AiTrustChecklistItem[] {
+  return [
+    {
+      id: "source-coverage",
+      label: "Source coverage",
+      detail:
+        args.citationCount >= 3
+          ? `${args.citationCount} evidence cards are available for traceability.`
+          : "Add more source records before trusting the summary as complete.",
+      status: args.citationCount >= 3 ? "passed" : "review",
+      tone: args.citationCount >= 3 ? "success" : "warning",
+    },
+    {
+      id: "readiness",
+      label: "Record readiness",
+      detail:
+        args.readinessScore >= 75
+          ? `Readiness score is ${args.readinessScore}%.`
+          : `Readiness score is ${args.readinessScore}%; missing modules may weaken the summary.`,
+      status: args.readinessScore >= 75 ? "passed" : "review",
+      tone: args.readinessScore >= 75 ? "success" : "warning",
+    },
+    {
+      id: "risk-review",
+      label: "Risk review",
+      detail:
+        args.urgentRiskCount > 0
+          ? `${args.urgentRiskCount} urgent risk signal${args.urgentRiskCount === 1 ? "" : "s"} should be reviewed first.`
+          : "No urgent AI risk blockers are currently open.",
+      status: args.urgentRiskCount > 0 ? "blocked" : "passed",
+      tone: args.urgentRiskCount > 0 ? "danger" : "success",
+    },
+    {
+      id: "data-gaps",
+      label: "Data gaps",
+      detail:
+        args.sourceGapCount > 0
+          ? `${args.sourceGapCount} known gap${args.sourceGapCount === 1 ? "" : "s"} remain; ${args.highPriorityGapCount} high priority.`
+          : "No major source gaps are blocking the review queue.",
+      status:
+        args.highPriorityGapCount > 0
+          ? "blocked"
+          : args.sourceGapCount > 0
+            ? "review"
+            : "passed",
+      tone:
+        args.highPriorityGapCount > 0
+          ? "danger"
+          : args.sourceGapCount > 0
+            ? "warning"
+            : "success",
+    },
+    {
+      id: "clinical-boundary",
+      label: "Clinical boundary",
+      detail: args.latestInsight
+        ? "Insight is saved as informational visit-prep context, not a diagnosis."
+        : "Generate an insight before clinician review can begin.",
+      status: args.latestInsight ? "passed" : "review",
+      tone: args.latestInsight ? "info" : "neutral",
+    },
+    {
+      id: "provider-mode",
+      label: "Provider mode",
+      detail: args.isAiConfigured
+        ? "Live AI provider is configured; review output before sharing."
+        : "Fallback/demo mode is available; label generated summaries as non-live AI output.",
+      status: "review",
+      tone: args.isAiConfigured ? "info" : "warning",
+    },
+  ];
+}
+
+export function buildAiReviewQueueSummary(
+  signals: AiInsightReviewSignal[],
+): AiReviewQueueSummary {
+  return signals.reduce(
+    (summary, signal) => {
+      if (signal.state === "source-backed") summary.sourceBacked += 1;
+      if (signal.state === "needs-review") summary.needsReview += 1;
+      if (signal.state === "stale") summary.stale += 1;
+      if (signal.state === "draft") summary.draft += 1;
+      if (signal.state === "blocked") summary.blocked += 1;
+      summary.total += 1;
+      return summary;
+    },
+    {
+      sourceBacked: 0,
+      needsReview: 0,
+      stale: 0,
+      draft: 0,
+      blocked: 0,
+      total: 0,
+    } satisfies AiReviewQueueSummary,
+  );
 }
 
 export async function getAiInsightsWorkspaceData(userId: string) {
@@ -247,7 +525,12 @@ export async function getAiInsightsWorkspaceData(userId: string) {
       take: 20,
     }),
     db.reminder.findMany({
-      where: { userId, state: { in: [ReminderState.DUE, ReminderState.OVERDUE, ReminderState.MISSED] } },
+      where: {
+        userId,
+        state: {
+          in: [ReminderState.DUE, ReminderState.OVERDUE, ReminderState.MISSED],
+        },
+      },
       orderBy: { dueAt: "asc" },
       take: 12,
     }),
@@ -280,12 +563,23 @@ export async function getAiInsightsWorkspaceData(userId: string) {
   const insights = insightsRaw.map(parseInsight);
   const latestInsight = insights[0] ?? null;
   const activeMedications = medications.filter((item) => item.active);
-  const missedLogs = medications.flatMap((item) => item.logs).filter((log) => log.status === MedicationLogStatus.MISSED);
+  const missedLogs = medications
+    .flatMap((item) => item.logs)
+    .filter((log) => log.status === MedicationLogStatus.MISSED);
   const abnormalLabs = labs.filter((item) => item.flag !== LabFlag.NORMAL);
   const unresolvedSymptoms = symptoms.filter((item) => !item.resolved);
-  const severeSymptoms = unresolvedSymptoms.filter((item) => item.severity === SymptomSeverity.SEVERE);
-  const urgentAlerts = alerts.filter((item) => item.severity === AlertSeverity.CRITICAL || item.severity === AlertSeverity.HIGH);
-  const upcomingAppointments = appointments.filter((item) => item.status === AppointmentStatus.UPCOMING && item.scheduledAt >= now);
+  const severeSymptoms = unresolvedSymptoms.filter(
+    (item) => item.severity === SymptomSeverity.SEVERE,
+  );
+  const urgentAlerts = alerts.filter(
+    (item) =>
+      item.severity === AlertSeverity.CRITICAL ||
+      item.severity === AlertSeverity.HIGH,
+  );
+  const upcomingAppointments = appointments.filter(
+    (item) =>
+      item.status === AppointmentStatus.UPCOMING && item.scheduledAt >= now,
+  );
   const elevatedVitals = vitals.filter((item) => {
     const highBp = (item.systolic ?? 0) >= 140 || (item.diastolic ?? 0) >= 90;
     const lowOxygen = (item.oxygenSaturation ?? 100) < 94;
@@ -351,7 +645,8 @@ export async function getAiInsightsWorkspaceData(userId: string) {
       id: `alert-${alert.id}`,
       title: alert.title,
       detail: alert.message,
-      severity: alert.severity === AlertSeverity.CRITICAL ? "urgent" : "warning",
+      severity:
+        alert.severity === AlertSeverity.CRITICAL ? "urgent" : "warning",
       href: `/alerts/${alert.id}`,
     });
   });
@@ -397,17 +692,20 @@ export async function getAiInsightsWorkspaceData(userId: string) {
   }
 
   const followUpItems: AiFollowUpItem[] = [
-    ...((latestInsight?.recommendedFollowUp ?? []).slice(0, 4).map((detail, index) => ({
-      id: `ai-followup-${index}`,
-      title: "AI recommended follow-up",
-      detail,
-      source: "Latest insight",
-      href: "/ai-insights",
-    }))),
+    ...(latestInsight?.recommendedFollowUp ?? [])
+      .slice(0, 4)
+      .map((detail, index) => ({
+        id: `ai-followup-${index}`,
+        title: "AI recommended follow-up",
+        detail,
+        source: "Latest insight",
+        href: "/ai-insights",
+      })),
     ...reminders.slice(0, 4).map((reminder) => ({
       id: `reminder-${reminder.id}`,
       title: reminder.title,
-      detail: reminder.description || `Due ${reminder.dueAt.toLocaleDateString()}`,
+      detail:
+        reminder.description || `Due ${reminder.dueAt.toLocaleDateString()}`,
       source: "Reminder",
       href: "/reminders",
     })),
@@ -415,7 +713,8 @@ export async function getAiInsightsWorkspaceData(userId: string) {
 
   const sharedPatients: SharedAiPatient[] = sharedPatientsRaw.map((grant) => ({
     id: grant.id,
-    patientName: grant.owner.healthProfile?.fullName ?? grant.owner.name ?? "Patient",
+    patientName:
+      grant.owner.healthProfile?.fullName ?? grant.owner.name ?? "Patient",
     email: grant.owner.email,
     accessRole: grant.accessRole,
     href: `/patient/${grant.owner.id}`,
@@ -438,10 +737,18 @@ export async function getAiInsightsWorkspaceData(userId: string) {
       label: "Medication",
       recordType: "Medication",
       title: item.name,
-      detail: [item.dosage, item.frequency, item.doctor?.name ? `Provider: ${item.doctor.name}` : null].filter(Boolean).join(" • "),
+      detail: [
+        item.dosage,
+        item.frequency,
+        item.doctor?.name ? `Provider: ${item.doctor.name}` : null,
+      ]
+        .filter(Boolean)
+        .join(" • "),
       capturedAt: item.updatedAt ?? item.startDate,
       href: `/medications?focus=${item.id}`,
-      tone: item.logs.some((log) => log.status === MedicationLogStatus.MISSED) ? "warning" as const : "success" as const,
+      tone: item.logs.some((log) => log.status === MedicationLogStatus.MISSED)
+        ? ("warning" as const)
+        : ("success" as const),
     })),
     ...labs.slice(0, 4).map((item) => ({
       id: `lab-${item.id}`,
@@ -451,7 +758,10 @@ export async function getAiInsightsWorkspaceData(userId: string) {
       detail: `${item.flag} • ${item.resultSummary}`,
       capturedAt: item.dateTaken,
       href: `/lab-review?q=${encodeURIComponent(item.testName)}`,
-      tone: item.flag === LabFlag.NORMAL ? "success" as const : "warning" as const,
+      tone:
+        item.flag === LabFlag.NORMAL
+          ? ("success" as const)
+          : ("warning" as const),
     })),
     ...vitals.slice(0, 4).map((item) => ({
       id: `vital-${item.id}`,
@@ -461,7 +771,9 @@ export async function getAiInsightsWorkspaceData(userId: string) {
       detail: formatVitalDetail(item),
       capturedAt: item.recordedAt,
       href: "/vitals-monitor",
-      tone: elevatedVitals.some((vital) => vital.id === item.id) ? "warning" as const : "info" as const,
+      tone: elevatedVitals.some((vital) => vital.id === item.id)
+        ? ("warning" as const)
+        : ("info" as const),
     })),
     ...symptoms.slice(0, 4).map((item) => ({
       id: `symptom-${item.id}`,
@@ -471,7 +783,10 @@ export async function getAiInsightsWorkspaceData(userId: string) {
       detail: `${item.severity}${item.resolved ? " • resolved" : " • unresolved"}${item.bodyArea ? ` • ${item.bodyArea}` : ""}`,
       capturedAt: item.startedAt,
       href: `/symptom-review?q=${encodeURIComponent(item.title)}`,
-      tone: item.severity === SymptomSeverity.SEVERE && !item.resolved ? "danger" as const : "info" as const,
+      tone:
+        item.severity === SymptomSeverity.SEVERE && !item.resolved
+          ? ("danger" as const)
+          : ("info" as const),
     })),
     ...documents.slice(0, 3).map((item) => ({
       id: `document-${item.id}`,
@@ -481,7 +796,7 @@ export async function getAiInsightsWorkspaceData(userId: string) {
       detail: `${item.type} • ${item.linkedRecordType ? `Linked to ${item.linkedRecordType}` : "Not linked"}`,
       capturedAt: item.createdAt,
       href: "/documents",
-      tone: item.linkedRecordType ? "success" as const : "warning" as const,
+      tone: item.linkedRecordType ? ("success" as const) : ("warning" as const),
     })),
     ...upcomingAppointments.slice(0, 2).map((item) => ({
       id: `appointment-${item.id}`,
@@ -501,10 +816,16 @@ export async function getAiInsightsWorkspaceData(userId: string) {
       detail: item.message,
       capturedAt: item.createdAt,
       href: `/alerts/${item.id}`,
-      tone: item.severity === AlertSeverity.CRITICAL || item.severity === AlertSeverity.HIGH ? "danger" as const : "warning" as const,
+      tone:
+        item.severity === AlertSeverity.CRITICAL ||
+        item.severity === AlertSeverity.HIGH
+          ? ("danger" as const)
+          : ("warning" as const),
     })),
   ]
-    .sort((a, b) => (b.capturedAt?.getTime() ?? 0) - (a.capturedAt?.getTime() ?? 0))
+    .sort(
+      (a, b) => (b.capturedAt?.getTime() ?? 0) - (a.capturedAt?.getTime() ?? 0),
+    )
     .slice(0, 12);
 
   const sourceGaps: AiSourceGap[] = [];
@@ -513,7 +834,8 @@ export async function getAiInsightsWorkspaceData(userId: string) {
     sourceGaps.push({
       id: "profile-gap",
       title: "Complete the health profile",
-      detail: "AI summaries are stronger when baseline details, allergies, emergency contact, and care context are available.",
+      detail:
+        "AI summaries are stronger when baseline details, allergies, emergency contact, and care context are available.",
       href: "/onboarding",
       priority: "high",
     });
@@ -523,7 +845,8 @@ export async function getAiInsightsWorkspaceData(userId: string) {
     sourceGaps.push({
       id: "lab-gap",
       title: "Add recent lab results",
-      detail: "Lab data gives AI better evidence for trend flags and provider questions.",
+      detail:
+        "Lab data gives AI better evidence for trend flags and provider questions.",
       href: "/labs",
       priority: "medium",
     });
@@ -533,27 +856,36 @@ export async function getAiInsightsWorkspaceData(userId: string) {
     sourceGaps.push({
       id: "vitals-gap",
       title: "Capture more vital readings",
-      detail: "At least three recent readings help reduce noisy AI trend summaries.",
+      detail:
+        "At least three recent readings help reduce noisy AI trend summaries.",
       href: "/vitals",
       priority: "medium",
     });
   }
 
-  if (documents.length > 0 && documents.every((item) => !item.linkedRecordType)) {
+  if (
+    documents.length > 0 &&
+    documents.every((item) => !item.linkedRecordType)
+  ) {
     sourceGaps.push({
       id: "document-link-gap",
       title: "Link documents to records",
-      detail: "Linked documents give reports and AI summaries better traceability.",
+      detail:
+        "Linked documents give reports and AI summaries better traceability.",
       href: "/documents?link=UNLINKED",
       priority: "low",
     });
   }
 
-  if (activeMedications.length > 0 && activeMedications.every((item) => item.logs.length === 0)) {
+  if (
+    activeMedications.length > 0 &&
+    activeMedications.every((item) => item.logs.length === 0)
+  ) {
     sourceGaps.push({
       id: "adherence-gap",
       title: "Log medication adherence",
-      detail: "Dose logs help AI separate medication schedule context from actual adherence behavior.",
+      detail:
+        "Dose logs help AI separate medication schedule context from actual adherence behavior.",
       href: "/medication-safety",
       priority: "medium",
     });
@@ -564,7 +896,10 @@ export async function getAiInsightsWorkspaceData(userId: string) {
       label: "Source coverage",
       value: `${evidenceCards.filter((item) => item.status === "Ready").length}/${evidenceCards.length}`,
       detail: "Modules with enough structured records for a stronger summary.",
-      tone: evidenceCards.filter((item) => item.status === "Ready").length >= 4 ? "success" : "warning",
+      tone:
+        evidenceCards.filter((item) => item.status === "Ready").length >= 4
+          ? "success"
+          : "warning",
     },
     {
       label: "Citation pool",
@@ -575,27 +910,71 @@ export async function getAiInsightsWorkspaceData(userId: string) {
     {
       label: "Open risk context",
       value: String(riskSignals.length),
-      detail: "Alert, lab, symptom, medication, and vital signals available for risk review.",
-      tone: riskSignals.some((item) => item.severity === "urgent") ? "danger" : riskSignals.length > 0 ? "warning" : "success",
+      detail:
+        "Alert, lab, symptom, medication, and vital signals available for risk review.",
+      tone: riskSignals.some((item) => item.severity === "urgent")
+        ? "danger"
+        : riskSignals.length > 0
+          ? "warning"
+          : "success",
     },
     {
       label: "Data gaps",
       value: String(sourceGaps.length),
       detail: "Known missing context that may reduce insight quality.",
-      tone: sourceGaps.some((item) => item.priority === "high") ? "danger" : sourceGaps.length > 0 ? "warning" : "success",
+      tone: sourceGaps.some((item) => item.priority === "high")
+        ? "danger"
+        : sourceGaps.length > 0
+          ? "warning"
+          : "success",
     },
   ];
 
+  const reviewSignal = buildAiInsightReviewSignal({
+    latestInsight,
+    readinessScore,
+    citationCount: sourceCitationCards.length,
+    highPriorityGapCount: sourceGaps.filter((item) => item.priority === "high")
+      .length,
+    urgentRiskCount: riskSignals.filter((item) => item.severity === "urgent")
+      .length,
+    followUpCount: followUpItems.length,
+    now,
+  });
+
+  const trustChecklist = buildAiTrustChecklist({
+    latestInsight,
+    readinessScore,
+    citationCount: sourceCitationCards.length,
+    sourceGapCount: sourceGaps.length,
+    highPriorityGapCount: sourceGaps.filter((item) => item.priority === "high")
+      .length,
+    urgentRiskCount: riskSignals.filter((item) => item.severity === "urgent")
+      .length,
+    isAiConfigured: Boolean(process.env.OPENAI_API_KEY?.trim()),
+  });
+
+  const reviewQueueSummary = buildAiReviewQueueSummary([reviewSignal]);
+
   const sourceSummary = {
-    totalRecords: medications.length + appointments.length + labs.length + vitals.length + symptoms.length + documents.length,
+    totalRecords:
+      medications.length +
+      appointments.length +
+      labs.length +
+      vitals.length +
+      symptoms.length +
+      documents.length,
     openAlerts: alerts.length,
     dueReminders: reminders.length,
     latestGeneratedAt: latestInsight?.createdAt ?? null,
-    promptModules: evidenceCards.filter((item) => item.count > 0).map((item) => item.label),
+    promptModules: evidenceCards
+      .filter((item) => item.count > 0)
+      .map((item) => item.label),
   };
 
   return {
-    patientLabel: user?.healthProfile?.fullName ?? user?.name ?? user?.email ?? "Patient",
+    patientLabel:
+      user?.healthProfile?.fullName ?? user?.name ?? user?.email ?? "Patient",
     readinessScore,
     insights,
     latestInsight,
@@ -605,8 +984,14 @@ export async function getAiInsightsWorkspaceData(userId: string) {
     sharedPatients,
     sourceCitationCards,
     confidenceMetrics,
-    sourceGaps: sourceGaps.map((item) => ({ ...item, tone: priorityTone(item.priority) })),
+    sourceGaps: sourceGaps.map((item) => ({
+      ...item,
+      tone: priorityTone(item.priority),
+    })),
     sourceSummary,
+    reviewSignal,
+    trustChecklist,
+    reviewQueueSummary,
     suggestedQuestions: latestInsight?.suggestedQuestions ?? [],
     transparencyNotes: [
       "AI uses structured VitaVault records only; it does not browse external medical sources or diagnose conditions.",
