@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { Beaker, ClipboardList, FileText, FlaskConical, Search, TrendingUp } from "lucide-react";
+import {
+  Beaker,
+  ClipboardList,
+  FileText,
+  FlaskConical,
+  Search,
+  TrendingUp,
+} from "lucide-react";
 import { LabFlag } from "@prisma/client";
 import { AppShell } from "@/components/app-shell";
 import { EmptyState, PageHeader, StatusPill } from "@/components/common";
@@ -21,11 +28,21 @@ import {
   TR,
 } from "@/components/ui";
 import { requireUser } from "@/lib/session";
-import { getLabFlagTone, getLabPriorityTone, getLabReviewData, type LabTrendCard } from "@/lib/lab-review";
+import {
+  getLabFlagTone,
+  getLabInterpretationLabel,
+  getLabInterpretationTone,
+  getLabPriorityTone,
+  getLabReviewData,
+  getLabTrendTone,
+  type LabTrendCard,
+} from "@/lib/lab-review";
 
 function formatDate(value: Date | null | undefined) {
   if (!value) return "—";
-  return new Intl.DateTimeFormat("en-PH", { dateStyle: "medium" }).format(value);
+  return new Intl.DateTimeFormat("en-PH", { dateStyle: "medium" }).format(
+    value,
+  );
 }
 
 function readinessTone(value: number): "success" | "warning" | "danger" {
@@ -38,12 +55,25 @@ function ProgressBar({ value }: { value: number }) {
   const safeValue = Math.max(0, Math.min(100, value));
   return (
     <div className="h-2 overflow-hidden rounded-full bg-muted">
-      <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${safeValue}%` }} />
+      <div
+        className="h-full rounded-full bg-primary transition-all"
+        style={{ width: `${safeValue}%` }}
+      />
     </div>
   );
 }
 
-function StatCard({ title, value, description, icon }: { title: string; value: string | number; description: string; icon: React.ReactNode }) {
+function StatCard({
+  title,
+  value,
+  description,
+  icon,
+}: {
+  title: string;
+  value: string | number;
+  description: string;
+  icon: React.ReactNode;
+}) {
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -52,7 +82,9 @@ function StatCard({ title, value, description, icon }: { title: string; value: s
             <CardDescription>{title}</CardDescription>
             <CardTitle className="mt-2 text-3xl">{value}</CardTitle>
           </div>
-          <div className="rounded-2xl border border-border/60 bg-background/70 p-2">{icon}</div>
+          <div className="rounded-2xl border border-border/60 bg-background/70 p-2">
+            {icon}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -63,24 +95,40 @@ function StatCard({ title, value, description, icon }: { title: string; value: s
 }
 
 function TrendCard({ item }: { item: LabTrendCard }) {
-  const directionTone =
-    item.direction === "improved" ? "success" : item.direction === "worse" ? "danger" : item.direction === "watch" ? "warning" : "info";
-
   return (
     <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="font-medium">{item.testName}</p>
-          <p className="mt-1 text-sm text-muted-foreground">Latest: {item.latestValue}</p>
-          {item.previousValue ? <p className="mt-1 text-xs text-muted-foreground">Previous: {item.previousValue}</p> : null}
+          <p className="mt-1 text-sm text-muted-foreground">
+            Latest: {item.latestValue}
+          </p>
+          {item.previousValue ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Previous: {item.previousValue}
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-col items-end gap-2">
-          <StatusPill tone={getLabFlagTone(item.latestFlag)}>{item.latestFlag}</StatusPill>
-          <StatusPill tone={directionTone}>{item.direction}</StatusPill>
+          <StatusPill tone={getLabFlagTone(item.latestFlag)}>
+            {item.latestFlag}
+          </StatusPill>
+          <StatusPill tone={getLabTrendTone(item.direction)}>
+            {item.trendLabel}
+          </StatusPill>
         </div>
       </div>
+      <div className="mt-3 space-y-2">
+        <StatusPill tone={getLabInterpretationTone(item.interpretationState)}>
+          {getLabInterpretationLabel(item.interpretationState)}
+        </StatusPill>
+        <p className="text-sm text-muted-foreground">{item.reviewReason}</p>
+        <p className="text-xs text-muted-foreground">{item.followUpGuidance}</p>
+      </div>
       <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-        <Badge>{item.count} result{item.count === 1 ? "" : "s"}</Badge>
+        <Badge>
+          {item.count} result{item.count === 1 ? "" : "s"}
+        </Badge>
         <Badge>{formatDate(item.latestDate)}</Badge>
       </div>
     </div>
@@ -96,7 +144,13 @@ export default async function LabReviewPage({
   const params = (await searchParams) ?? {};
   const q = typeof params.q === "string" ? params.q : "";
   const flagParam = typeof params.flag === "string" ? params.flag : "ALL";
-  const flag = flagParam === "NORMAL" || flagParam === "BORDERLINE" || flagParam === "HIGH" || flagParam === "LOW" ? flagParam : "ALL";
+  const flag =
+    flagParam === "NORMAL" ||
+    flagParam === "BORDERLINE" ||
+    flagParam === "HIGH" ||
+    flagParam === "LOW"
+      ? flagParam
+      : "ALL";
 
   const data = await getLabReviewData(user.id!, { q, flag });
 
@@ -108,56 +162,179 @@ export default async function LabReviewPage({
           description="Review abnormal results, trend movement, follow-up reminders, and document linkage before your next appointment."
           action={
             <div className="flex flex-wrap gap-2">
-              <Link href="/labs" className="inline-flex h-10 items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium transition-all hover:border-border hover:bg-muted/60">
+              <Link
+                href="/labs"
+                className="inline-flex h-10 items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium transition-all hover:border-border hover:bg-muted/60"
+              >
                 Open labs
               </Link>
-              <Link href="/summary/print?mode=doctor" className="inline-flex h-10 items-center justify-center rounded-2xl bg-primary px-4 text-sm font-medium text-primary-foreground transition-all hover:opacity-95">
+              <Link
+                href="/summary/print?mode=doctor"
+                className="inline-flex h-10 items-center justify-center rounded-2xl bg-primary px-4 text-sm font-medium text-primary-foreground transition-all hover:opacity-95"
+              >
                 Doctor packet
               </Link>
             </div>
           }
         />
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard title="Readiness score" value={`${data.summary.readinessScore}%`} description="Blends lab freshness, flag pressure, and document coverage." icon={<ClipboardList className="h-5 w-5 text-primary" />} />
-          <StatCard title="Flagged results" value={data.summary.abnormalLabs + data.summary.borderlineLabs} description={`${data.summary.flaggedRate}% of lab history needs watch or review.`} icon={<Beaker className="h-5 w-5 text-amber-500" />} />
-          <StatCard title="Document coverage" value={`${data.summary.documentCoverage}%`} description="Lab records with linked report files for handoff context." icon={<FileText className="h-5 w-5 text-sky-500" />} />
-          <StatCard title="Follow-ups" value={data.summary.labReminders} description="Due, overdue, or missed lab follow-up reminders." icon={<TrendingUp className="h-5 w-5 text-emerald-500" />} />
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <StatCard
+            title="Readiness score"
+            value={`${data.summary.readinessScore}%`}
+            description="Blends lab freshness, flag pressure, and document coverage."
+            icon={<ClipboardList className="h-5 w-5 text-primary" />}
+          />
+          <StatCard
+            title="Flagged results"
+            value={data.summary.abnormalLabs + data.summary.borderlineLabs}
+            description={`${data.summary.flaggedRate}% of lab history needs watch or review.`}
+            icon={<Beaker className="h-5 w-5 text-amber-500" />}
+          />
+          <StatCard
+            title="Document coverage"
+            value={`${data.summary.documentCoverage}%`}
+            description="Lab records with linked report files for handoff context."
+            icon={<FileText className="h-5 w-5 text-sky-500" />}
+          />
+          <StatCard
+            title="Follow-ups"
+            value={data.summary.labReminders}
+            description="Due, overdue, or missed lab follow-up reminders."
+            icon={<TrendingUp className="h-5 w-5 text-emerald-500" />}
+          />
+          <StatCard
+            title="Trend review"
+            value={data.summary.trendReviewQueue}
+            description="Critical, worsening, or borderline lab trends needing review."
+            icon={<FlaskConical className="h-5 w-5 text-rose-500" />}
+          />
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Lab trend interpretation</CardTitle>
+            <CardDescription>
+              Clinical-review signals for abnormal, improving, stable, and
+              baseline-building lab trends.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-[0.9fr_1.1fr]">
+            <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Current interpretation
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold">
+                    {data.interpretationSummary.topLabel}
+                  </p>
+                </div>
+                <StatusPill
+                  tone={getLabInterpretationTone(
+                    data.interpretationSummary.topState,
+                  )}
+                >
+                  {getLabInterpretationLabel(
+                    data.interpretationSummary.topState,
+                  )}
+                </StatusPill>
+              </div>
+              <p className="mt-3 text-sm text-muted-foreground">
+                {data.interpretationSummary.topGuidance}
+              </p>
+            </div>
+            <div className="grid gap-3 text-sm md:grid-cols-3">
+              <div className="rounded-2xl border border-border/60 p-3">
+                <p className="font-medium">Critical / worsening</p>
+                <p className="text-muted-foreground">
+                  {data.interpretationSummary.critical +
+                    data.interpretationSummary.worsening}{" "}
+                  trend
+                  {data.interpretationSummary.critical +
+                    data.interpretationSummary.worsening ===
+                  1
+                    ? ""
+                    : "s"}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border/60 p-3">
+                <p className="font-medium">Watch list</p>
+                <p className="text-muted-foreground">
+                  {data.interpretationSummary.watch} borderline trend
+                  {data.interpretationSummary.watch === 1 ? "" : "s"}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border/60 p-3">
+                <p className="font-medium">Improving / stable</p>
+                <p className="text-muted-foreground">
+                  {data.interpretationSummary.improving +
+                    data.interpretationSummary.stable}{" "}
+                  trend
+                  {data.interpretationSummary.improving +
+                    data.interpretationSummary.stable ===
+                  1
+                    ? ""
+                    : "s"}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
           <Card>
             <CardHeader>
               <CardTitle>Lab readiness</CardTitle>
-              <CardDescription>Quick signal for whether lab data is ready for review or provider handoff.</CardDescription>
+              <CardDescription>
+                Quick signal for whether lab data is ready for review or
+                provider handoff.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-3xl font-semibold">{data.summary.readinessScore}%</p>
-                  <p className="text-sm text-muted-foreground">{data.summary.totalLabs} total result{data.summary.totalLabs === 1 ? "" : "s"}</p>
+                  <p className="text-3xl font-semibold">
+                    {data.summary.readinessScore}%
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {data.summary.totalLabs} total result
+                    {data.summary.totalLabs === 1 ? "" : "s"}
+                  </p>
                 </div>
                 <StatusPill tone={readinessTone(data.summary.readinessScore)}>
-                  {data.summary.readinessScore >= 80 ? "Ready" : data.summary.readinessScore >= 55 ? "Review" : "Needs cleanup"}
+                  {data.summary.readinessScore >= 80
+                    ? "Ready"
+                    : data.summary.readinessScore >= 55
+                      ? "Review"
+                      : "Needs cleanup"}
                 </StatusPill>
               </div>
               <ProgressBar value={data.summary.readinessScore} />
               <div className="grid gap-3 text-sm md:grid-cols-2">
                 <div className="rounded-2xl border border-border/60 p-3">
                   <p className="font-medium">Normal</p>
-                  <p className="text-muted-foreground">{data.flagBreakdown.normal} results</p>
+                  <p className="text-muted-foreground">
+                    {data.flagBreakdown.normal} results
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-border/60 p-3">
                   <p className="font-medium">Borderline</p>
-                  <p className="text-muted-foreground">{data.flagBreakdown.borderline} results</p>
+                  <p className="text-muted-foreground">
+                    {data.flagBreakdown.borderline} results
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-border/60 p-3">
                   <p className="font-medium">High</p>
-                  <p className="text-muted-foreground">{data.flagBreakdown.high} results</p>
+                  <p className="text-muted-foreground">
+                    {data.flagBreakdown.high} results
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-border/60 p-3">
                   <p className="font-medium">Low</p>
-                  <p className="text-muted-foreground">{data.flagBreakdown.low} results</p>
+                  <p className="text-muted-foreground">
+                    {data.flagBreakdown.low} results
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -166,26 +343,43 @@ export default async function LabReviewPage({
           <Card>
             <CardHeader>
               <CardTitle>Recommended lab actions</CardTitle>
-              <CardDescription>Highest-value cleanup and follow-up items from your lab history.</CardDescription>
+              <CardDescription>
+                Highest-value cleanup and follow-up items from your lab history.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {data.actions.map((item) => (
-                <div key={item.id} className="rounded-2xl border border-border/60 bg-background/60 p-4">
+                <div
+                  key={item.id}
+                  className="rounded-2xl border border-border/60 bg-background/60 p-4"
+                >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <StatusPill tone={getLabPriorityTone(item.priority)}>{item.priority}</StatusPill>
+                        <StatusPill tone={getLabPriorityTone(item.priority)}>
+                          {item.priority}
+                        </StatusPill>
                         <p className="font-medium">{item.title}</p>
                       </div>
-                      <p className="mt-2 text-sm text-muted-foreground">{item.detail}</p>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {item.detail}
+                      </p>
                     </div>
-                    <Link href={item.href} className="text-sm font-medium text-primary hover:underline">
+                    <Link
+                      href={item.href}
+                      className="text-sm font-medium text-primary hover:underline"
+                    >
                       Review
                     </Link>
                   </div>
                 </div>
               ))}
-              {data.actions.length === 0 ? <EmptyState title="No urgent lab actions" description="Your lab records do not currently show abnormal results, missed follow-ups, or document cleanup work." /> : null}
+              {data.actions.length === 0 ? (
+                <EmptyState
+                  title="No urgent lab actions"
+                  description="Your lab records do not currently show abnormal results, missed follow-ups, or document cleanup work."
+                />
+              ) : null}
             </CardContent>
           </Card>
         </div>
@@ -193,11 +387,21 @@ export default async function LabReviewPage({
         <Card>
           <CardHeader>
             <CardTitle>Lab trend cards</CardTitle>
-            <CardDescription>Latest result per test with previous-result context when available.</CardDescription>
+            <CardDescription>
+              Latest result per test with previous-result context, trend
+              interpretation, and follow-up guidance.
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {data.trendCards.map((item) => <TrendCard key={item.testName} item={item} />)}
-            {data.trendCards.length === 0 ? <EmptyState title="No lab trends yet" description="Add lab results to see trend cards and provider-ready review notes." /> : null}
+            {data.trendCards.map((item) => (
+              <TrendCard key={item.testName} item={item} />
+            ))}
+            {data.trendCards.length === 0 ? (
+              <EmptyState
+                title="No lab trends yet"
+                description="Add lab results to see trend cards and provider-ready review notes."
+              />
+            ) : null}
           </CardContent>
         </Card>
 
@@ -205,17 +409,28 @@ export default async function LabReviewPage({
           <Card>
             <CardHeader>
               <CardTitle>Lab result register</CardTitle>
-              <CardDescription>Search and filter lab results without leaving the review hub.</CardDescription>
+              <CardDescription>
+                Search and filter lab results without leaving the review hub.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <form className="grid gap-3 md:grid-cols-[1fr_180px_auto]">
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input name="q" defaultValue={data.filters.q} placeholder="Search test, result, range, or file" className="pl-9" />
+                  <Input
+                    name="q"
+                    defaultValue={data.filters.q}
+                    placeholder="Search test, result, range, or file"
+                    className="pl-9"
+                  />
                 </div>
                 <Select name="flag" defaultValue={data.filters.flag}>
                   <option value="ALL">All flags</option>
-                  {Object.values(LabFlag).map((item) => <option key={item} value={item}>{item}</option>)}
+                  {Object.values(LabFlag).map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
                 </Select>
                 <Button type="submit">Filter</Button>
               </form>
@@ -236,15 +451,28 @@ export default async function LabReviewPage({
                       <TR key={lab.id}>
                         <TD className="font-medium">{lab.testName}</TD>
                         <TD>{lab.resultSummary}</TD>
-                        <TD><StatusPill tone={getLabFlagTone(lab.flag)}>{lab.flag}</StatusPill></TD>
-                        <TD className="text-muted-foreground">{lab.referenceRange || "—"}</TD>
-                        <TD className="text-muted-foreground">{formatDate(lab.dateTaken)}</TD>
+                        <TD>
+                          <StatusPill tone={getLabFlagTone(lab.flag)}>
+                            {lab.flag}
+                          </StatusPill>
+                        </TD>
+                        <TD className="text-muted-foreground">
+                          {lab.referenceRange || "—"}
+                        </TD>
+                        <TD className="text-muted-foreground">
+                          {formatDate(lab.dateTaken)}
+                        </TD>
                       </TR>
                     ))}
                   </TBody>
                 </Table>
               </div>
-              {data.labs.length === 0 ? <EmptyState title="No matching labs" description="Try another search term or filter to review your lab history." /> : null}
+              {data.labs.length === 0 ? (
+                <EmptyState
+                  title="No matching labs"
+                  description="Try another search term or filter to review your lab history."
+                />
+              ) : null}
             </CardContent>
           </Card>
 
@@ -252,43 +480,85 @@ export default async function LabReviewPage({
             <Card>
               <CardHeader>
                 <CardTitle>Lab document coverage</CardTitle>
-                <CardDescription>Recent lab files and whether they are ready to support records and visits.</CardDescription>
+                <CardDescription>
+                  Recent lab files and whether they are ready to support records
+                  and visits.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {data.labDocuments.map((document) => (
-                  <div key={document.id} className="rounded-2xl border border-border/60 bg-background/60 p-4">
+                  <div
+                    key={document.id}
+                    className="rounded-2xl border border-border/60 bg-background/60 p-4"
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-medium">{document.title}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">{document.fileName} • {formatDate(document.createdAt)}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {document.fileName} • {formatDate(document.createdAt)}
+                        </p>
                       </div>
-                      <StatusPill tone={document.linkedRecordId ? "success" : "warning"}>{document.linkedRecordId ? "Linked" : "Unlinked"}</StatusPill>
+                      <StatusPill
+                        tone={document.linkedRecordId ? "success" : "warning"}
+                      >
+                        {document.linkedRecordId ? "Linked" : "Unlinked"}
+                      </StatusPill>
                     </div>
                   </div>
                 ))}
-                {data.labDocuments.length === 0 ? <EmptyState title="No lab documents" description="Upload lab files or link existing documents to lab results." /> : null}
+                {data.labDocuments.length === 0 ? (
+                  <EmptyState
+                    title="No lab documents"
+                    description="Upload lab files or link existing documents to lab results."
+                  />
+                ) : null}
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
                 <CardTitle>Lab follow-up reminders</CardTitle>
-                <CardDescription>Due, overdue, and missed lab follow-up tasks.</CardDescription>
+                <CardDescription>
+                  Due, overdue, and missed lab follow-up tasks.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {data.labReminders.map((reminder) => (
-                  <div key={reminder.id} className="rounded-2xl border border-border/60 bg-background/60 p-4">
+                  <div
+                    key={reminder.id}
+                    className="rounded-2xl border border-border/60 bg-background/60 p-4"
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-medium">{reminder.title}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">Due {formatDate(reminder.dueAt)}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Due {formatDate(reminder.dueAt)}
+                        </p>
                       </div>
-                      <StatusPill tone={reminder.state === "OVERDUE" || reminder.state === "MISSED" ? "danger" : "warning"}>{reminder.state}</StatusPill>
+                      <StatusPill
+                        tone={
+                          reminder.state === "OVERDUE" ||
+                          reminder.state === "MISSED"
+                            ? "danger"
+                            : "warning"
+                        }
+                      >
+                        {reminder.state}
+                      </StatusPill>
                     </div>
-                    {reminder.description ? <p className="mt-2 text-sm text-muted-foreground">{reminder.description}</p> : null}
+                    {reminder.description ? (
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {reminder.description}
+                      </p>
+                    ) : null}
                   </div>
                 ))}
-                {data.labReminders.length === 0 ? <EmptyState title="No lab reminders" description="Lab follow-up reminders will appear here when they are due or overdue." /> : null}
+                {data.labReminders.length === 0 ? (
+                  <EmptyState
+                    title="No lab reminders"
+                    description="Lab follow-up reminders will appear here when they are due or overdue."
+                  />
+                ) : null}
               </CardContent>
             </Card>
           </div>
@@ -297,23 +567,33 @@ export default async function LabReviewPage({
         <Card>
           <CardHeader>
             <CardTitle>Provider review note</CardTitle>
-            <CardDescription>Use this hub before visits to identify which lab results need explanation, follow-up, or file cleanup.</CardDescription>
+            <CardDescription>
+              Use this hub before visits to identify which lab results need
+              explanation, follow-up, or file cleanup.
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-3">
             <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
               <FlaskConical className="h-5 w-5 text-primary" />
               <p className="mt-3 font-medium">Review flagged results first</p>
-              <p className="mt-1 text-sm text-muted-foreground">High, low, and borderline labs are sorted into the action queue.</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                High, low, and borderline labs are sorted into the action queue.
+              </p>
             </div>
             <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
               <FileText className="h-5 w-5 text-primary" />
               <p className="mt-3 font-medium">Attach source files</p>
-              <p className="mt-1 text-sm text-muted-foreground">Linked lab documents make the doctor packet more complete.</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Linked lab documents make the doctor packet more complete.
+              </p>
             </div>
             <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
               <ClipboardList className="h-5 w-5 text-primary" />
               <p className="mt-3 font-medium">Close the loop</p>
-              <p className="mt-1 text-sm text-muted-foreground">Follow-up reminders help track repeat tests and pending provider review.</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Follow-up reminders help track repeat tests and pending provider
+                review.
+              </p>
             </div>
           </CardContent>
         </Card>
