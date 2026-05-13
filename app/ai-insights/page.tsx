@@ -1,9 +1,36 @@
 import Link from "next/link";
-import { AlertTriangle, BrainCircuit, ClipboardList, Database, FileText, HelpCircle, History, ListChecks, Quote, SearchCheck, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  AlertTriangle,
+  BrainCircuit,
+  ClipboardList,
+  Database,
+  FileText,
+  HelpCircle,
+  History,
+  ListChecks,
+  Quote,
+  SearchCheck,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { EmptyState, PageHeader, StatusPill } from "@/components/common";
-import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
-import { getAiInsightsWorkspaceData, type AiConfidenceMetric, type AiEvidenceCard, type AiRiskSignal, type AiSourceCitationCard } from "@/lib/ai-insights-workspace";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui";
+import {
+  getAiInsightsWorkspaceData,
+  type AiConfidenceMetric,
+  type AiEvidenceCard,
+  type AiRiskSignal,
+  type AiSourceCitationCard,
+} from "@/lib/ai-insights-workspace";
 import { requireUser } from "@/lib/session";
 import { generateOwnAiInsightAction } from "./actions";
 
@@ -11,12 +38,17 @@ type SearchParams = Promise<{ error?: string; success?: string }>;
 
 function formatDateTime(value: Date | null | undefined) {
   if (!value) return "—";
-  return new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeStyle: "short" }).format(value);
+  return new Intl.DateTimeFormat("en-PH", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(value);
 }
 
 function riskTone(value: string) {
-  if (["high", "urgent", "critical"].includes(value.toLowerCase())) return "danger" as const;
-  if (["medium", "warning"].includes(value.toLowerCase())) return "warning" as const;
+  if (["high", "urgent", "critical"].includes(value.toLowerCase()))
+    return "danger" as const;
+  if (["medium", "warning"].includes(value.toLowerCase()))
+    return "warning" as const;
   if (["low", "info"].includes(value.toLowerCase())) return "info" as const;
   return "neutral" as const;
 }
@@ -37,14 +69,20 @@ function ProgressBar({ value }: { value: number }) {
   const safeValue = Math.max(0, Math.min(100, value));
   return (
     <div className="h-2 overflow-hidden rounded-full bg-muted">
-      <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${safeValue}%` }} />
+      <div
+        className="h-full rounded-full bg-primary transition-all"
+        style={{ width: `${safeValue}%` }}
+      />
     </div>
   );
 }
 
 function EvidenceCard({ item }: { item: AiEvidenceCard }) {
   return (
-    <Link href={item.href} className="rounded-3xl border border-border/60 bg-background/60 p-4 transition hover:border-primary/40 hover:bg-muted/40">
+    <Link
+      href={item.href}
+      className="rounded-3xl border border-border/60 bg-background/60 p-4 transition hover:border-primary/40 hover:bg-muted/40"
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-medium">{item.label}</p>
@@ -62,14 +100,21 @@ function EvidenceCard({ item }: { item: AiEvidenceCard }) {
 
 function CitationCard({ item }: { item: AiSourceCitationCard }) {
   return (
-    <Link href={item.href} className="block rounded-3xl border border-border/60 bg-background/60 p-4 transition hover:border-primary/40 hover:bg-muted/40">
+    <Link
+      href={item.href}
+      className="block rounded-3xl border border-border/60 bg-background/60 p-4 transition hover:border-primary/40 hover:bg-muted/40"
+    >
       <div className="flex flex-wrap items-center gap-2">
         <StatusPill tone={item.tone}>{item.label}</StatusPill>
         <Badge>{item.recordType}</Badge>
       </div>
       <p className="mt-3 font-semibold">{item.title}</p>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.detail}</p>
-      <p className="mt-3 text-xs text-muted-foreground">Captured: {formatDateTime(item.capturedAt)}</p>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">
+        {item.detail}
+      </p>
+      <p className="mt-3 text-xs text-muted-foreground">
+        Captured: {formatDateTime(item.capturedAt)}
+      </p>
     </Link>
   );
 }
@@ -89,27 +134,56 @@ function ConfidenceCard({ item }: { item: AiConfidenceMetric }) {
   );
 }
 
-function StatusMessage({ error, success }: { error?: string; success?: string }) {
+function StatusMessage({
+  error,
+  success,
+}: {
+  error?: string;
+  success?: string;
+}) {
   if (success === "1") {
-    return <div className="rounded-3xl border border-emerald-200/70 bg-emerald-50/70 p-4 text-sm text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-200">AI insight generated successfully.</div>;
+    return (
+      <div className="rounded-3xl border border-emerald-200/70 bg-emerald-50/70 p-4 text-sm text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-200">
+        AI insight generated successfully.
+      </div>
+    );
   }
 
   if (error === "quota") {
-    return <div className="rounded-3xl border border-amber-200/70 bg-amber-50/70 p-4 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">OpenAI API quota or billing is not available. VitaVault can still save fallback insight summaries for demo continuity.</div>;
+    return (
+      <div className="rounded-3xl border border-amber-200/70 bg-amber-50/70 p-4 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
+        OpenAI API quota or billing is not available. VitaVault can still save
+        fallback insight summaries for demo continuity.
+      </div>
+    );
   }
 
   if (error === "not_configured") {
-    return <div className="rounded-3xl border border-amber-200/70 bg-amber-50/70 p-4 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">AI is not configured. Set <span className="font-mono">OPENAI_API_KEY</span> and optional <span className="font-mono">OPENAI_MODEL</span>, then retry.</div>;
+    return (
+      <div className="rounded-3xl border border-amber-200/70 bg-amber-50/70 p-4 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
+        AI is not configured. Set{" "}
+        <span className="font-mono">OPENAI_API_KEY</span> and optional{" "}
+        <span className="font-mono">OPENAI_MODEL</span>, then retry.
+      </div>
+    );
   }
 
   if (error === "general") {
-    return <div className="rounded-3xl border border-rose-200/70 bg-rose-50/70 p-4 text-sm text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200">AI insight generation failed. Please try again.</div>;
+    return (
+      <div className="rounded-3xl border border-rose-200/70 bg-rose-50/70 p-4 text-sm text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200">
+        AI insight generation failed. Please try again.
+      </div>
+    );
   }
 
   return null;
 }
 
-export default async function AiInsightsPage({ searchParams }: { searchParams?: SearchParams }) {
+export default async function AiInsightsPage({
+  searchParams,
+}: {
+  searchParams?: SearchParams;
+}) {
   const user = await requireUser();
   const params = (await searchParams) ?? {};
   const data = await getAiInsightsWorkspaceData(user.id);
@@ -130,46 +204,93 @@ export default async function AiInsightsPage({ searchParams }: { searchParams?: 
                   Generate new insight
                 </Button>
               </form>
-              <Link href="/care-plan" className="inline-flex h-10 items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium hover:bg-muted/50">Open Care Plan</Link>
-              <Link href="/visit-prep" className="inline-flex h-10 items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium hover:bg-muted/50">Visit Prep</Link>
+              <Link
+                href="/care-plan"
+                className="inline-flex h-10 items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium hover:bg-muted/50"
+              >
+                Open Care Plan
+              </Link>
+              <Link
+                href="/visit-prep"
+                className="inline-flex h-10 items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium hover:bg-muted/50"
+              >
+                Visit Prep
+              </Link>
             </div>
           }
         />
 
         <StatusMessage error={params.error} success={params.success} />
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <Card>
             <CardHeader className="pb-3">
               <CardDescription>AI readiness</CardDescription>
-              <CardTitle className="mt-2 text-3xl">{data.readinessScore}%</CardTitle>
+              <CardTitle className="mt-2 text-3xl">
+                {data.readinessScore}%
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <ProgressBar value={data.readinessScore} />
-              <p className="text-sm text-muted-foreground">Based on profile, records, workflows, previous insights, and visible evidence coverage.</p>
+              <p className="text-sm text-muted-foreground">
+                Based on profile, records, workflows, previous insights, and
+                visible evidence coverage.
+              </p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-3">
               <CardDescription>Evidence cards</CardDescription>
-              <CardTitle className="mt-2 text-3xl">{data.sourceCitationCards.length}</CardTitle>
+              <CardTitle className="mt-2 text-3xl">
+                {data.sourceCitationCards.length}
+              </CardTitle>
             </CardHeader>
-            <CardContent><p className="text-sm text-muted-foreground">Recent source records that can be shown beside AI outputs.</p></CardContent>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Recent source records that can be shown beside AI outputs.
+              </p>
+            </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-3">
               <CardDescription>Open signals</CardDescription>
-              <CardTitle className="mt-2 text-3xl">{data.sourceSummary.openAlerts + data.sourceSummary.dueReminders}</CardTitle>
+              <CardTitle className="mt-2 text-3xl">
+                {data.sourceSummary.openAlerts +
+                  data.sourceSummary.dueReminders}
+              </CardTitle>
             </CardHeader>
-            <CardContent><p className="text-sm text-muted-foreground">Open alerts and due reminders that can shape follow-up planning.</p></CardContent>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Open alerts and due reminders that can shape follow-up planning.
+              </p>
+            </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-3">
               <CardDescription>AI status</CardDescription>
-              <CardTitle className="mt-2 text-xl">{isAiConfigured ? "Configured" : "Fallback-ready"}</CardTitle>
+              <CardTitle className="mt-2 text-xl">
+                {isAiConfigured ? "Configured" : "Fallback-ready"}
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <StatusPill tone={isAiConfigured ? "success" : "warning"}>{isAiConfigured ? "Live AI" : "Demo fallback"}</StatusPill>
+              <StatusPill tone={isAiConfigured ? "success" : "warning"}>
+                {isAiConfigured ? "Live AI" : "Demo fallback"}
+              </StatusPill>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardDescription>Review queue</CardDescription>
+              <CardTitle className="mt-2 text-xl">
+                {data.reviewSignal.label}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <StatusPill tone={data.reviewSignal.tone}>
+                {data.reviewSignal.sourceBacked
+                  ? "Source-backed"
+                  : "Review first"}
+              </StatusPill>
             </CardContent>
           </Card>
         </div>
@@ -179,10 +300,20 @@ export default async function AiInsightsPage({ searchParams }: { searchParams?: 
             <CardHeader>
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <CardTitle className="flex items-center gap-2"><BrainCircuit className="h-5 w-5" /> Latest source-linked insight</CardTitle>
-                  <CardDescription>Generated for {data.patientLabel}. Includes summary, flags, questions, follow-up actions, and traceable evidence.</CardDescription>
+                  <CardTitle className="flex items-center gap-2">
+                    <BrainCircuit className="h-5 w-5" /> Latest source-linked
+                    insight
+                  </CardTitle>
+                  <CardDescription>
+                    Generated for {data.patientLabel}. Includes summary, flags,
+                    questions, follow-up actions, and traceable evidence.
+                  </CardDescription>
                 </div>
-                {latest ? <StatusPill tone={riskTone(latest.adherenceRisk)}>{latest.adherenceRisk.toUpperCase()} risk</StatusPill> : null}
+                {latest ? (
+                  <StatusPill tone={riskTone(latest.adherenceRisk)}>
+                    {latest.adherenceRisk.toUpperCase()} risk
+                  </StatusPill>
+                ) : null}
               </div>
             </CardHeader>
             <CardContent className="space-y-5">
@@ -192,37 +323,75 @@ export default async function AiInsightsPage({ searchParams }: { searchParams?: 
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge>{formatDateTime(latest.createdAt)}</Badge>
                       <Badge>{latest.trendFlags.length} trend flags</Badge>
-                      <Badge>{data.sourceCitationCards.length} evidence cards</Badge>
+                      <Badge>
+                        {data.sourceCitationCards.length} evidence cards
+                      </Badge>
                     </div>
                     <p className="mt-4 text-lg font-semibold">{latest.title}</p>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{latest.summary}</p>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      {latest.summary}
+                    </p>
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="rounded-3xl border border-border/60 bg-background/60 p-5">
-                      <p className="flex items-center gap-2 text-sm font-semibold"><AlertTriangle className="h-4 w-4" /> Trend flags</p>
+                      <p className="flex items-center gap-2 text-sm font-semibold">
+                        <AlertTriangle className="h-4 w-4" /> Trend flags
+                      </p>
                       <div className="mt-3 space-y-3">
-                        {latest.trendFlags.length ? latest.trendFlags.map((flag, index) => (
-                          <div key={`${flag.type}-${index}`} className="rounded-2xl border border-border/60 bg-background/60 p-3 text-sm">
-                            <div className="flex flex-wrap items-center gap-2"><StatusPill tone={riskTone(flag.severity)}>{flag.severity}</StatusPill><Badge>{flag.type}</Badge></div>
-                            <p className="mt-2 text-muted-foreground">{flag.message}</p>
-                          </div>
-                        )) : <p className="text-sm text-muted-foreground">No trend flags were saved with this insight.</p>}
+                        {latest.trendFlags.length ? (
+                          latest.trendFlags.map((flag, index) => (
+                            <div
+                              key={`${flag.type}-${index}`}
+                              className="rounded-2xl border border-border/60 bg-background/60 p-3 text-sm"
+                            >
+                              <div className="flex flex-wrap items-center gap-2">
+                                <StatusPill tone={riskTone(flag.severity)}>
+                                  {flag.severity}
+                                </StatusPill>
+                                <Badge>{flag.type}</Badge>
+                              </div>
+                              <p className="mt-2 text-muted-foreground">
+                                {flag.message}
+                              </p>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm text-muted-foreground">
+                            No trend flags were saved with this insight.
+                          </p>
+                        )}
                       </div>
                     </div>
 
                     <div className="rounded-3xl border border-border/60 bg-background/60 p-5">
-                      <p className="flex items-center gap-2 text-sm font-semibold"><HelpCircle className="h-4 w-4" /> Suggested clinician questions</p>
+                      <p className="flex items-center gap-2 text-sm font-semibold">
+                        <HelpCircle className="h-4 w-4" /> Suggested clinician
+                        questions
+                      </p>
                       <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-                        {data.suggestedQuestions.length ? data.suggestedQuestions.slice(0, 5).map((question, index) => <li key={index}>• {question}</li>) : <li>No suggested questions saved yet.</li>}
+                        {data.suggestedQuestions.length ? (
+                          data.suggestedQuestions
+                            .slice(0, 5)
+                            .map((question, index) => (
+                              <li key={index}>• {question}</li>
+                            ))
+                        ) : (
+                          <li>No suggested questions saved yet.</li>
+                        )}
                       </ul>
                     </div>
                   </div>
 
-                  <p className="rounded-3xl border border-border/60 bg-background/60 p-4 text-xs text-muted-foreground">{latest.disclaimer}</p>
+                  <p className="rounded-3xl border border-border/60 bg-background/60 p-4 text-xs text-muted-foreground">
+                    {latest.disclaimer}
+                  </p>
                 </>
               ) : (
-                <EmptyState title="No AI insight yet" description="Generate the first insight once profile, records, and care signals are ready." />
+                <EmptyState
+                  title="No AI insight yet"
+                  description="Generate the first insight once profile, records, and care signals are ready."
+                />
               )}
             </CardContent>
           </Card>
@@ -230,26 +399,98 @@ export default async function AiInsightsPage({ searchParams }: { searchParams?: 
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><SearchCheck className="h-5 w-5" /> Confidence signals</CardTitle>
-                <CardDescription>Quick quality checks before relying on a summary.</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5" /> AI review queue
+                </CardTitle>
+                <CardDescription>
+                  Trust, source coverage, and clinician-review readiness before
+                  sharing.
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {data.confidenceMetrics.map((item) => <ConfidenceCard key={item.label} item={item} />)}
+              <CardContent className="space-y-4">
+                <div className="rounded-3xl border border-border/60 bg-background/60 p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <StatusPill tone={data.reviewSignal.tone}>
+                      {data.reviewSignal.label}
+                    </StatusPill>
+                    <Badge>{data.reviewQueueSummary.total} tracked</Badge>
+                  </div>
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    {data.reviewSignal.detail}
+                  </p>
+                  <p className="mt-3 text-sm font-medium">
+                    {data.reviewSignal.nextStep}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  {data.trustChecklist.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-2xl border border-border/60 bg-background/60 p-3"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <StatusPill tone={item.tone}>{item.status}</StatusPill>
+                        <span className="text-sm font-medium">
+                          {item.label}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                        {item.detail}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><ListChecks className="h-5 w-5" /> Data gaps</CardTitle>
-                <CardDescription>Missing context that may reduce insight quality.</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <SearchCheck className="h-5 w-5" /> Confidence signals
+                </CardTitle>
+                <CardDescription>
+                  Quick quality checks before relying on a summary.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {data.sourceGaps.length ? data.sourceGaps.map((gap) => (
-                  <Link key={gap.id} href={gap.href} className="block rounded-2xl border border-border/60 bg-background/60 p-4 transition hover:border-primary/40 hover:bg-muted/40">
-                    <div className="flex flex-wrap items-center gap-2"><StatusPill tone={gap.tone}>{gap.priority}</StatusPill><span className="font-medium">{gap.title}</span></div>
-                    <p className="mt-2 text-sm text-muted-foreground">{gap.detail}</p>
-                  </Link>
-                )) : <EmptyState title="No major data gaps" description="The current record set has enough context for stronger source-aware summaries." />}
+                {data.confidenceMetrics.map((item) => (
+                  <ConfidenceCard key={item.label} item={item} />
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ListChecks className="h-5 w-5" /> Data gaps
+                </CardTitle>
+                <CardDescription>
+                  Missing context that may reduce insight quality.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {data.sourceGaps.length ? (
+                  data.sourceGaps.map((gap) => (
+                    <Link
+                      key={gap.id}
+                      href={gap.href}
+                      className="block rounded-2xl border border-border/60 bg-background/60 p-4 transition hover:border-primary/40 hover:bg-muted/40"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <StatusPill tone={gap.tone}>{gap.priority}</StatusPill>
+                        <span className="font-medium">{gap.title}</span>
+                      </div>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {gap.detail}
+                      </p>
+                    </Link>
+                  ))
+                ) : (
+                  <EmptyState
+                    title="No major data gaps"
+                    description="The current record set has enough context for stronger source-aware summaries."
+                  />
+                )}
               </CardContent>
             </Card>
           </div>
@@ -257,41 +498,82 @@ export default async function AiInsightsPage({ searchParams }: { searchParams?: 
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Quote className="h-5 w-5" /> Visible source citations</CardTitle>
-            <CardDescription>Recent records that can explain where an AI summary is drawing context from.</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <Quote className="h-5 w-5" /> Visible source citations
+            </CardTitle>
+            <CardDescription>
+              Recent records that can explain where an AI summary is drawing
+              context from.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {data.sourceCitationCards.length ? (
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {data.sourceCitationCards.map((item) => <CitationCard key={item.id} item={item} />)}
+                {data.sourceCitationCards.map((item) => (
+                  <CitationCard key={item.id} item={item} />
+                ))}
               </div>
-            ) : <EmptyState title="No citation cards yet" description="Add medications, labs, vitals, symptoms, documents, appointments, or alerts to build an evidence map." />}
+            ) : (
+              <EmptyState
+                title="No citation cards yet"
+                description="Add medications, labs, vitals, symptoms, documents, appointments, or alerts to build an evidence map."
+              />
+            )}
           </CardContent>
         </Card>
 
         <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Database className="h-5 w-5" /> Source coverage</CardTitle>
-              <CardDescription>Records that can support AI summaries and care-plan recommendations.</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5" /> Source coverage
+              </CardTitle>
+              <CardDescription>
+                Records that can support AI summaries and care-plan
+                recommendations.
+              </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3 md:grid-cols-2">
-              {data.evidenceCards.map((item) => <EvidenceCard key={item.label} item={item} />)}
+              {data.evidenceCards.map((item) => (
+                <EvidenceCard key={item.label} item={item} />
+              ))}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5" /> Risk signal board</CardTitle>
-              <CardDescription>Open signals the AI summary should keep visible for review.</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" /> Risk signal board
+              </CardTitle>
+              <CardDescription>
+                Open signals the AI summary should keep visible for review.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {data.riskSignals.length ? data.riskSignals.map((signal) => (
-                <Link key={signal.id} href={signal.href} className="block rounded-2xl border border-border/60 bg-background/60 p-4 transition hover:border-primary/40 hover:bg-muted/40">
-                  <div className="flex flex-wrap items-center gap-2"><StatusPill tone={riskSignalTone(signal.severity)}>{signal.severity}</StatusPill><span className="font-medium">{signal.title}</span></div>
-                  <p className="mt-2 text-sm text-muted-foreground">{signal.detail}</p>
-                </Link>
-              )) : <EmptyState title="No major risk signals" description="Open alerts, abnormal labs, severe symptoms, missed logs, and vital review signals will appear here." />}
+              {data.riskSignals.length ? (
+                data.riskSignals.map((signal) => (
+                  <Link
+                    key={signal.id}
+                    href={signal.href}
+                    className="block rounded-2xl border border-border/60 bg-background/60 p-4 transition hover:border-primary/40 hover:bg-muted/40"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <StatusPill tone={riskSignalTone(signal.severity)}>
+                        {signal.severity}
+                      </StatusPill>
+                      <span className="font-medium">{signal.title}</span>
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {signal.detail}
+                    </p>
+                  </Link>
+                ))
+              ) : (
+                <EmptyState
+                  title="No major risk signals"
+                  description="Open alerts, abnormal labs, severe symptoms, missed logs, and vital review signals will appear here."
+                />
+              )}
             </CardContent>
           </Card>
         </div>
@@ -299,29 +581,66 @@ export default async function AiInsightsPage({ searchParams }: { searchParams?: 
         <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><ClipboardList className="h-5 w-5" /> Recommended next actions</CardTitle>
-              <CardDescription>Follow-ups from the latest insight plus due workflow items.</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <ClipboardList className="h-5 w-5" /> Recommended next actions
+              </CardTitle>
+              <CardDescription>
+                Follow-ups from the latest insight plus due workflow items.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {data.followUpItems.length ? data.followUpItems.map((item) => (
-                <Link key={item.id} href={item.href} className="block rounded-2xl border border-border/60 bg-background/60 p-4 transition hover:border-primary/40 hover:bg-muted/40">
-                  <div className="flex flex-wrap items-center gap-2"><Badge>{item.source}</Badge><span className="font-medium">{item.title}</span></div>
-                  <p className="mt-2 text-sm text-muted-foreground">{item.detail}</p>
-                </Link>
-              )) : <EmptyState title="No follow-up queue" description="AI follow-ups and due reminders will appear here." />}
+              {data.followUpItems.length ? (
+                data.followUpItems.map((item) => (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    className="block rounded-2xl border border-border/60 bg-background/60 p-4 transition hover:border-primary/40 hover:bg-muted/40"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge>{item.source}</Badge>
+                      <span className="font-medium">{item.title}</span>
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {item.detail}
+                    </p>
+                  </Link>
+                ))
+              ) : (
+                <EmptyState
+                  title="No follow-up queue"
+                  description="AI follow-ups and due reminders will appear here."
+                />
+              )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5" /> Prompt transparency</CardTitle>
-              <CardDescription>What the assistant can and cannot use.</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5" /> Prompt transparency
+              </CardTitle>
+              <CardDescription>
+                What the assistant can and cannot use.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
               <div className="flex flex-wrap gap-2">
-                {data.sourceSummary.promptModules.length ? data.sourceSummary.promptModules.map((module) => <Badge key={module}>{module}</Badge>) : <Badge>No record modules yet</Badge>}
+                {data.sourceSummary.promptModules.length ? (
+                  data.sourceSummary.promptModules.map((module) => (
+                    <Badge key={module}>{module}</Badge>
+                  ))
+                ) : (
+                  <Badge>No record modules yet</Badge>
+                )}
               </div>
-              {data.transparencyNotes.map((note) => <p key={note} className="rounded-2xl border border-border/60 bg-background/60 p-3">{note}</p>)}
+              {data.transparencyNotes.map((note) => (
+                <p
+                  key={note}
+                  className="rounded-2xl border border-border/60 bg-background/60 p-3"
+                >
+                  {note}
+                </p>
+              ))}
             </CardContent>
           </Card>
         </div>
@@ -329,36 +648,76 @@ export default async function AiInsightsPage({ searchParams }: { searchParams?: 
         <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><History className="h-5 w-5" /> Insight history</CardTitle>
-              <CardDescription>Your last 12 generated insights.</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <History className="h-5 w-5" /> Insight history
+              </CardTitle>
+              <CardDescription>
+                Your last 12 generated insights.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {data.insights.length ? (
                 <div className="grid gap-4 md:grid-cols-2">
                   {data.insights.map((item) => (
-                    <div key={item.id} className="rounded-3xl border border-border/60 bg-background/60 p-5">
-                      <div className="flex flex-wrap items-center gap-2"><StatusPill tone={riskTone(item.adherenceRisk)}>{item.adherenceRisk}</StatusPill><Badge>{formatDateTime(item.createdAt)}</Badge></div>
+                    <div
+                      key={item.id}
+                      className="rounded-3xl border border-border/60 bg-background/60 p-5"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <StatusPill tone={riskTone(item.adherenceRisk)}>
+                          {item.adherenceRisk}
+                        </StatusPill>
+                        <Badge>{formatDateTime(item.createdAt)}</Badge>
+                      </div>
                       <p className="mt-3 font-semibold">{item.title}</p>
-                      <p className="mt-2 line-clamp-4 text-sm text-muted-foreground">{item.summary}</p>
+                      <p className="mt-2 line-clamp-4 text-sm text-muted-foreground">
+                        {item.summary}
+                      </p>
                     </div>
                   ))}
                 </div>
-              ) : <EmptyState title="No insight history" description="Generated insight cards will appear here." />}
+              ) : (
+                <EmptyState
+                  title="No insight history"
+                  description="Generated insight cards will appear here."
+                />
+              )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" /> Shared patients with AI permission</CardTitle>
-              <CardDescription>Care-team workspaces where AI generation is allowed.</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" /> Shared patients with AI
+                permission
+              </CardTitle>
+              <CardDescription>
+                Care-team workspaces where AI generation is allowed.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {data.sharedPatients.length ? data.sharedPatients.map((patient) => (
-                <Link key={patient.id} href={patient.href} className="block rounded-2xl border border-border/60 bg-background/60 p-4 transition hover:border-primary/40 hover:bg-muted/40">
-                  <div className="flex flex-wrap items-center gap-2"><StatusPill tone="info">{patient.accessRole}</StatusPill><span className="font-medium">{patient.patientName}</span></div>
-                  <p className="mt-2 text-sm text-muted-foreground">{patient.email}</p>
-                </Link>
-              )) : <EmptyState title="No shared AI workspaces" description="Shared patients with AI permissions will appear here." />}
+              {data.sharedPatients.length ? (
+                data.sharedPatients.map((patient) => (
+                  <Link
+                    key={patient.id}
+                    href={patient.href}
+                    className="block rounded-2xl border border-border/60 bg-background/60 p-4 transition hover:border-primary/40 hover:bg-muted/40"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <StatusPill tone="info">{patient.accessRole}</StatusPill>
+                      <span className="font-medium">{patient.patientName}</span>
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {patient.email}
+                    </p>
+                  </Link>
+                ))
+              ) : (
+                <EmptyState
+                  title="No shared AI workspaces"
+                  description="Shared patients with AI permissions will appear here."
+                />
+              )}
             </CardContent>
           </Card>
         </div>
