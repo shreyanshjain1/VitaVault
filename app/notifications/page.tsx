@@ -5,22 +5,33 @@ import {
   CalendarClock,
   ClipboardList,
   FileText,
-  HeartPulse,
   Inbox,
   RadioTower,
   Users,
   CheckCircle2,
+  ClipboardCheck,
   Clock3,
   RotateCcw,
+  Sparkles,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { EmptyState, PageHeader, StatusPill } from "@/components/common";
-import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui";
 import { requireUser } from "@/lib/session";
 import {
   getNotificationCenterData,
+  getNotificationItemSignal,
   type NotificationItem,
   type NotificationPriority,
+  type NotificationReliabilityState,
   type NotificationSource,
   type NotificationTone,
 } from "@/lib/notification-center";
@@ -53,9 +64,21 @@ const sourceIcons: Record<NotificationSource, typeof BellRing> = {
   DEVICE: RadioTower,
 };
 
+const stateLabels: Record<NotificationReliabilityState, string> = {
+  urgent: "Urgent",
+  due_now: "Due now",
+  follow_up: "Follow-up",
+  stale: "Stale",
+  scheduled: "Scheduled",
+  review: "Needs review",
+};
+
 function formatDateTime(value: Date | null | undefined) {
   if (!value) return "—";
-  return new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeStyle: "short" }).format(value);
+  return new Intl.DateTimeFormat("en-PH", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(value);
 }
 
 function priorityTone(priority: NotificationPriority): NotificationTone {
@@ -136,7 +159,9 @@ function NotificationActions({ item }: { item: NotificationItem }) {
         </form>
         <form action={skipNotificationReminderAction}>
           <input type="hidden" name="reminderId" value={item.sourceId} />
-          <Button type="submit" size="sm" variant="ghost">Skip</Button>
+          <Button type="submit" size="sm" variant="ghost">
+            Skip
+          </Button>
         </form>
       </div>
     );
@@ -151,6 +176,7 @@ function NotificationActions({ item }: { item: NotificationItem }) {
 
 function NotificationCard({ item }: { item: NotificationItem }) {
   const Icon = sourceIcons[item.source];
+  const signal = getNotificationItemSignal(item);
 
   return (
     <div className="rounded-3xl border border-border/60 bg-background/50 p-5 transition hover:border-border hover:bg-muted/30">
@@ -161,16 +187,40 @@ function NotificationCard({ item }: { item: NotificationItem }) {
           </div>
           <div className="min-w-0 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <StatusPill tone={sourceTone(item.source)}>{sourceLabels[item.source]}</StatusPill>
-              <StatusPill tone={priorityTone(item.priority)}>{item.priority}</StatusPill>
+              <StatusPill tone={sourceTone(item.source)}>
+                {sourceLabels[item.source]}
+              </StatusPill>
+              <StatusPill tone={priorityTone(item.priority)}>
+                {item.priority}
+              </StatusPill>
+              <StatusPill tone={signal.tone}>{signal.label}</StatusPill>
               <Badge>{item.status}</Badge>
             </div>
             <div>
-              <Link href={item.href} className="font-semibold tracking-tight hover:underline">
+              <Link
+                href={item.href}
+                className="font-semibold tracking-tight hover:underline"
+              >
                 {item.title}
               </Link>
-              <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.description}</p>
-              <p className="mt-2 text-xs text-muted-foreground">Recommended action: {item.actionHint}</p>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                {item.description}
+              </p>
+              <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+                <div className="rounded-2xl border border-border/60 bg-background/70 p-3">
+                  <span className="font-semibold text-foreground">Action:</span>{" "}
+                  {signal.actionLabel}
+                </div>
+                <div className="rounded-2xl border border-border/60 bg-background/70 p-3">
+                  <span className="font-semibold text-foreground">
+                    Cleanup:
+                  </span>{" "}
+                  {signal.cleanupHint}
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Original recommendation: {item.actionHint}
+              </p>
             </div>
             <NotificationActions item={item} />
           </div>
@@ -178,13 +228,24 @@ function NotificationCard({ item }: { item: NotificationItem }) {
         <div className="shrink-0 text-left text-xs text-muted-foreground md:text-right">
           <p>{item.meta}</p>
           <p className="mt-1">{formatDateTime(item.dueAt || item.createdAt)}</p>
+          <p className="mt-1 font-medium text-foreground">{signal.ageLabel}</p>
         </div>
       </div>
     </div>
   );
 }
 
-function MetricCard({ title, value, description, icon }: { title: string; value: number | string; description: string; icon: React.ReactNode }) {
+function MetricCard({
+  title,
+  value,
+  description,
+  icon,
+}: {
+  title: string;
+  value: number | string;
+  description: string;
+  icon: React.ReactNode;
+}) {
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -193,7 +254,9 @@ function MetricCard({ title, value, description, icon }: { title: string; value:
             <CardDescription>{title}</CardDescription>
             <CardTitle className="mt-2 text-3xl">{value}</CardTitle>
           </div>
-          <div className="rounded-2xl border border-border/60 bg-background/70 p-2">{icon}</div>
+          <div className="rounded-2xl border border-border/60 bg-background/70 p-2">
+            {icon}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -211,8 +274,14 @@ export default async function NotificationsPage({
   const user = await requireUser();
   const params = (await searchParams) ?? {};
   const source = typeof params.source === "string" ? params.source : "ALL";
-  const priority = typeof params.priority === "string" ? params.priority : "ALL";
-  const data = await getNotificationCenterData(user.id!, { source, priority });
+  const priority =
+    typeof params.priority === "string" ? params.priority : "ALL";
+  const state = typeof params.state === "string" ? params.state : "ALL";
+  const data = await getNotificationCenterData(user.id!, {
+    source,
+    priority,
+    state,
+  });
 
   return (
     <AppShell>
@@ -222,18 +291,59 @@ export default async function NotificationsPage({
           description="A unified action inbox for alerts, reminders, follow-ups, abnormal results, document hygiene, care invites, and device sync issues."
           action={
             <div className="flex flex-wrap gap-2">
-              <Link href="/alerts" className="inline-flex h-10 items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium hover:bg-muted/50">Alerts</Link>
-              <Link href="/reminders" className="inline-flex h-10 items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium hover:bg-muted/50">Reminders</Link>
-              <Link href="/dashboard" className="inline-flex h-10 items-center justify-center rounded-2xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-95">Dashboard</Link>
+              <Link
+                href="/alerts"
+                className="inline-flex h-10 items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium hover:bg-muted/50"
+              >
+                Alerts
+              </Link>
+              <Link
+                href="/reminders"
+                className="inline-flex h-10 items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 text-sm font-medium hover:bg-muted/50"
+              >
+                Reminders
+              </Link>
+              <Link
+                href="/dashboard"
+                className="inline-flex h-10 items-center justify-center rounded-2xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-95"
+              >
+                Dashboard
+              </Link>
             </div>
           }
         />
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <MetricCard title="Visible items" value={data.counts.visible} description={`${data.counts.total} total inbox signals before filters.`} icon={<Inbox className="h-5 w-5 text-primary" />} />
-          <MetricCard title="Critical" value={data.counts.critical} description="Critical alert or high-urgency workflow items." icon={<AlertTriangle className="h-5 w-5 text-rose-500" />} />
-          <MetricCard title="High priority" value={data.counts.high} description="Items that should be reviewed before routine updates." icon={<BellRing className="h-5 w-5 text-amber-500" />} />
-          <MetricCard title="Care workload" value={data.counts.medium + data.counts.low} description="Medium and low priority items for normal follow-up." icon={<HeartPulse className="h-5 w-5 text-emerald-500" />} />
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <MetricCard
+            title="Visible items"
+            value={data.counts.visible}
+            description={`${data.counts.total} total inbox signals before filters.`}
+            icon={<Inbox className="h-5 w-5 text-primary" />}
+          />
+          <MetricCard
+            title="Critical"
+            value={data.counts.critical}
+            description="Critical alert or high-urgency workflow items."
+            icon={<AlertTriangle className="h-5 w-5 text-rose-500" />}
+          />
+          <MetricCard
+            title="High priority"
+            value={data.counts.high}
+            description="Items that should be reviewed before routine updates."
+            icon={<BellRing className="h-5 w-5 text-amber-500" />}
+          />
+          <MetricCard
+            title="Actionable"
+            value={data.reliability.actionable}
+            description="Items with a direct follow-through or cleanup path."
+            icon={<ClipboardCheck className="h-5 w-5 text-emerald-500" />}
+          />
+          <MetricCard
+            title="Cleanup queue"
+            value={data.reliability.cleanupCandidates}
+            description="Stale or follow-up items that should be cleared soon."
+            icon={<Sparkles className="h-5 w-5 text-violet-500" />}
+          />
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
@@ -241,15 +351,33 @@ export default async function NotificationsPage({
             <Card>
               <CardHeader>
                 <CardTitle>Filters</CardTitle>
-                <CardDescription>Switch between source and priority views without losing the inbox context.</CardDescription>
+                <CardDescription>
+                  Switch between source and priority views without losing the
+                  inbox context.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
                 <div>
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Source</p>
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Source
+                  </p>
                   <div className="flex flex-wrap gap-2">
-                    <Link href={filterHref({ source: "ALL", priority })} className="rounded-full border border-border/60 px-3 py-1.5 text-xs font-medium hover:bg-muted/50">All</Link>
+                    <Link
+                      href={filterHref({ source: "ALL", priority, state })}
+                      className="rounded-full border border-border/60 px-3 py-1.5 text-xs font-medium hover:bg-muted/50"
+                    >
+                      All
+                    </Link>
                     {data.counts.bySource.map((row) => (
-                      <Link key={row.source} href={filterHref({ source: row.source, priority })} className="rounded-full border border-border/60 px-3 py-1.5 text-xs font-medium hover:bg-muted/50">
+                      <Link
+                        key={row.source}
+                        href={filterHref({
+                          source: row.source,
+                          priority,
+                          state,
+                        })}
+                        className="rounded-full border border-border/60 px-3 py-1.5 text-xs font-medium hover:bg-muted/50"
+                      >
                         {sourceLabels[row.source]} ({row.count})
                       </Link>
                     ))}
@@ -257,11 +385,46 @@ export default async function NotificationsPage({
                 </div>
 
                 <div>
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Priority</p>
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Priority
+                  </p>
                   <div className="flex flex-wrap gap-2">
-                    {(["ALL", "critical", "high", "medium", "low"] as const).map((option) => (
-                      <Link key={option} href={filterHref({ source, priority: option })} className="rounded-full border border-border/60 px-3 py-1.5 text-xs font-medium hover:bg-muted/50">
+                    {(
+                      ["ALL", "critical", "high", "medium", "low"] as const
+                    ).map((option) => (
+                      <Link
+                        key={option}
+                        href={filterHref({ source, priority: option, state })}
+                        className="rounded-full border border-border/60 px-3 py-1.5 text-xs font-medium hover:bg-muted/50"
+                      >
                         {option}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Workflow state
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Link
+                      href={filterHref({ source, priority, state: "ALL" })}
+                      className="rounded-full border border-border/60 px-3 py-1.5 text-xs font-medium hover:bg-muted/50"
+                    >
+                      All
+                    </Link>
+                    {data.reliability.byState.map((row) => (
+                      <Link
+                        key={row.state}
+                        href={filterHref({
+                          source,
+                          priority,
+                          state: row.state,
+                        })}
+                        className="rounded-full border border-border/60 px-3 py-1.5 text-xs font-medium hover:bg-muted/50"
+                      >
+                        {stateLabels[row.state]} ({row.count})
                       </Link>
                     ))}
                   </div>
@@ -272,11 +435,18 @@ export default async function NotificationsPage({
             <Card>
               <CardHeader>
                 <CardTitle>Recommended next actions</CardTitle>
-                <CardDescription>Generated from the current notification workload. Use item actions to resolve, complete, snooze, or create follow-up reminders.</CardDescription>
+                <CardDescription>
+                  Generated from the current notification workload. Use item
+                  actions to resolve, complete, snooze, or create follow-up
+                  reminders.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {data.nextActions.map((action) => (
-                  <div key={action} className="rounded-2xl border border-border/60 bg-background/50 p-4 text-sm text-muted-foreground">
+                  <div
+                    key={action}
+                    className="rounded-2xl border border-border/60 bg-background/50 p-4 text-sm text-muted-foreground"
+                  >
                     {action}
                   </div>
                 ))}
@@ -288,14 +458,21 @@ export default async function NotificationsPage({
             <CardHeader>
               <CardTitle>Unified inbox</CardTitle>
               <CardDescription>
-                {source !== "ALL" || priority !== "ALL"
-                  ? `Filtered by source ${source} and priority ${priority}.`
+                {source !== "ALL" || priority !== "ALL" || state !== "ALL"
+                  ? `Filtered by source ${source}, priority ${priority}, and state ${state}.`
                   : "Sorted by priority first, then by the most relevant date."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {data.items.map((item) => <NotificationCard key={item.id} item={item} />)}
-              {data.items.length === 0 ? <EmptyState title="Inbox is clear" description="No alerts, reminders, follow-ups, document gaps, care invites, or device issues match the current filter." /> : null}
+              {data.items.map((item) => (
+                <NotificationCard key={item.id} item={item} />
+              ))}
+              {data.items.length === 0 ? (
+                <EmptyState
+                  title="Inbox is clear"
+                  description="No alerts, reminders, follow-ups, document gaps, care invites, or device issues match the current filter."
+                />
+              ) : null}
             </CardContent>
           </Card>
         </div>
