@@ -77,6 +77,7 @@ export default async function DocumentsPage({
   ]);
 
   const hub = buildDocumentHub(documents);
+  const reviewCardMap = new Map(hub.reviewCards.map((card) => [card.id, card]));
   const visibleDocuments = filterDocumentsForHub(documents, filters);
   const latest = documents[0] ?? null;
   const linkSummaries = await Promise.all(
@@ -116,13 +117,13 @@ export default async function DocumentsPage({
               { label: "Stored files", value: documents.length },
               { label: "Linked records", value: hub.linkedCount, hint: `${hub.unlinkedCount} still unlinked` },
               { label: "Readiness", value: `${hub.readinessScore}%`, hint: hub.readinessLabel },
-              { label: "Review items", value: hub.reviewItems.length },
+              { label: "Review queue", value: hub.intelligenceSummary.reviewQueue, hint: hub.intelligenceSummary.readinessLabel },
             ]}
           />
         </PageTransition>
 
         <PageTransition delay={0.06}>
-          <div className="grid gap-4 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-sm">
@@ -165,6 +166,19 @@ export default async function DocumentsPage({
               <CardContent>
                 <p className="text-2xl font-semibold">{hub.totalSizeLabel}</p>
                 <p className="mt-1 text-xs text-muted-foreground">Across all stored medical files.</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <FileSearch className="h-4 w-4 text-primary" /> Review queue
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-semibold">{hub.intelligenceSummary.reviewQueue}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {hub.intelligenceSummary.ready} ready · {hub.intelligenceSummary.highPriority} high priority.
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -258,6 +272,40 @@ export default async function DocumentsPage({
               </CardContent>
             </Card>
           </div>
+        </PageTransition>
+
+        <PageTransition delay={0.095}>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileSearch className="h-5 w-5 text-primary" /> Document intelligence review queue
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                High-priority document gaps for visit prep, care-team review, and export readiness.
+              </p>
+            </CardHeader>
+            <CardContent>
+              {hub.reviewCards.length ? (
+                <div className="grid gap-3 lg:grid-cols-3">
+                  {hub.reviewCards.slice(0, 6).map((card) => (
+                    <div key={card.id} className="rounded-2xl border border-border/60 bg-background/40 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold">{card.title}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">{card.typeLabel} · {card.ageLabel}</p>
+                        </div>
+                        <StatusPill tone={card.tone}>{card.stateLabel}</StatusPill>
+                      </div>
+                      <p className="mt-3 text-sm text-muted-foreground">{card.reason}</p>
+                      <p className="mt-3 text-xs font-medium text-foreground">Next: {card.nextStep}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState title="No documents yet" description="Upload a document to start the intelligence review queue." />
+              )}
+            </CardContent>
+          </Card>
         </PageTransition>
 
         <PageTransition delay={0.1}>
@@ -368,6 +416,7 @@ export default async function DocumentsPage({
                       const linked = linkMap.get(document.id) ?? null;
                       const hasNotes = Boolean(document.notes?.trim());
                       const hasLink = Boolean(document.linkedRecordType && document.linkedRecordId);
+                      const reviewCard = reviewCardMap.get(document.id);
 
                       return (
                         <DataCard
@@ -386,8 +435,27 @@ export default async function DocumentsPage({
                               <Badge className="bg-background/70">{DOCUMENT_TYPE_LABELS[document.type]}</Badge>
                               <StatusPill tone={hasLink ? "success" : "warning"}>{hasLink ? "Linked" : "Needs link"}</StatusPill>
                               <StatusPill tone={hasNotes ? "success" : "neutral"}>{hasNotes ? "Notes added" : "No notes"}</StatusPill>
+                              {reviewCard ? <StatusPill tone={reviewCard.tone}>{reviewCard.stateLabel}</StatusPill> : null}
                             </div>
                           </div>
+
+                          {reviewCard ? (
+                            <div className="mt-4 rounded-2xl border border-border/60 bg-background/40 p-4">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <p className="text-sm font-medium">Document review signal</p>
+                                <Badge className="bg-background/70">{reviewCard.ageLabel}</Badge>
+                              </div>
+                              <p className="mt-2 text-sm text-muted-foreground">{reviewCard.reason}</p>
+                              <p className="mt-2 text-xs font-medium text-foreground">Next: {reviewCard.nextStep}</p>
+                              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                {reviewCard.checklist.map((item) => (
+                                  <div key={item} className="rounded-xl border border-border/60 bg-background/50 px-3 py-2 text-xs text-muted-foreground">
+                                    {item}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
 
                           {linked ? (
                             <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">
