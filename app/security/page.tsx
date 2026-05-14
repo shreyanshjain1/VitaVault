@@ -26,7 +26,11 @@ import {
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { PASSWORD_POLICY_LABELS } from "@/lib/security/password-policy";
-import { getMobileSessionRisk, getSecurityReadiness } from "@/lib/security/security-center";
+import {
+  buildSecurityReviewDashboard,
+  getMobileSessionRisk,
+  getSecurityReadiness,
+} from "@/lib/security/security-center";
 import {
   changePasswordAction,
   revokeAllMobileSessionsAction,
@@ -53,7 +57,10 @@ function ProgressBar({ value }: { value: number }) {
   const safeValue = Math.max(0, Math.min(100, value));
   return (
     <div className="h-2 overflow-hidden rounded-full bg-muted">
-      <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${safeValue}%` }} />
+      <div
+        className="h-full rounded-full bg-primary transition-all"
+        style={{ width: `${safeValue}%` }}
+      />
     </div>
   );
 }
@@ -84,57 +91,64 @@ function SecurityMetric({
 export default async function SecurityPage() {
   const user = await requireUser();
 
-  const [account, mobileTokens, connectionCount, careInviteCount, auditEvents] = await Promise.all([
-    db.user.findUnique({
-      where: { id: user.id! },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        emailVerified: true,
-        passwordHash: true,
-        createdAt: true,
-      },
-    }),
-    db.mobileSessionToken.findMany({
-      where: { userId: user.id! },
-      orderBy: [{ revokedAt: "asc" }, { lastUsedAt: "desc" }, { createdAt: "desc" }],
-      take: 12,
-    }),
-    db.deviceConnection.count({
-      where: {
-        userId: user.id!,
-        status: { in: [DeviceConnectionStatus.ACTIVE, DeviceConnectionStatus.ERROR] },
-      },
-    }),
-    db.careInvite.count({
-      where: { ownerUserId: user.id!, status: "PENDING" },
-    }),
-    db.accessAuditLog.findMany({
-      where: {
-        ownerUserId: user.id!,
-        action: {
-          in: [
-            "PASSWORD_ROTATED",
-            "MOBILE_SESSION_REVOKED",
-            "ALL_MOBILE_SESSIONS_REVOKED",
-            "USER_DEACTIVATED",
-            "USER_REACTIVATED",
-          ],
+  const [account, mobileTokens, connectionCount, careInviteCount, auditEvents] =
+    await Promise.all([
+      db.user.findUnique({
+        where: { id: user.id! },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          emailVerified: true,
+          passwordHash: true,
+          createdAt: true,
         },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 8,
-    }),
-  ]);
+      }),
+      db.mobileSessionToken.findMany({
+        where: { userId: user.id! },
+        orderBy: [
+          { revokedAt: "asc" },
+          { lastUsedAt: "desc" },
+          { createdAt: "desc" },
+        ],
+        take: 12,
+      }),
+      db.deviceConnection.count({
+        where: {
+          userId: user.id!,
+          status: {
+            in: [DeviceConnectionStatus.ACTIVE, DeviceConnectionStatus.ERROR],
+          },
+        },
+      }),
+      db.careInvite.count({
+        where: { ownerUserId: user.id!, status: "PENDING" },
+      }),
+      db.accessAuditLog.findMany({
+        where: {
+          ownerUserId: user.id!,
+          action: {
+            in: [
+              "PASSWORD_ROTATED",
+              "MOBILE_SESSION_REVOKED",
+              "ALL_MOBILE_SESSIONS_REVOKED",
+              "USER_DEACTIVATED",
+              "USER_REACTIVATED",
+            ],
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 8,
+      }),
+    ]);
 
   if (!account) {
     throw new Error("Unable to load account security profile.");
   }
 
   const activeMobileSessions = mobileTokens.filter(
-    (item) => !item.revokedAt && item.expiresAt > new Date()
+    (item) => !item.revokedAt && item.expiresAt > new Date(),
   );
 
   const revokedMobileSessions = mobileTokens.filter((item) => item.revokedAt);
@@ -146,6 +160,21 @@ export default async function SecurityPage() {
     connectionCount,
     pendingCareInvites: careInviteCount,
   });
+  const mobileSessionRiskStates = mobileTokens.map((token) =>
+    getMobileSessionRisk(token),
+  );
+  const securityReview = buildSecurityReviewDashboard({
+    readinessScore: readiness.score,
+    readinessTone: readiness.riskTone,
+    activeMobileSessions: activeMobileSessions.length,
+    staleOrExpiringSessions: mobileSessionRiskStates.filter(
+      (state) => state.tone === "warning",
+    ).length,
+    revokedMobileSessions: revokedMobileSessions.length,
+    connectionCount,
+    pendingCareInvites: careInviteCount,
+    recentSensitiveActions: auditEvents.length,
+  });
 
   return (
     <AppShell>
@@ -155,13 +184,22 @@ export default async function SecurityPage() {
           description="Rotate credentials, review mobile/API sessions, confirm sensitive actions, and monitor account security posture."
           action={
             <div className="flex flex-wrap gap-3">
-              <Link href="/audit-log" className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2.5 text-sm font-medium hover:bg-muted/50">
+              <Link
+                href="/audit-log"
+                className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2.5 text-sm font-medium hover:bg-muted/50"
+              >
                 Audit log
               </Link>
-              <Link href="/device-connection" className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2.5 text-sm font-medium hover:bg-muted/50">
+              <Link
+                href="/device-connection"
+                className="inline-flex items-center justify-center rounded-2xl border border-border/70 bg-background/60 px-4 py-2.5 text-sm font-medium hover:bg-muted/50"
+              >
                 Device connections
               </Link>
-              <Link href="/care-team" className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-95">
+              <Link
+                href="/care-team"
+                className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-95"
+              >
                 Care access
               </Link>
             </div>
@@ -173,23 +211,33 @@ export default async function SecurityPage() {
             <CardHeader>
               <CardTitle>Security readiness</CardTitle>
               <CardDescription className="mt-1">
-                A quick posture score based on password setup, email verification, sessions, devices, and pending care invites.
+                A quick posture score based on password setup, email
+                verification, sessions, devices, and pending care invites.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <p className="text-4xl font-semibold">{readiness.score}%</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{readiness.nextAction}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {readiness.nextAction}
+                  </p>
                 </div>
-                <StatusPill tone={readiness.riskTone}>{readiness.score >= 80 ? "Healthy" : "Review needed"}</StatusPill>
+                <StatusPill tone={readiness.riskTone}>
+                  {readiness.score >= 80 ? "Healthy" : "Review needed"}
+                </StatusPill>
               </div>
               <ProgressBar value={readiness.score} />
               <div className="grid gap-3 md:grid-cols-2">
                 {readiness.checks.map((check) => (
-                  <div key={check.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-background/60 p-3">
+                  <div
+                    key={check.id}
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-background/60 p-3"
+                  >
                     <span className="text-sm font-medium">{check.label}</span>
-                    <StatusPill tone={check.tone}>{check.passed ? "Pass" : "Review"}</StatusPill>
+                    <StatusPill tone={check.tone}>
+                      {check.passed ? "Pass" : "Review"}
+                    </StatusPill>
                   </div>
                 ))}
               </div>
@@ -200,54 +248,166 @@ export default async function SecurityPage() {
             <CardHeader>
               <CardTitle>Sensitive action policy</CardTitle>
               <CardDescription className="mt-1">
-                High-impact security actions now require typed confirmation and audit logging.
+                High-impact security actions now require typed confirmation and
+                audit logging.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
               <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
                 <p className="font-medium text-foreground">Password rotation</p>
-                <p className="mt-1">Enforces stronger password rules and writes an audit event.</p>
+                <p className="mt-1">
+                  Enforces stronger password rules and writes an audit event.
+                </p>
               </div>
               <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
-                <p className="font-medium text-foreground">Session revocation</p>
-                <p className="mt-1">Requires typing <span className="font-mono">REVOKE</span> or <span className="font-mono">REVOKE ALL</span>.</p>
+                <p className="font-medium text-foreground">
+                  Session revocation
+                </p>
+                <p className="mt-1">
+                  Requires typing <span className="font-mono">REVOKE</span> or{" "}
+                  <span className="font-mono">REVOKE ALL</span>.
+                </p>
               </div>
               <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
-                <p className="font-medium text-foreground">Mobile login protection</p>
-                <p className="mt-1">The mobile login API now has an in-memory rate-limit guard.</p>
+                <p className="font-medium text-foreground">
+                  Mobile login protection
+                </p>
+                <p className="mt-1">
+                  The mobile login API now has an in-memory rate-limit guard.
+                </p>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <SecurityMetric title="Password" value={account.passwordHash ? "Configured" : "Missing"} description={`Credentials login ${account.passwordHash ? "is enabled" : "needs setup"}.`} icon={<LockKeyhole className="h-5 w-5 text-primary" />} />
-          <SecurityMetric title="Email verification" value={account.emailVerified ? "Verified" : "Pending"} description={account.emailVerified ? `Verified on ${formatDate(account.emailVerified)}` : "Email verification is not complete."} icon={<ShieldCheck className="h-5 w-5 text-emerald-500" />} />
-          <SecurityMetric title="Mobile sessions" value={activeMobileSessions.length} description="Active API/mobile tokens." icon={<Smartphone className="h-5 w-5 text-sky-500" />} />
-          <SecurityMetric title="Linked exposure" value={`${connectionCount} devices`} description={`${careInviteCount} pending care invite${careInviteCount === 1 ? "" : "s"}.`} icon={<TriangleAlert className="h-5 w-5 text-amber-500" />} />
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <SecurityMetric
+            title="Password"
+            value={account.passwordHash ? "Configured" : "Missing"}
+            description={`Credentials login ${account.passwordHash ? "is enabled" : "needs setup"}.`}
+            icon={<LockKeyhole className="h-5 w-5 text-primary" />}
+          />
+          <SecurityMetric
+            title="Email verification"
+            value={account.emailVerified ? "Verified" : "Pending"}
+            description={
+              account.emailVerified
+                ? `Verified on ${formatDate(account.emailVerified)}`
+                : "Email verification is not complete."
+            }
+            icon={<ShieldCheck className="h-5 w-5 text-emerald-500" />}
+          />
+          <SecurityMetric
+            title="Mobile sessions"
+            value={activeMobileSessions.length}
+            description="Active API/mobile tokens."
+            icon={<Smartphone className="h-5 w-5 text-sky-500" />}
+          />
+          <SecurityMetric
+            title="Review queue"
+            value={securityReview.reviewQueue}
+            description={`${securityReview.label} security posture.`}
+            icon={<TriangleAlert className="h-5 w-5 text-amber-500" />}
+          />
+          <SecurityMetric
+            title="Linked exposure"
+            value={`${connectionCount} devices`}
+            description={`${careInviteCount} pending care invite${careInviteCount === 1 ? "" : "s"}.`}
+            icon={<TriangleAlert className="h-5 w-5 text-amber-500" />}
+          />
         </div>
+
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <CardTitle>Security review dashboard</CardTitle>
+                <CardDescription className="mt-1">
+                  A focused review queue for account posture, mobile/API
+                  exposure, care invites, and linked-device risk.
+                </CardDescription>
+              </div>
+              <StatusPill tone={securityReview.tone}>
+                {securityReview.label}
+              </StatusPill>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {securityReview.nextStep}
+            </p>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {securityReview.checklist.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-3xl border border-border/60 bg-background/40 p-4"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="font-medium">{item.label}</p>
+                    <StatusPill tone={item.tone}>
+                      {item.passed ? "Clear" : "Review"}
+                    </StatusPill>
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {item.detail}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="grid gap-6 xl:grid-cols-[0.95fr_1.25fr]">
           <Card>
             <CardHeader>
               <CardTitle>Rotate password</CardTitle>
               <CardDescription className="mt-1">
-                Password updates now enforce stronger checks before credentials are changed.
+                Password updates now enforce stronger checks before credentials
+                are changed.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form action={changePasswordAction} className="space-y-4">
                 <div className="space-y-2">
-                  <label htmlFor="currentPassword" className="text-sm font-medium">Current password</label>
-                  <Input id="currentPassword" name="currentPassword" type="password" required />
+                  <label
+                    htmlFor="currentPassword"
+                    className="text-sm font-medium"
+                  >
+                    Current password
+                  </label>
+                  <Input
+                    id="currentPassword"
+                    name="currentPassword"
+                    type="password"
+                    required
+                  />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="newPassword" className="text-sm font-medium">New password</label>
-                  <Input id="newPassword" name="newPassword" type="password" minLength={10} required />
+                  <label htmlFor="newPassword" className="text-sm font-medium">
+                    New password
+                  </label>
+                  <Input
+                    id="newPassword"
+                    name="newPassword"
+                    type="password"
+                    minLength={10}
+                    required
+                  />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="confirmPassword" className="text-sm font-medium">Confirm new password</label>
-                  <Input id="confirmPassword" name="confirmPassword" type="password" minLength={10} required />
+                  <label
+                    htmlFor="confirmPassword"
+                    className="text-sm font-medium"
+                  >
+                    Confirm new password
+                  </label>
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    minLength={10}
+                    required
+                  />
                 </div>
                 <div className="rounded-3xl border border-border/60 bg-background/40 p-4">
                   <p className="text-sm font-medium">Password policy</p>
@@ -273,15 +433,33 @@ export default async function SecurityPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <form action={revokeAllMobileSessionsAction} className="rounded-3xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+              <form
+                action={revokeAllMobileSessionsAction}
+                className="rounded-3xl border border-amber-200 bg-amber-50 p-4 text-amber-900"
+              >
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                   <div>
-                    <p className="font-medium">Revoke all active mobile/API sessions</p>
-                    <p className="mt-1 text-sm">Type <span className="font-mono">REVOKE ALL</span> to confirm.</p>
+                    <p className="font-medium">
+                      Revoke all active mobile/API sessions
+                    </p>
+                    <p className="mt-1 text-sm">
+                      Type <span className="font-mono">REVOKE ALL</span> to
+                      confirm.
+                    </p>
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row">
-                    <Input name="confirmation" placeholder="REVOKE ALL" className="bg-background" />
-                    <Button type="submit" variant="destructive" disabled={activeMobileSessions.length === 0}>Revoke all</Button>
+                    <Input
+                      name="confirmation"
+                      placeholder="REVOKE ALL"
+                      className="bg-background"
+                    />
+                    <Button
+                      type="submit"
+                      variant="destructive"
+                      disabled={activeMobileSessions.length === 0}
+                    >
+                      Revoke all
+                    </Button>
                   </div>
                 </div>
               </form>
@@ -289,23 +467,57 @@ export default async function SecurityPage() {
               {mobileTokens.map((token) => {
                 const state = getMobileSessionRisk(token);
                 return (
-                  <div key={token.id} className="rounded-3xl border border-border/60 bg-background/40 p-4">
+                  <div
+                    key={token.id}
+                    className="rounded-3xl border border-border/60 bg-background/40 p-4"
+                  >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-medium">{token.name || "Unnamed mobile/API token"}</p>
-                          <StatusPill tone={sessionTone(token.expiresAt, token.revokedAt)}>{token.revokedAt ? "Revoked" : token.expiresAt < new Date() ? "Expired" : "Active"}</StatusPill>
-                          <StatusPill tone={state.tone}>{state.label}</StatusPill>
+                          <p className="font-medium">
+                            {token.name || "Unnamed mobile/API token"}
+                          </p>
+                          <StatusPill
+                            tone={sessionTone(token.expiresAt, token.revokedAt)}
+                          >
+                            {token.revokedAt
+                              ? "Revoked"
+                              : token.expiresAt < new Date()
+                                ? "Expired"
+                                : "Active"}
+                          </StatusPill>
+                          <StatusPill tone={state.tone}>
+                            {state.label}
+                          </StatusPill>
                         </div>
-                        <p className="mt-1 text-sm text-muted-foreground">Created {formatDateTime(token.createdAt)} · Last used {formatDateTime(token.lastUsedAt)}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">Expires {formatDateTime(token.expiresAt)}</p>
-                        <p className="mt-2 text-sm text-muted-foreground">{state.detail}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Created {formatDateTime(token.createdAt)} · Last used{" "}
+                          {formatDateTime(token.lastUsedAt)}
+                        </p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Expires {formatDateTime(token.expiresAt)}
+                        </p>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          {state.detail}
+                        </p>
                       </div>
                       {!token.revokedAt ? (
-                        <form action={revokeMobileSessionAction} className="min-w-[220px] space-y-2">
-                          <input type="hidden" name="tokenId" value={token.id} />
-                          <Input name="confirmation" placeholder="Type REVOKE" />
-                          <Button type="submit" variant="destructive" size="sm">Revoke</Button>
+                        <form
+                          action={revokeMobileSessionAction}
+                          className="min-w-[220px] space-y-2"
+                        >
+                          <input
+                            type="hidden"
+                            name="tokenId"
+                            value={token.id}
+                          />
+                          <Input
+                            name="confirmation"
+                            placeholder="Type REVOKE"
+                          />
+                          <Button type="submit" variant="destructive" size="sm">
+                            Revoke
+                          </Button>
                         </form>
                       ) : null}
                     </div>
@@ -325,32 +537,73 @@ export default async function SecurityPage() {
           <Card>
             <CardHeader>
               <CardTitle>Identity snapshot</CardTitle>
-              <CardDescription className="mt-1">Core account metadata attached to this workspace.</CardDescription>
+              <CardDescription className="mt-1">
+                Core account metadata attached to this workspace.
+              </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
-              <div className="rounded-3xl border border-border/60 bg-background/40 p-4"><p className="text-xs uppercase tracking-wide text-muted-foreground">Name</p><p className="mt-1 font-medium">{account.name || "No name set"}</p></div>
-              <div className="rounded-3xl border border-border/60 bg-background/40 p-4"><p className="text-xs uppercase tracking-wide text-muted-foreground">Email</p><p className="mt-1 font-medium">{account.email}</p></div>
-              <div className="rounded-3xl border border-border/60 bg-background/40 p-4"><p className="text-xs uppercase tracking-wide text-muted-foreground">Role</p><p className="mt-1 font-medium">{account.role}</p></div>
-              <div className="rounded-3xl border border-border/60 bg-background/40 p-4"><p className="text-xs uppercase tracking-wide text-muted-foreground">Member since</p><p className="mt-1 font-medium">{formatDate(account.createdAt)}</p></div>
+              <div className="rounded-3xl border border-border/60 bg-background/40 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Name
+                </p>
+                <p className="mt-1 font-medium">
+                  {account.name || "No name set"}
+                </p>
+              </div>
+              <div className="rounded-3xl border border-border/60 bg-background/40 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Email
+                </p>
+                <p className="mt-1 font-medium">{account.email}</p>
+              </div>
+              <div className="rounded-3xl border border-border/60 bg-background/40 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Role
+                </p>
+                <p className="mt-1 font-medium">{account.role}</p>
+              </div>
+              <div className="rounded-3xl border border-border/60 bg-background/40 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Member since
+                </p>
+                <p className="mt-1 font-medium">
+                  {formatDate(account.createdAt)}
+                </p>
+              </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
               <CardTitle>Recent security audit</CardTitle>
-              <CardDescription className="mt-1">Recent account-security actions recorded in the audit log.</CardDescription>
+              <CardDescription className="mt-1">
+                Recent account-security actions recorded in the audit log.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {auditEvents.map((event) => (
-                <div key={event.id} className="rounded-2xl border border-border/60 bg-background/60 p-4">
+                <div
+                  key={event.id}
+                  className="rounded-2xl border border-border/60 bg-background/60 p-4"
+                >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      {event.action.includes("REVOKED") ? <AlertTriangle className="h-4 w-4 text-amber-500" /> : <History className="h-4 w-4 text-primary" />}
-                      <p className="font-medium">{event.action.replaceAll("_", " ")}</p>
+                      {event.action.includes("REVOKED") ? (
+                        <AlertTriangle className="h-4 w-4 text-amber-500" />
+                      ) : (
+                        <History className="h-4 w-4 text-primary" />
+                      )}
+                      <p className="font-medium">
+                        {event.action.replaceAll("_", " ")}
+                      </p>
                     </div>
                     <Badge>{formatDateTime(event.createdAt)}</Badge>
                   </div>
-                  {event.metadataJson ? <p className="mt-2 text-xs text-muted-foreground">{event.metadataJson}</p> : null}
+                  {event.metadataJson ? (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {event.metadataJson}
+                    </p>
+                  ) : null}
                 </div>
               ))}
               {auditEvents.length === 0 ? (
@@ -365,12 +618,36 @@ export default async function SecurityPage() {
         <Card>
           <CardHeader>
             <CardTitle>Security hardening summary</CardTitle>
-            <CardDescription className="mt-1">Patch 39 adds guardrails around credentials, mobile API login, and sensitive session controls.</CardDescription>
+            <CardDescription className="mt-1">
+              Guardrails around credentials, mobile API login, and sensitive
+              session controls.
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-3xl border border-border/60 bg-background/40 p-5"><KeyRound className="h-5 w-5 text-primary" /><p className="mt-3 font-medium">Stronger password policy</p><p className="mt-1 text-sm text-muted-foreground">Credential rotation now rejects weak, common, or account-identifying passwords.</p></div>
-            <div className="rounded-3xl border border-border/60 bg-background/40 p-5"><Smartphone className="h-5 w-5 text-sky-500" /><p className="mt-3 font-medium">Rate-limited mobile login</p><p className="mt-1 text-sm text-muted-foreground">Mobile credential attempts are protected by an in-memory rate-limit guard.</p></div>
-            <div className="rounded-3xl border border-border/60 bg-background/40 p-5"><ShieldCheck className="h-5 w-5 text-emerald-500" /><p className="mt-3 font-medium">Audited sensitive actions</p><p className="mt-1 text-sm text-muted-foreground">Password rotation and mobile token revocation are written to access audit logs.</p></div>
+            <div className="rounded-3xl border border-border/60 bg-background/40 p-5">
+              <KeyRound className="h-5 w-5 text-primary" />
+              <p className="mt-3 font-medium">Stronger password policy</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Credential rotation now rejects weak, common, or
+                account-identifying passwords.
+              </p>
+            </div>
+            <div className="rounded-3xl border border-border/60 bg-background/40 p-5">
+              <Smartphone className="h-5 w-5 text-sky-500" />
+              <p className="mt-3 font-medium">Rate-limited mobile login</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Mobile credential attempts are protected by an in-memory
+                rate-limit guard.
+              </p>
+            </div>
+            <div className="rounded-3xl border border-border/60 bg-background/40 p-5">
+              <ShieldCheck className="h-5 w-5 text-emerald-500" />
+              <p className="mt-3 font-medium">Audited sensitive actions</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Password rotation and mobile token revocation are written to
+                access audit logs.
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>

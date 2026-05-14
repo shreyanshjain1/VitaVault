@@ -27,7 +27,13 @@ import {
   THead,
   TR,
 } from "@/components/ui";
-import { getSecurityAuditCenterData, parseAuditFilters, type SecurityAuditEvent } from "@/lib/audit-log";
+import {
+  buildAuditReviewChecklist,
+  getAuditEventRiskSignal,
+  getSecurityAuditCenterData,
+  parseAuditFilters,
+  type SecurityAuditEvent,
+} from "@/lib/audit-log";
 import { isAdminRole } from "@/lib/route-policy";
 import { requireUser } from "@/lib/session";
 
@@ -63,7 +69,16 @@ function severityTone(severity: SecurityAuditEvent["severity"]) {
 }
 
 function buildExportText(events: SecurityAuditEvent[]) {
-  const header = ["Created At", "Source", "Severity", "Title", "Actor", "Owner", "Target", "Note"].join(",");
+  const header = [
+    "Created At",
+    "Source",
+    "Severity",
+    "Title",
+    "Actor",
+    "Owner",
+    "Target",
+    "Note",
+  ].join(",");
   const rows = events.map((event) =>
     [
       event.createdAt.toISOString(),
@@ -76,7 +91,7 @@ function buildExportText(events: SecurityAuditEvent[]) {
       event.note,
     ]
       .map((value) => `"${String(value).replaceAll('"', '""')}"`)
-      .join(",")
+      .join(","),
   );
 
   return [header, ...rows].join("\n");
@@ -92,9 +107,10 @@ export default async function AuditLogPage({
   const filters = parseAuditFilters(params);
   const data = await getSecurityAuditCenterData(
     { id: user.id!, role: user.role },
-    filters
+    filters,
   );
   const exportText = buildExportText(data.events);
+  const reviewChecklist = buildAuditReviewChecklist(data.summary);
 
   return (
     <AppShell>
@@ -122,16 +138,22 @@ export default async function AuditLogPage({
           }
         />
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-7">
           <Card className="xl:col-span-2">
             <CardHeader>
               <CardTitle>Visible events</CardTitle>
-              <CardDescription>After current filters are applied.</CardDescription>
+              <CardDescription>
+                After current filters are applied.
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-4xl font-semibold">{data.summary.totalEvents}</p>
+              <p className="text-4xl font-semibold">
+                {data.summary.totalEvents}
+              </p>
               <p className="mt-2 text-sm text-muted-foreground">
-                {data.isAdmin ? "Admin-wide operational visibility" : "Limited to your workspace"}
+                {data.isAdmin
+                  ? "Admin-wide operational visibility"
+                  : "Limited to your workspace"}
               </p>
             </CardContent>
           </Card>
@@ -141,7 +163,11 @@ export default async function AuditLogPage({
               <CardTitle>High risk</CardTitle>
               <CardDescription>Critical/failed events.</CardDescription>
             </CardHeader>
-            <CardContent><p className="text-4xl font-semibold">{data.summary.dangerEvents}</p></CardContent>
+            <CardContent>
+              <p className="text-4xl font-semibold">
+                {data.summary.dangerEvents}
+              </p>
+            </CardContent>
           </Card>
 
           <Card>
@@ -149,7 +175,23 @@ export default async function AuditLogPage({
               <CardTitle>Warnings</CardTitle>
               <CardDescription>Needs review.</CardDescription>
             </CardHeader>
-            <CardContent><p className="text-4xl font-semibold">{data.summary.warningEvents}</p></CardContent>
+            <CardContent>
+              <p className="text-4xl font-semibold">
+                {data.summary.warningEvents}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Review queue</CardTitle>
+              <CardDescription>Critical + warning events.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-4xl font-semibold">
+                {data.summary.reviewQueue}
+              </p>
+            </CardContent>
           </Card>
 
           <Card>
@@ -157,7 +199,11 @@ export default async function AuditLogPage({
               <CardTitle>Open alerts</CardTitle>
               <CardDescription>Unresolved alert events.</CardDescription>
             </CardHeader>
-            <CardContent><p className="text-4xl font-semibold">{data.summary.openAlerts}</p></CardContent>
+            <CardContent>
+              <p className="text-4xl font-semibold">
+                {data.summary.openAlerts}
+              </p>
+            </CardContent>
           </Card>
 
           <Card>
@@ -165,7 +211,11 @@ export default async function AuditLogPage({
               <CardTitle>Failed jobs</CardTitle>
               <CardDescription>Failed/retrying runs.</CardDescription>
             </CardHeader>
-            <CardContent><p className="text-4xl font-semibold">{data.summary.failedJobs}</p></CardContent>
+            <CardContent>
+              <p className="text-4xl font-semibold">
+                {data.summary.failedJobs}
+              </p>
+            </CardContent>
           </Card>
         </div>
 
@@ -175,10 +225,14 @@ export default async function AuditLogPage({
               <div>
                 <CardTitle>Filter audit activity</CardTitle>
                 <CardDescription className="mt-1">
-                  Narrow by event source, severity, or free-text search across title, actor, owner, target, and notes.
+                  Narrow by event source, severity, or free-text search across
+                  title, actor, owner, target, and notes.
                 </CardDescription>
               </div>
-              <form method="post" action={`data:text/csv;charset=utf-8,${encodeURIComponent(exportText)}`}>
+              <form
+                method="post"
+                action={`data:text/csv;charset=utf-8,${encodeURIComponent(exportText)}`}
+              >
                 <button
                   type="submit"
                   className="inline-flex items-center justify-center gap-2 rounded-2xl border border-border/70 bg-background/60 px-4 py-2.5 text-sm font-medium hover:bg-muted/50"
@@ -190,13 +244,25 @@ export default async function AuditLogPage({
             </div>
           </CardHeader>
           <CardContent>
-            <form className="grid gap-3 lg:grid-cols-[1fr_180px_180px_auto]" action="/audit-log">
+            <form
+              className="grid gap-3 lg:grid-cols-[1fr_180px_180px_auto]"
+              action="/audit-log"
+            >
               <div className="space-y-2">
-                <label htmlFor="q" className="text-sm font-medium">Search</label>
-                <Input id="q" name="q" defaultValue={filters.q} placeholder="Search actions, actors, targets, or notes" />
+                <label htmlFor="q" className="text-sm font-medium">
+                  Search
+                </label>
+                <Input
+                  id="q"
+                  name="q"
+                  defaultValue={filters.q}
+                  placeholder="Search actions, actors, targets, or notes"
+                />
               </div>
               <div className="space-y-2">
-                <label htmlFor="source" className="text-sm font-medium">Source</label>
+                <label htmlFor="source" className="text-sm font-medium">
+                  Source
+                </label>
                 <Select id="source" name="source" defaultValue={filters.source}>
                   <option value="all">All sources</option>
                   <option value="access">Access</option>
@@ -207,8 +273,14 @@ export default async function AuditLogPage({
                 </Select>
               </div>
               <div className="space-y-2">
-                <label htmlFor="severity" className="text-sm font-medium">Severity</label>
-                <Select id="severity" name="severity" defaultValue={filters.severity}>
+                <label htmlFor="severity" className="text-sm font-medium">
+                  Severity
+                </label>
+                <Select
+                  id="severity"
+                  name="severity"
+                  defaultValue={filters.severity}
+                >
                   <option value="all">All severities</option>
                   <option value="danger">Danger</option>
                   <option value="warning">Warning</option>
@@ -234,7 +306,8 @@ export default async function AuditLogPage({
             <CardHeader>
               <CardTitle>Unified audit feed</CardTitle>
               <CardDescription>
-                Most recent access, alert, reminder, job, and mobile session events.
+                Most recent access, alert, reminder, job, and mobile session
+                events.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -250,33 +323,68 @@ export default async function AuditLogPage({
                       </TR>
                     </THead>
                     <TBody>
-                      {data.events.map((event) => (
-                        <TR key={event.id}>
-                          <TD>
-                            <div className="space-y-2">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <Badge className="gap-2">{sourceIcon(event.source)}{sourceLabel(event.source)}</Badge>
-                                <StatusPill tone={severityTone(event.severity)}>{event.severity}</StatusPill>
+                      {data.events.map((event) => {
+                        const signal = getAuditEventRiskSignal(event);
+                        return (
+                          <TR key={event.id}>
+                            <TD>
+                              <div className="space-y-2">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <Badge className="gap-2">
+                                    {sourceIcon(event.source)}
+                                    {sourceLabel(event.source)}
+                                  </Badge>
+                                  <StatusPill
+                                    tone={severityTone(event.severity)}
+                                  >
+                                    {event.severity}
+                                  </StatusPill>
+                                  <StatusPill tone={signal.tone}>
+                                    {signal.label}
+                                  </StatusPill>
+                                </div>
+                                <div className="font-medium">{event.title}</div>
+                                <div className="max-w-xl text-sm text-muted-foreground">
+                                  {event.note}
+                                </div>
+                                <div className="text-xs font-medium text-muted-foreground">
+                                  {signal.actionLabel} · {signal.nextStep}
+                                </div>
                               </div>
-                              <div className="font-medium">{event.title}</div>
-                              <div className="max-w-xl text-sm text-muted-foreground">{event.note}</div>
-                            </div>
-                          </TD>
-                          <TD>
-                            <div className="space-y-1 text-sm">
-                              <p><span className="text-muted-foreground">Actor:</span> {event.actor}</p>
-                              <p><span className="text-muted-foreground">Owner:</span> {event.owner}</p>
-                            </div>
-                          </TD>
-                          <TD className="max-w-xs text-sm text-muted-foreground">{event.target}</TD>
-                          <TD className="whitespace-nowrap text-sm text-muted-foreground">{formatDateTime(event.createdAt)}</TD>
-                        </TR>
-                      ))}
+                            </TD>
+                            <TD>
+                              <div className="space-y-1 text-sm">
+                                <p>
+                                  <span className="text-muted-foreground">
+                                    Actor:
+                                  </span>{" "}
+                                  {event.actor}
+                                </p>
+                                <p>
+                                  <span className="text-muted-foreground">
+                                    Owner:
+                                  </span>{" "}
+                                  {event.owner}
+                                </p>
+                              </div>
+                            </TD>
+                            <TD className="max-w-xs text-sm text-muted-foreground">
+                              {event.target}
+                            </TD>
+                            <TD className="whitespace-nowrap text-sm text-muted-foreground">
+                              {formatDateTime(event.createdAt)}
+                            </TD>
+                          </TR>
+                        );
+                      })}
                     </TBody>
                   </Table>
                 </div>
               ) : (
-                <EmptyState title="No audit events found" description="Try clearing filters or generating activity through care access, alerts, reminders, mobile sessions, or jobs." />
+                <EmptyState
+                  title="No audit events found"
+                  description="Try clearing filters or generating activity through care access, alerts, reminders, mobile sessions, or jobs."
+                />
               )}
             </CardContent>
           </Card>
@@ -284,21 +392,68 @@ export default async function AuditLogPage({
           <div className="space-y-6">
             <Card>
               <CardHeader>
+                <CardTitle>Audit review checklist</CardTitle>
+                <CardDescription>
+                  High-risk items that should be cleared before exporting or
+                  sharing records.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {reviewChecklist.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-3xl border border-border/60 bg-background/40 p-4"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <p className="font-medium">{item.label}</p>
+                      <StatusPill tone={item.tone}>
+                        {item.passed ? "Clear" : "Review"}
+                      </StatusPill>
+                    </div>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {item.detail}
+                    </p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                 <CardTitle>Security posture</CardTitle>
-                <CardDescription>What this audit center is tracking.</CardDescription>
+                <CardDescription>
+                  What this audit center is tracking.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <div className="rounded-3xl border border-border/60 bg-background/40 p-4">
-                  <div className="flex items-center gap-2 font-medium"><ShieldCheck className="h-4 w-4 text-primary" /> Care access changes</div>
-                  <p className="mt-1 text-muted-foreground">Invite, grant, revoke, and shared-access audit entries.</p>
+                  <div className="flex items-center gap-2 font-medium">
+                    <ShieldCheck className="h-4 w-4 text-primary" /> Care access
+                    changes
+                  </div>
+                  <p className="mt-1 text-muted-foreground">
+                    Invite, grant, revoke, and shared-access audit entries.
+                  </p>
                 </div>
                 <div className="rounded-3xl border border-border/60 bg-background/40 p-4">
-                  <div className="flex items-center gap-2 font-medium"><AlertTriangle className="h-4 w-4 text-amber-500" /> Alert and reminder actions</div>
-                  <p className="mt-1 text-muted-foreground">Acknowledgements, resolutions, reminder state changes, and related notes.</p>
+                  <div className="flex items-center gap-2 font-medium">
+                    <AlertTriangle className="h-4 w-4 text-amber-500" /> Alert
+                    and reminder actions
+                  </div>
+                  <p className="mt-1 text-muted-foreground">
+                    Acknowledgements, resolutions, reminder state changes, and
+                    related notes.
+                  </p>
                 </div>
                 <div className="rounded-3xl border border-border/60 bg-background/40 p-4">
-                  <div className="flex items-center gap-2 font-medium"><Activity className="h-4 w-4 text-sky-500" /> Jobs and sessions</div>
-                  <p className="mt-1 text-muted-foreground">Worker runs, failed attempts, active mobile sessions, expired tokens, and revocations.</p>
+                  <div className="flex items-center gap-2 font-medium">
+                    <Activity className="h-4 w-4 text-sky-500" /> Jobs and
+                    sessions
+                  </div>
+                  <p className="mt-1 text-muted-foreground">
+                    Worker runs, failed attempts, active mobile sessions,
+                    expired tokens, and revocations.
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -306,14 +461,22 @@ export default async function AuditLogPage({
             <Card>
               <CardHeader>
                 <CardTitle>Active mobile sessions</CardTitle>
-                <CardDescription>Current valid mobile/API tokens.</CardDescription>
+                <CardDescription>
+                  Current valid mobile/API tokens.
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-5xl font-semibold">{data.summary.activeMobileSessions}</p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Manage personal tokens from the Security Center. Admins can review aggregate visibility from this page.
+                <p className="text-5xl font-semibold">
+                  {data.summary.activeMobileSessions}
                 </p>
-                <Link href="/security" className="mt-4 inline-flex rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50">
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Manage personal tokens from the Security Center. Admins can
+                  review aggregate visibility from this page.
+                </p>
+                <Link
+                  href="/security"
+                  className="mt-4 inline-flex rounded-2xl border border-border/70 bg-background/60 px-4 py-2 text-sm font-medium hover:bg-muted/50"
+                >
                   Open Security Center
                 </Link>
               </CardContent>
