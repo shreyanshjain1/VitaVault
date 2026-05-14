@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { DemoHeader, DemoSection, MetricGrid, SimpleTable, StatCards } from "@/components/demo-primitives";
-import { demoNav, demoDashboardStats, demoSummary, demoOps, demoProductHubs, demoFeatureMatrix } from "@/lib/demo-data";
+import { demoNav, demoDashboardStats, demoSummary, demoOps, demoProductHubs, demoFeatureMatrix, demoNavGroups, demoQaChecklist } from "@/lib/demo-data";
 
 export default function DemoOverviewPage() {
   return (
@@ -21,6 +21,14 @@ export default function DemoOverviewPage() {
 
       <DemoSection title="What this demo covers" description="The goal here is to give reviewers a reliable map of the real VitaVault product surface, not just a landing-page teaser.">
         <SimpleTable headers={["Area", "What you can inspect in demo"]} rows={demoNav.slice(1).map((item) => [item.label, item.description ?? `Read-only mirror of the ${item.label.toLowerCase()} module`])} />
+      </DemoSection>
+
+      <DemoSection title="Demo route QA" description="A quick confidence check showing that the public demo is discoverable, read-only, and ready for reviewers.">
+        <StatCards items={demoQaChecklist.map((item) => ({ title: item.label, body: item.detail, status: item.status }))} />
+      </DemoSection>
+
+      <DemoSection title="Grouped reviewer map" description="The left navigation is grouped by reviewer task so the demo feels intentional instead of being one long route list.">
+        <SimpleTable headers={["Group", "Routes included", "Why it matters"]} rows={demoNavGroups.map((group) => [group.label, group.items.map((item) => item.label).join(" • "), group.description])} />
       </DemoSection>
 
       <DemoSection title="Newest product hubs" description="These cards highlight the current workflow and clinical-review hubs so reviewers can understand the expanded product layer even when the public demo route is read-only.">
