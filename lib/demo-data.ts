@@ -1,4 +1,5 @@
 export type DemoNavItem = { href: string; label: string; description?: string };
+export type DemoNavGroup = { label: string; description: string; items: DemoNavItem[] };
 
 export const demoPatient = {
   name: "Elena Cruz",
@@ -58,6 +59,71 @@ export const demoNav: DemoNavItem[] = [
   { href: "/demo/ops", label: "Ops", description: "System readiness" },
   { href: "/demo/security", label: "Security", description: "Session and account posture" },
   { href: "/demo/admin", label: "Admin", description: "Business control surface" },
+];
+
+const demoNavByHref = new Map(demoNav.map((item) => [item.href, item]));
+
+function pickDemoNavItems(hrefs: string[]) {
+  return hrefs
+    .map((href) => demoNavByHref.get(href))
+    .filter((item): item is DemoNavItem => Boolean(item));
+}
+
+export const demoNavGroups: DemoNavGroup[] = [
+  {
+    label: "Reviewer path",
+    description: "Start here for the fastest product walkthrough.",
+    items: pickDemoNavItems(["/demo", "/demo/walkthrough", "/demo/dashboard", "/demo/notifications", "/demo/care-plan", "/demo/visit-prep"]),
+  },
+  {
+    label: "Clinical review",
+    description: "Interpretation layers on top of patient records.",
+    items: pickDemoNavItems(["/demo/data-quality", "/demo/trends", "/demo/medication-safety", "/demo/lab-review", "/demo/vitals-monitor", "/demo/symptom-review"]),
+  },
+  {
+    label: "Health records",
+    description: "Core structured patient data modules.",
+    items: pickDemoNavItems(["/demo/health-profile", "/demo/medications", "/demo/appointments", "/demo/labs", "/demo/vitals", "/demo/symptoms", "/demo/vaccinations", "/demo/doctors", "/demo/documents"]),
+  },
+  {
+    label: "Care collaboration",
+    description: "Shared access, handoffs, reminders, alerts, and summaries.",
+    items: pickDemoNavItems(["/demo/care-team", "/demo/care-notes", "/demo/ai-insights", "/demo/alerts", "/demo/timeline", "/demo/reminders", "/demo/review-queue", "/demo/summary"]),
+  },
+  {
+    label: "Reports and platform",
+    description: "Exports, devices, APIs, operations, security, and admin controls.",
+    items: pickDemoNavItems(["/demo/emergency-card", "/demo/exports", "/demo/report-builder", "/demo/device-connection", "/demo/device-sync-simulator", "/demo/audit-log", "/demo/api-docs", "/demo/jobs", "/demo/ops", "/demo/security", "/demo/admin"]),
+  },
+];
+
+export const demoQaChecklist = [
+  {
+    label: "Route coverage",
+    status: "Verified",
+    detail: "Sidebar, product hub, and guided walkthrough links are covered by route tests.",
+  },
+  {
+    label: "No-login navigation",
+    status: "Verified",
+    detail: "Every public demo page is discoverable from the grouped demo navigation.",
+  },
+  {
+    label: "Read-only safety",
+    status: "Verified",
+    detail: "The demo shell clearly marks the experience as sample data and routes users to the real app separately.",
+  },
+  {
+    label: "Reviewer flow",
+    status: "Ready",
+    detail: "The overview, walkthrough, and dashboard provide a stable starting path for recruiters and evaluators.",
+  },
+];
+
+export const demoReviewerCtas = [
+  { label: "Start guided walkthrough", href: "/demo/walkthrough", variant: "primary" },
+  { label: "Open demo overview", href: "/demo", variant: "secondary" },
+  { label: "Open real app", href: "/login", variant: "secondary" },
 ];
 
 export const demoDashboardStats = [
